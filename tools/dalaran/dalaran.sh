@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # ZSH Command Dalaran Library Script
 # Builds and maintains a collection of the most-used commands over time

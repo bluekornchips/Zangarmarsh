@@ -64,7 +64,7 @@ Use Bats for shell testing.
 
 Bash is the only shell scripting language permitted for executables.
 
-- Executables must start with `#!/bin/bash` and minimal flags
+- Executables must start with `#!/usr/bin/env bash` and minimal flags
 - Use `set` to set shell options so that calling your script as `bash script_name` does not break its functionality
 - No need to strive for POSIX-compatibility or avoid "bashisms"
 
@@ -92,7 +92,7 @@ fi
 Start each file with a description of its contents.
 
 ```bash
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Perform hot backups of Oracle databases.
 ```

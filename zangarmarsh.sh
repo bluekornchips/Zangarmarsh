@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Zangarmarsh shell configuration loader
 # This script should be sourced, not executed
