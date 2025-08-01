@@ -54,8 +54,11 @@ make test-all
 # Reload configuration
 source ~/.bashrc  # or ~/.zshrc
 
-# Quick reload alias (available after sourcing)
-zngr
+# Available functions after sourcing:
+# penv - Python virtual environment helper
+# nvm - Node.js version manager
+# agi - Agent instructions tool
+# dalaran - Command history library tool
 ```
 
 ## Configuration
@@ -87,26 +90,42 @@ Zangarmarsh loads configuration from:
 
 ## Tools
 
+Zangarmarsh includes several powerful tools for development workflow enhancement:
+
 ### Dalaran Library
 
 The `tools/dalaran/` directory contains a ZSH command library script that:
 
-- Analyzes your command history to find most-used commands
-- Creates an enhanced history file prioritizing valuable commands
-- Maintains a growing library that improves over time
+- Analyzes your ZSH history to identify most-used commands
+- Creates a growing library of historical command snapshots
+- Combines current history with historical top commands
+- Generates a working history file with enhanced command prioritization
+- Maintains backup files and command frequency rankings
 - Supports dry-run mode for safe testing
 
 ```bash
 # Run dalaran library script
 ./tools/dalaran/dalaran.sh
 
+# Show top 20 most used commands
+./tools/dalaran/dalaran.sh --top=20
+
 # Preview changes without applying
-DRY_RUN=true ./tools/dalaran/dalaran.sh
+./tools/dalaran/dalaran.sh --dry-run
+
+# Use enhanced history in current session
+export HISTFILE="$HOME/.dalaran/.active_history"
+fc -R
 ```
 
 ### Agent Instructions
 
 The `tools/agent-instructions/` directory contains tools for generating AI assistant rules:
+
+- CLAUDE.md Generation: Creates core development standards for Claude Code
+- Cursor Rules: Generates individual rule files for Cursor IDE
+- Backup System: Safely backs up existing rules before overwriting
+- Template-Based: Uses YAML schema to define rule structure
 
 ```bash
 # Generate agent rules for current directory
@@ -114,7 +133,34 @@ The `tools/agent-instructions/` directory contains tools for generating AI assis
 
 # Generate with backup of existing rules
 ./tools/agent-instructions/agent-instructions.sh --backup
+
+# Generate rules in specified directory
+./tools/agent-instructions/agent-instructions.sh /path/to/project
 ```
+
+#### Generated Rule Types
+
+- Core Standards: Essential development practices for all languages
+- Python Standards: Type hints, testing, security, and async patterns
+- Shell Standards: Bash scripting best practices and ShellCheck compliance
+- Documentation Standards: Templates for PRs, READMEs, and API docs
+- Test Data Standards: Lord of the Rings and World of Warcraft mock data
+
+### Available Functions
+
+After sourcing Zangarmarsh, these functions are available:
+
+- `penv`: Python virtual environment helper
+- `nvm`: Node.js version manager
+- `agi`: Agent instructions tool (alias for agent-instructions.sh)
+- `dalaran`: Command history library tool (alias for dalaran.sh)
+
+### Tool Documentation
+
+Each tool includes comprehensive documentation:
+
+- [Dalaran Library README](tools/dalaran/README.md): Command history analysis and enhancement
+- [Agent Instructions README](tools/agent-instructions/README.md): AI assistant rule generation
 
 ## Development
 

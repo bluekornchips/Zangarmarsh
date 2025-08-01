@@ -16,6 +16,7 @@ set -uo pipefail
 # Set locale to handle encoding issues
 export LC_ALL=C
 
+# Show usage information and exit
 show_usage() {
 	cat <<EOF
 Usage: $(basename "$0") [OPTIONS]
@@ -48,6 +49,7 @@ EOF
 # DRY_RUN mode: set to true to see what would be done without making changes
 DRY_RUN=${DRY_RUN:-false}
 
+# Execute command or show what would be executed in dry run mode
 execute_or_dry_run() {
 	if [[ "${DRY_RUN}" == "true" ]]; then
 		echo "Would execute: $*"
@@ -57,6 +59,7 @@ execute_or_dry_run() {
 	fi
 }
 
+# Create file or show what would be created in dry run mode
 create_file_or_dry_run() {
 	local content="$1"
 	local file_path="$2"
@@ -71,6 +74,7 @@ create_file_or_dry_run() {
 	fi
 }
 
+# Validate input history file exists and is accessible
 validate_input() {
 	local current_history="$1"
 
@@ -87,6 +91,7 @@ validate_input() {
 	echo "Valid history file: ${current_history}"
 }
 
+# Create backup of current history file
 create_backup() {
 	if [[ ! -f "${CURRENT_HISTORY}" ]]; then
 		echo "Current history file not found: ${CURRENT_HISTORY}" >&2
@@ -109,6 +114,7 @@ create_backup() {
 	fi
 }
 
+# Extract top commands from history file
 extract_top_commands() {
 	echo "Extracting top ${TOP_N_COMMANDS} commands."
 
@@ -141,16 +147,18 @@ extract_top_commands() {
 	fi
 }
 
+# Combine all historical top command files
 combine_historical_files() {
 	echo "Combining all historical top command files."
+	local library_file_pattern="library_*.txt"
 
 	if [[ "${DRY_RUN}" == "true" ]]; then
 		echo "Would combine historical files from: ${TOP_COMMANDS_DIR}"
 		echo "Would save to: $(basename "${COMBINED_TOP_COMMANDS}")"
 
-		local historical_files
-		mapfile -t historical_files < <(find "${TOP_COMMANDS_DIR}" -name ".zsh_history_*.txt" -type f 2>/dev/null || true)
-		echo "Found ${#historical_files[@]} historical top command files"
+		local file_count
+		file_count=$(find "${TOP_COMMANDS_DIR}" -name "${library_file_pattern}" -type f 2>/dev/null | wc -l || echo 0)
+		echo "Found ${file_count} historical top command files"
 		return 0
 	fi
 
@@ -158,12 +166,11 @@ combine_historical_files() {
 	temp_combined=$(mktemp)
 	local files_processed=0
 
-	local historical_files
-	mapfile -t historical_files < <(find "${TOP_COMMANDS_DIR}" -name ".zsh_history_*.txt" -type f)
-	echo "Found ${#historical_files[@]} historical top command files. Adding to combined file."
+	local total_files
+	total_files=$(find "${TOP_COMMANDS_DIR}" -name "${library_file_pattern}" -type f 2>/dev/null | wc -l || echo 0)
+	echo "Found ${total_files} historical top command files. Adding to combined file."
 
-	local file
-	for file in "${historical_files[@]}"; do
+	while IFS= read -r -d '' file; do
 		if [[ -f "${file}" ]]; then
 			local file_count
 			file_count=$(wc -l <"${file}")
@@ -171,7 +178,7 @@ combine_historical_files() {
 			cat "${file}" >>"${temp_combined}"
 			((files_processed++))
 		fi
-	done
+	done < <(find "${TOP_COMMANDS_DIR}" -name "${library_file_pattern}" -type f -print0 2>/dev/null || true)
 
 	# Count frequency of commands
 	sort "${temp_combined}" |
@@ -191,6 +198,7 @@ combine_historical_files() {
 	rm -f "${temp_combined}" "${temp_combined}.ranked"
 }
 
+# Create dalaran library history file in zsh format
 create_dalaran_library_history() {
 	if [[ "${DRY_RUN}" == "true" ]]; then
 		echo "Would create dalaran library history file: $(basename "${DALARAN_LIBRARY_HISTORY}")"
@@ -233,6 +241,7 @@ create_dalaran_library_history() {
 	echo "Created zsh history format: $(basename "${DALARAN_LIBRARY_HISTORY}") with ${count} commands"
 }
 
+# Create working history file combining library and current history
 create_working_history() {
 	if [[ "${DRY_RUN}" == "true" ]]; then
 		echo "Would create working history file: $(basename "${WORKING_HISTORY}")"
@@ -252,6 +261,7 @@ create_working_history() {
 	echo "Created working history: $(basename "${WORKING_HISTORY}") with ${working_count} total commands"
 }
 
+# Display summary of operations performed
 display_summary() {
 	if [[ "${DRY_RUN}" == "true" ]]; then
 		echo "Would display summary of operations"
@@ -260,9 +270,9 @@ display_summary() {
 	fi
 
 	local backup_files
-	backup_files=$(find "${DALARAN_LIBRARY_DIR}" -maxdepth 1 -name ".zsh_history_*.txt" -type f | wc -l)
+	backup_files=$(find "${DALARAN_DIR}" -maxdepth 1 -name ".library_*.txt" -type f | wc -l)
 	local snapshot_files
-	snapshot_files=$(find "${TOP_COMMANDS_DIR}" -name ".zsh_history_*.txt" -type f | wc -l)
+	snapshot_files=$(find "${TOP_COMMANDS_DIR}" -name ".library_*.txt" -type f | wc -l)
 	local combined_count
 	combined_count=$(grep -c -v '^#' "${COMBINED_TOP_COMMANDS}" || echo 0)
 	local working_count
@@ -284,9 +294,10 @@ Run this script periodically to keep your library updated.
 EOF
 }
 
+# Show top N most used commands from dalaran library
 show_top_commands() {
 	local top_count="$1"
-	local combined_file="${DALARAN_LIBRARY_DIR}/top_commands.txt"
+	local combined_file="${DALARAN_DIR}/top_commands.txt"
 
 	if [[ ! -f "${combined_file}" ]]; then
 		echo "No dalaran library found. Run the script first to create one."
@@ -301,6 +312,7 @@ $(head -"${top_count}" "${combined_file}" | nl)
 EOF
 }
 
+# Parse command line options
 parse_options() {
 	local show_top=0
 	local top_count=10
@@ -334,34 +346,35 @@ parse_options() {
 
 	if [[ "${show_top}" -eq 1 ]]; then
 		# Configuration for top commands display
-		DALARAN_LIBRARY_DIR="$HOME/.zsh_dalaran_library"
+		DALARAN_DIR="$HOME/.dalaran"
 		show_top_commands "${top_count}"
 		exit $?
 	fi
 }
 
+# Main function orchestrating the entire process
 main() {
 	parse_options "$@"
 
 	# Configuration
-	readonly DALARAN_LIBRARY_DIR="$HOME/.zsh_dalaran_library"
-	readonly TOP_COMMANDS_DIR="${DALARAN_LIBRARY_DIR}/top_commands"
+	readonly DALARAN_DIR="$HOME/.dalaran"
+	readonly TOP_COMMANDS_DIR="${DALARAN_DIR}/top_commands"
 	readonly TOP_N_COMMANDS=${TOP_N_COMMANDS:-1000}
 	readonly CURRENT_HISTORY="${HISTFILE:-$HOME/.zsh_history}"
 	TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 	readonly TIMESTAMP
-	readonly BACKUP_FILE="${DALARAN_LIBRARY_DIR}/.zsh_history_${TIMESTAMP}.txt"
-	readonly TOP_COMMANDS_FILE="${TOP_COMMANDS_DIR}/.zsh_history_${TIMESTAMP}.txt"
-	readonly COMBINED_TOP_COMMANDS="${DALARAN_LIBRARY_DIR}/top_commands.txt"
-	readonly DALARAN_LIBRARY_HISTORY="${DALARAN_LIBRARY_DIR}/.zsh_history_dalaran_library"
-	readonly WORKING_HISTORY="${DALARAN_LIBRARY_DIR}/.zsh_history_working"
+	readonly BACKUP_FILE="${DALARAN_DIR}/library_${TIMESTAMP}.txt"
+	readonly TOP_COMMANDS_FILE="${TOP_COMMANDS_DIR}/library_${TIMESTAMP}.txt"
+	readonly COMBINED_TOP_COMMANDS="${DALARAN_DIR}/top_commands.txt"
+	readonly DALARAN_LIBRARY_HISTORY="${DALARAN_DIR}/library"
+	readonly WORKING_HISTORY="${DALARAN_DIR}/active_history"
 
 	validate_input "${CURRENT_HISTORY}"
 
 	if [[ "${DRY_RUN}" == "true" ]]; then
-		echo "Would create directories: ${DALARAN_LIBRARY_DIR} and ${TOP_COMMANDS_DIR}"
+		echo "Would create directories: ${DALARAN_DIR} and ${TOP_COMMANDS_DIR}"
 	else
-		mkdir -p "${DALARAN_LIBRARY_DIR}" "${TOP_COMMANDS_DIR}"
+		mkdir -p "${DALARAN_DIR}" "${TOP_COMMANDS_DIR}"
 	fi
 
 	if [[ "${DRY_RUN}" == "true" ]]; then

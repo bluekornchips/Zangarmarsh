@@ -17,8 +17,8 @@ setup() {
 	export ORIGINAL_HISTFILE="${HISTFILE:-$HOME/.zsh_history}"
 	export TEST_HISTFILE="${TEST_DIR}/test_zsh_history"
 	export TEST_HOME="${TEST_DIR}/home"
-	export TEST_DALARAN_DIR="${TEST_HOME}/.zsh_dalaran_library"
-	export TEST_TOP_COMMANDS_DIR="${TEST_HOME}/.zsh_dalaran_library/top_commands"
+	export TEST_DALARAN_DIR="${TEST_HOME}/.dalaran"
+	export TEST_TOP_COMMANDS_DIR="${TEST_HOME}/.dalaran/top_commands"
 
 	mkdir -p "${TEST_HOME}"
 
@@ -97,9 +97,9 @@ teardown() {
 
 	HOME="${TEST_HOME}" HISTFILE="${TEST_HISTFILE}" DRY_RUN=false run bash "${DALARAN_SCRIPT}"
 
-	local backup_files
-	mapfile -t backup_files < <(find "${TEST_DALARAN_DIR}" -name ".zsh_history_*.txt" -type f 2>/dev/null || true)
-	[ ${#backup_files[@]} -gt 0 ]
+	local backup_files_count
+	backup_files_count=$(find "${TEST_DALARAN_DIR}" -name "library_*.txt" -type f 2>/dev/null | wc -l)
+	[ "${backup_files_count}" -gt 0 ]
 }
 
 @test "core::top_commands_extraction" {
@@ -120,7 +120,7 @@ teardown() {
 
 	HOME="${TEST_HOME}" HISTFILE="${TEST_HISTFILE}" DRY_RUN=false run bash "${DALARAN_SCRIPT}"
 
-	local working_history="${TEST_DALARAN_DIR}/.zsh_history_working"
+	local working_history="${TEST_DALARAN_DIR}/active_history"
 	[[ -f "${working_history}" ]]
 
 	local history_count
@@ -136,7 +136,7 @@ teardown() {
 	[[ -d "${TEST_DALARAN_DIR}" ]]
 	[[ -d "${TEST_TOP_COMMANDS_DIR}" ]]
 	[[ -f "${TEST_DALARAN_DIR}/top_commands.txt" ]]
-	[[ -f "${TEST_DALARAN_DIR}/.zsh_history_working" ]]
+	[[ -f "${TEST_DALARAN_DIR}/active_history" ]]
 }
 
 @test "core::script_creates_expected_files_in_dry_run_mode" {
@@ -167,7 +167,7 @@ teardown() {
 	[[ -d "${TEST_DALARAN_DIR}" ]]
 	[[ -d "${TEST_TOP_COMMANDS_DIR}" ]]
 	[[ -f "${TEST_DALARAN_DIR}/top_commands.txt" ]]
-	[[ -f "${TEST_DALARAN_DIR}/.zsh_history_working" ]]
+	[[ -f "${TEST_DALARAN_DIR}/active_history" ]]
 }
 
 @test "error::missing_history_file_handling" {
@@ -264,7 +264,7 @@ EOF
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Usage:"
 	echo "$output" | grep -q "OPTIONS:"
-	echo "$output" | grep -q "--help"
+	echo "$output" | grep -q "\\--help"
 	echo "$output" | grep -q "top"
 	echo "$output" | grep -q "dry-run"
 	echo "$output" | grep -q "ENVIRONMENT VARIABLES:"
