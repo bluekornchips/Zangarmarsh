@@ -15,7 +15,7 @@
 
 ## Why the name 'Zangarmarsh'?
 
-Zangarmarsh is a zone in World of Warcraft overwhelmed by blue ambiance, dampness, glowing plans, and massive mushrooms. The zone is one I return to whenever I make updates to my user interface or addon packages. When I think of Zangarmarsh I think of relaxtion, creativity, and grounding.
+Zangarmarsh is a zone in World of Warcraft overwhelmed by blue ambiance, dampness, glowing foliage, and massive mushrooms. The zone is one I return to whenever I make updates to my user interface or addon packages. When I think of Zangarmarsh I think of relaxtion, creativity, and grounding.
 
 ## What it does
 
