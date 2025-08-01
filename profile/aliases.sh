@@ -3,7 +3,7 @@ alias awsume=". awsume"
 alias awsor="aws-sso-util login --force-refresh"
 
 # Development
-alias drun='docker run -it --rm --entrypoint /bin/bash'
+alias drun='docker run -it --rm --entrypoint /usr/bin/env bash'
 alias k="kubectl"
 alias python="python3"
 

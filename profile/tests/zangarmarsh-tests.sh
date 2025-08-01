@@ -94,7 +94,7 @@ teardown() {
 	cd "$temp_dir"
 
 	cat >test_zangarmarsh.sh <<'EOF'
-#!/bin/bash
+#!/usr/bin/env bash
 ZANGARMARSH_VERBOSE="${ZANGARMARSH_VERBOSE:-false}"
 
 # This should fail since we're not in a git repo
