@@ -1,6 +1,6 @@
 # IDE and editor files
 .cursor
-.vscode/
+# .vscode/ # Intentionally not ignored
 *.swp
 *.swo
 *~
