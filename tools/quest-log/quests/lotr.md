@@ -1,4 +1,4 @@
-# Lord of the Rings Reference Data
+# Lord of the Rings Test Data
 
 ## Famous Quotes (Sample)
 
@@ -17,7 +17,7 @@
 13. "Not all those who wander are lost."
 14. "One Ring to rule them all, One Ring to find them, One Ring to bring them all and in the darkness bind them."
 
-## Character Names for Mock Data
+## Character Names
 
 ### Hobbits
 
@@ -41,109 +41,51 @@
 
 - Gandalf, Saruman, Radagast
 
-## Locations for Environment Names
-
-### Realms & Cities
+## Locations
 
 - The Shire, Hobbiton, Bag End, Rivendell, Lothlórien, Minas Tirith
 - Isengard, Edoras, Dale, Erebor, Rohan, Gondor
-
-### Geographic Features
-
 - Mount Doom, Weathertop, Fangorn Forest, Anduin River, Pelennor Fields
-- The Dead Marshes, Helm's Deep, Khazad-dûm, Moria
 
-## Artifacts for Test Objects
+## Artifacts
 
 - The One Ring, Narsil/Andúril, Sting, Glamdring, Mithril
 - Palantír, The Phial of Galadriel, The White Tree of Gondor
 
-## Advanced Test Scenarios
+## Test Data Patterns
 
-### User Profiles for Testing
+### User Profiles
 
 ```json
 {
   "admin_users": [
-    {
-      "id": 1,
-      "username": "gandalf_grey",
-      "email": "gandalf@rivendell.test",
-      "role": "admin"
-    },
-    {
-      "id": 2,
-      "username": "aragorn_elessar",
-      "email": "aragorn@gondor.test",
-      "role": "admin"
-    }
+    { "id": 1, "username": "gandalf_grey", "email": "gandalf@rivendell.test", "role": "admin" },
+    { "id": 2, "username": "aragorn_elessar", "email": "aragorn@gondor.test", "role": "admin" }
   ],
   "regular_users": [
-    {
-      "id": 3,
-      "username": "frodo_baggins",
-      "email": "frodo@shire.test",
-      "role": "user"
-    },
-    {
-      "id": 4,
-      "username": "samwise_gamgee",
-      "email": "sam@shire.test",
-      "role": "user"
-    },
-    {
-      "id": 5,
-      "username": "legolas_greenleaf",
-      "email": "legolas@mirkwood.test",
-      "role": "user"
-    }
-  ],
-  "test_accounts": [
-    {
-      "id": 6,
-      "username": "gimli_gloin",
-      "email": "gimli@erebor.test",
-      "role": "moderator"
-    },
-    {
-      "id": 7,
-      "username": "boromir_denethor",
-      "email": "boromir@minas-tirith.test",
-      "role": "user"
-    }
+    { "id": 3, "username": "frodo_baggins", "email": "frodo@shire.test", "role": "user" },
+    { "id": 4, "username": "samwise_gamgee", "email": "sam@shire.test", "role": "user" }
   ]
 }
 ```
 
-### Environment Configuration
+### Environment Names
 
 ```yaml
 environments:
-  development:
-    name: 'hobbiton-dev'
-    db_host: 'bag-end.shire.local'
-    api_url: 'https://dev-api.shire.test'
-
-  staging:
-    name: 'rivendell-staging'
-    db_host: 'elrond.rivendell.local'
-    api_url: 'https://staging-api.rivendell.test'
-
-  production:
-    name: 'minas-tirith-prod'
-    db_host: 'aragorn.gondor.local'
-    api_url: 'https://api.gondor.test'
+  development: 'hobbiton-dev'
+  staging: 'rivendell-staging'
+  production: 'minas-tirith-prod'
 ```
 
-### Test Data Generators
+### Test Data Generator
 
 ```python
-# User generation patterns
 USER_PATTERNS = {
     "hobbit": ["frodo", "sam", "merry", "pippin", "bilbo"],
-    "elf": ["legolas", "elrond", "arwen", "galadriel", "celeborn"],
-    "dwarf": ["gimli", "balin", "thorin", "dain", "gloin"],
-    "human": ["aragorn", "boromir", "faramir", "eowyn", "eomer"]
+    "elf": ["legolas", "elrond", "arwen", "galadriel"],
+    "dwarf": ["gimli", "balin", "thorin", "dain"],
+    "human": ["aragorn", "boromir", "faramir", "eowyn"]
 }
 
 def generate_test_email(name, race):
@@ -158,10 +100,10 @@ def generate_test_email(name, race):
 
 ## Usage Examples
 
-### ✅ Appropriate Usage
+### Appropriate
 
 ```python
-# Test users and authentication
+# Test users
 TEST_USERS = [
     {"username": "frodo_baggins", "email": "frodo@shire.test"},
     {"username": "gandalf_grey", "email": "gandalf@rivendell.test"}
@@ -170,51 +112,24 @@ TEST_USERS = [
 # Environment names
 ENVIRONMENTS = ["hobbiton-dev", "rivendell-staging", "gondor-prod"]
 
-# Mock API responses
+# Mock responses
 MOCK_RESPONSE = {
     "user": {"name": "Samwise Gamgee", "location": "Hobbiton"},
     "status": "success"
 }
-
-# Database test data
-INSERT_USERS = [
-    ("Legolas", "legolas@mirkwood.test", "elf"),
-    ("Gimli", "gimli@erebor.test", "dwarf")
-]
 ```
 
-### ❌ Inappropriate Usage
+### Inappropriate
 
 ```python
 # Don't use for function names
-def gandalfProcessor():  # ❌ Use descriptive names instead
-    pass
+def gandalfProcessor():  # Do not use lack of descriptive names
 
 # Don't use in documentation
 """
-This function works like Gandalf's magic...  # ❌ Avoid themed explanations
+This function works like Gandalf's magic...  # Do not use themed explanations
 """
 
 # Don't use for production values
-API_KEY = "one_ring_to_rule_them_all"  # ❌ Use proper secrets management
+API_KEY = "one_ring_to_rule_them_all"
 ```
-
-## Context-Specific Applications
-
-### Database Testing
-
-- **User IDs**: Sequential (1=Frodo, 2=Sam, 3=Merry, etc.)
-- **Timestamps**: Use significant dates (3018 Third Age = Sept 23)
-- **Foreign Keys**: Logical relationships (Sam → Frodo, Legolas → Thranduil)
-
-### API Testing
-
-- **Endpoints**: `/api/users/frodo_baggins`, `/api/locations/shire`
-- **Payloads**: Consistent character attributes
-- **Error Cases**: Use evil characters (Sauron, Saruman) for failure scenarios
-
-### Performance Testing
-
-- **Load Testing**: Use army sizes (10,000 orcs, 6,000 Rohirrim)
-- **Stress Testing**: Use epic battle scenarios
-- **Volume Testing**: Population of Middle-earth locations

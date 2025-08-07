@@ -1,8 +1,6 @@
-# AI Documentation Assistant Guidelines
+# Documentation Templates
 
-## Essential Templates
-
-### PR Description
+## PR Description
 
 ```markdown
 ## Issue Link
@@ -11,13 +9,16 @@
 
 ## Description
 
-[Concise summary of the PR]
+[Concise summary of changes]
 
-- [List of high-level changes]
+- [List key changes]
 - [Why changes were made]
-- [Any breaking changes or compatibility notes]
+- [Breaking changes or compatibility notes]
 
-- Steps to verify
+## Verification Steps
+
+- [ ] Step 1
+- [ ] Step 2
 ```
 
 **Notes:**
@@ -31,7 +32,7 @@
 ```markdown
 **Summary:** [Concise objective]
 
-**Description:** [Context]
+**Description:** [Context and background]
 
 **Acceptance Criteria:**
 
@@ -44,7 +45,7 @@
 2. Step 2
 ```
 
-### README.md
+## README.md
 
 ````markdown
 # Project Title
@@ -68,7 +69,7 @@
 
 ````
 
-### API Docs
+## API Docs
 ```markdown
 # API Reference
 
@@ -78,7 +79,7 @@
 - Response: [Example]
 ````
 
-### Technical Spec
+## Technical Spec
 
 ```markdown
 # Technical Spec: [Feature]
@@ -96,11 +97,11 @@
 [How to verify]
 ```
 
-## Best Practices & Checklist
+## Best Practices
 
 - Use clear, simple language
 - Follow templates strictly
 - Include test/verification steps
 - Use code blocks for commands/code
-- Check for accuracy and completeness before publishing
-- Never use double asterisks for bolding.
+- Check accuracy before publishing
+- Never use double asterisks for bolding

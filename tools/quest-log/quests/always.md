@@ -1,57 +1,47 @@
-# Enhanced Development Standards
+# Core Development Rules
 
-## All Languages
+## Universal Bans
 
-### Never Allow
+### Never Use
 
-#### Comments, Logs, & Tracing
+- Debug prefixes: "INFO", "WARNING", "ERROR", "DEBUG", "PASS", "FAIL", "CRITICAL", "TRACE"
+- Ellipses: "...", "—", "-", " - "
+- Emojis or non-ASCII characters
+- Double asterisks for bolding
 
-Never use prefixed debug statements, in any uppercase or lowercase, such as: "INFO", "INFO:", "[INFO]","WARNING", "ERROR", "DEBUG", "PASS", "FAIL", "CRITICAL", "TRACE", "DEBUG", "DEBUG:", "[DEBUG]".
+### Git Commands
 
-- Never use elipses, "...".
-- Never use em-dash, " - ", "—", "-", dashes, or any other ellipsis symbol, unless it is part of a quote, or start of a markdown list.
-- Never use emojis, unicode characters, or any other non-ASCII characters.
-
-## Git
-
-### Never Allow
+**Never use state-changing commands:**
 
 ```bash
-# Never use state-changing git commands
-git add
-git commit
-git push
-git merge
-git pull
-git fetch
-git reset
-git revert
+git add, git commit, git push, git merge, git pull, git fetch, git reset, git revert
 ```
 
-### Always Allow
-
-## Comments, Logs, & Tracing
-
-Use commas and semi colons to separate statements.
-
-## Shell
+**Always allow read-only commands:**
 
 ```bash
-# Always allow read-only git commands
-git status
-git log
-git diff
-git branch
+git status, git log, git diff, git branch
 ```
 
-## Python
+## Language-Specific Rules
 
-Refer to [python-styles.md](python-styles.md) for comprehensive Python development standards.
+### Python
 
-## Shell
+- Use specific exceptions: `except ValueError as e:` not `except Exception as e:`
+- Use environment variables: `os.getenv("API_KEY")` not hardcoded secrets
+- Use absolute imports: `from myproject.utils import parse_data`
+- Test coverage ≥80%, type safety with mypy, security scan with bandit
 
-Refer to [shell-styles.md](shell-styles.md) for comprehensive shell development standards.
+### Shell
 
-## Documentation Standards
+- Use heredocs for multi-line strings (>160 chars or 2+ lines)
+- Use Bats for testing
+- All executables must use `#!/usr/bin/env bash`
+- Error messages to STDERR: `echo "Error" >&2`
 
-Refer to [author.md](author.md) for comprehensive documentation standards.
+## Documentation
+
+- Use clear, simple language
+- Include test/verification steps
+- Use code blocks for commands/code
+- Never use double asterisks for bolding
