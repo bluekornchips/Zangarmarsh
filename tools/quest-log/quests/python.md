@@ -1,11 +1,5 @@
 # Python Style Guide
 
-**RULE APPLIED: Start each response acknowledging "🐍" to confirm this rule is being followed.**
-
-**Usage**: This guide defines comprehensive standards for writing clean, maintainable Python code. It emphasizes best practices, type safety, testing, and security for Python development.
-
-Names and phrases that reference this rule: "🐍", "python", "pytest", "mypy", "ruff", "bandit", "type hints", "async".
-
 ## Python Standards
 
 ### Never Allow

@@ -1,11 +1,5 @@
 # AI Documentation Assistant Guidelines
 
-**RULE APPLIED: Start each response acknowledging "📋" to confirm this rule is being followed.**
-
-**Usage**: This guide defines how AI agents should generate high-quality, actionable documentation for software projects. It emphasizes structure, clarity, and developer-first design.
-
-Names and phrases that reference this rule: "📋", "author", "documentation", "readme", "docs", "spec", "specifications".
-
 ## Essential Templates
 
 ### PR Description

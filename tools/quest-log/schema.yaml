@@ -1,0 +1,91 @@
+---
+# Schema for agentic tools rule generation
+
+- name: always
+  file: always.md
+  icon: 💡
+  description: Applied to every request.
+  keywords:
+    - '💡'
+    - 'rule'
+    - 'core'
+    - 'standards'
+    - 'always'
+  cursor:
+    alwaysApply: true
+
+- name: author
+  file: author.md
+  icon: 📝
+  description: Applied to github pull requests, jira tasks, README's, and other documentation.
+  keywords:
+    - '📝'
+    - 'author'
+    - 'authoring'
+    - 'README'
+    - 'JIRA'
+    - 'ticket'
+    - 'description'
+    - 'desc'
+    - 'doc'
+    - 'documentation'
+    - 'summary'
+  cursor:
+    alwaysApply: false
+
+# Style Guides
+- name: python
+  file: python.md
+  icon: 🐍
+  description: Applied to python code.
+  keywords:
+    - 'python'
+    - 'python3'
+    - 'py'
+    - 'pytest'
+    - 'pycharm'
+    - 'venv'
+    - 'virtualenv'
+  cursor:
+    alwaysApply: false
+
+- name: shell
+  file: shell.md
+  icon: 🐚
+  description: Applied to shell scripts.
+  keywords:
+    - 'shell'
+    - 'bash'
+    - 'zsh'
+    - 'sh'
+    - 'script'
+    - 'bats'
+  cursor:
+    alwaysApply: false
+
+# Reference Data
+- name: lotr
+  file: lotr.md
+  icon: 📚
+  description: Applied to Lord of the Rings reference data for mock data, test users, and environment names.
+  keywords:
+    - 'lotr'
+    - 'lord of the rings'
+    - 'middle earth'
+    - 'test data'
+    - 'mock'
+  cursor:
+    alwaysApply: false
+
+- name: warcraft
+  file: warcraft.md
+  icon: 📚
+  description: Applied to World of Warcraft reference data for mock data, test users, and environment names.
+  keywords:
+    - 'warcraft'
+    - 'world of warcraft'
+    - 'wow'
+    - 'test data'
+    - 'mock'
+  cursor:
+    alwaysApply: false

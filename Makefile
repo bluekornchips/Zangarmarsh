@@ -10,7 +10,7 @@ test-all:
 	bats ./profile/tests/profile-tests.sh
 	bats ./profile/tests/penv-tests.sh
 	bats ./profile/tests/nvm-tests.sh
-	bats ./tools/agent-instructions/tests/agent-instructions-tests.sh
+	bats ./tools/quest-log/tests/quest-log-tests.sh
 	bats ./tools/dalaran/dalaran-tests.sh
 
 # Format shell scripts

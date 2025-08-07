@@ -1,10 +1,10 @@
-# Agent Instructions Tool
+# Quest Log
 
 Generate AI assistant rules for Cursor and Claude Code.
 
 ## Overview
 
-The agent-instructions tool analyzes your project structure and generates:
+The quest-log tool analyzes your project structure and generates:
 
 - CLAUDE.md: Core development standards for Claude Code
 - Cursor Rules: Individual rule files for Cursor IDE
@@ -18,16 +18,16 @@ None required.
 
 ```bash
 # Generate rules in current directory
-./tools/agent-instructions/agent-instructions.sh
+./tools/quest-log/quest-log.sh
 
 # Generate rules in specified directory
-./tools/agent-instructions/agent-instructions.sh /path/to/project
+./tools/quest-log/quest-log.sh /path/to/project
 
 # Backup existing rules before generating new ones
-./tools/agent-instructions/agent-instructions.sh --backup
+./tools/quest-log/quest-log.sh --backup
 
 # Show help
-./tools/agent-instructions/agent-instructions.sh --help
+./tools/quest-log/quest-log.sh --help
 ```
 
 ## Configuration
@@ -144,10 +144,10 @@ The tool includes comprehensive Bats tests:
 
 ```bash
 # Run all tests
-bats tools/agent-instructions/tests/agent-instructions-tests.sh
+bats tools/quest-log/tests/quest-log-tests.sh
 
 # Run specific test
-bats tools/agent-instructions/tests/agent-instructions-tests.sh -f "test name"
+bats tools/quest-log/tests/quest-log-tests.sh -f "test name"
 ```
 
 Tests cover:

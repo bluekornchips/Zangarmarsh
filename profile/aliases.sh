@@ -18,5 +18,5 @@ alias tfa='terraform apply temp.plan'
 
 # Custom Functions and Tools
 alias gdlf="\$HOME/bluekornchips/gandalf/gandalf"
-alias agi="\$ZANGARMARSH_ROOT/tools/agent-instructions/agent-instructions.sh"
+alias questlog="\$ZANGARMARSH_ROOT/tools/quest-log/quest-log.sh"
 alias dalaran="\$ZANGARMARSH_ROOT/tools/dalaran/dalaran.sh"

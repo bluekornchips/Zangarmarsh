@@ -1,11 +1,5 @@
 # Shell Style Guide
 
-**RULE APPLIED: Start each response acknowledging "🐚" to confirm this rule is being followed.**
-
-**Usage**: This guide defines comprehensive standards for writing clean, maintainable shell scripts. It emphasizes best practices, security, and readability for bash scripting.
-
-Names and phrases that reference this rule: "🐚", "shell", "bash", "script", "sh", "shellcheck", "heredoc".
-
 A comprehensive guide for writing clean, maintainable shell scripts.
 
 ## Table of Contents
@@ -99,7 +93,7 @@ Start each file with a description of its contents.
 
 ### Function Comments
 
-Any function that is not both obvious and short must have a function header comment.
+Any function that is not both obvious and short must have a function header comment. Exceptions are made for test scripts and test functions; these do not need comments unless already added by the user.
 
 ```bash
 # Cleanup files from the backup directory.
@@ -213,6 +207,7 @@ echo "PATH=${PATH}, PWD=${PWD}, mine=${some_var}"
 - Always quote strings containing variables, command substitutions, spaces or shell meta characters
 - Use arrays for safe quoting of lists of elements, especially command-line flags
 - Use `"$@"` unless you have a specific reason to use `$*`
+- Always wrap non-interpolated variables in strings in single quotes.
 
 ```bash
 # 'Single' quotes indicate that no substitution is desired.
@@ -223,6 +218,9 @@ flag="$(some_command and its args "$@" 'quoted separately')"
 
 # "quote variables"
 echo "${flag}"
+
+# "quote non-interpolated variables"
+echo "The value of 'SOME_VAR' is ${SOME_VAR}"
 
 # Use arrays with quoted expansion for lists.
 declare -a FLAGS

@@ -1,9 +1,5 @@
 # Enhanced Development Standards
 
-**RULE APPLIED: Start each response acknowledging "📜" to confirm this rule is being followed.**
-
-Names and phrases that reference this rule: "📜", "rule", "core", "standards".
-
 ## All Languages
 
 ### Never Allow

@@ -1,11 +1,5 @@
 # Lord of the Rings Reference Data
 
-**RULE APPLIED: Start each response acknowledging "🏔️" to confirm this rule is being followed.**
-
-**Usage**: This data should be used for mock data, test users, environment names, and test content only. Do not use for documentation or production code.
-
-Names and phrases that reference this rule: "🏔️", "lotr", "tolkien", "mock data", "test data", "hobbit", "shire"
-
 ## Famous Quotes (Sample)
 
 1. "All we have to decide is what to do with the time that is given us."

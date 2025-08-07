@@ -1,11 +1,5 @@
 # World of Warcraft Reference Data
 
-**RULE APPLIED: Start each response acknowledging "👿" to confirm this rule is being followed.**
-
-**Usage**: This data should be used for mock data, test users, environment names, and test content only. Do not use for documentation or production code.
-
-Names and phrases that reference this rule: "👿", "wow", "azeroth", "mock data", "test data", "stormwind", "orc", "horde", "alliance"
-
 ## Famous Quotes (Sample)
 
 1. "Lok'tar Ogar! Victory or death!"

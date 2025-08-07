@@ -57,7 +57,7 @@ source ~/.bashrc  # or ~/.zshrc
 # Available functions after sourcing:
 # penv - Python virtual environment helper
 # nvm - Node.js version manager
-# agi - Agent instructions tool
+# questlog - Agent instructions tool
 # dalaran - Command history library tool
 ```
 
@@ -118,9 +118,9 @@ export HISTFILE="$HOME/.dalaran/.active_history"
 fc -R
 ```
 
-### Agent Instructions
+### Quest Log
 
-The `tools/agent-instructions/` directory contains tools for generating AI assistant rules:
+The `tools/quest-log/` directory contains tools for generating AI assistant rules:
 
 - CLAUDE.md Generation: Creates core development standards for Claude Code
 - Cursor Rules: Generates individual rule files for Cursor IDE
@@ -129,13 +129,13 @@ The `tools/agent-instructions/` directory contains tools for generating AI assis
 
 ```bash
 # Generate agent rules for current directory
-./tools/agent-instructions/agent-instructions.sh
+./tools/quest-log/quest-log.sh
 
 # Generate with backup of existing rules
-./tools/agent-instructions/agent-instructions.sh --backup
+./tools/quest-log/quest-log.sh --backup
 
 # Generate rules in specified directory
-./tools/agent-instructions/agent-instructions.sh /path/to/project
+./tools/quest-log/quest-log.sh /path/to/project
 ```
 
 #### Generated Rule Types
@@ -152,7 +152,7 @@ After sourcing Zangarmarsh, these functions are available:
 
 - `penv`: Python virtual environment helper
 - `nvm`: Node.js version manager
-- `agi`: Agent instructions tool (alias for agent-instructions.sh)
+- `questlog`: Quest log tool (alias for quest-log.sh)
 - `dalaran`: Command history library tool (alias for dalaran.sh)
 
 ### Tool Documentation
@@ -160,7 +160,7 @@ After sourcing Zangarmarsh, these functions are available:
 Each tool includes comprehensive documentation:
 
 - [Dalaran Library README](tools/dalaran/README.md): Command history analysis and enhancement
-- [Agent Instructions README](tools/agent-instructions/README.md): AI assistant rule generation
+- [Quest Log README](tools/quest-log/README.md): AI assistant rule generation
 
 ## Development
 
