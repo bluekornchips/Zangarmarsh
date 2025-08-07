@@ -83,7 +83,8 @@ teardown() {
 	PLATFORM="unknown"
 
 	mkdir -p "$NVM_DIR"
-	touch "$NVM_DIR/nvm.sh"
+	echo "# Mock NVM script" >"$NVM_DIR/nvm.sh"
+	echo 'nvm() { echo "nvm version"; }' >>"$NVM_DIR/nvm.sh"
 	run nvm --version 2>&1
 	[ "$status" -eq 0 ]
 }

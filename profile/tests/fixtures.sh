@@ -89,7 +89,7 @@ users:
      token: test-user-token
 EOF
 		# Create mock kubectl function
-		# shellcheck disable=SC2317
+		# shellcheck disable=SC2317,SC2329
 		kubectl() {
 			if [[ "$1" == "config" && "$2" == "current-context" ]]; then
 				echo "$MOCK_KUBECTL_CONTEXT"
@@ -102,8 +102,8 @@ EOF
 		unset KUBECONFIG
 		unset MOCK_KUBECTL_CONTEXT
 		# Create mock kubectl that fails
+		# shellcheck disable=SC2317,SC2329
 		kubectl() {
-			# shellcheck disable=SC2317
 			return 1
 		}
 		export -f kubectl

@@ -1,10 +1,16 @@
 # SSH Agent setup
 # This script configures and manages SSH agent for key authentication
 
+# Check if SSH setup is enabled
+if [[ "${ZANGARMARSH_ENABLE_SSH:-true}" != "true" ]]; then
+	[[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "SSH setup disabled by configuration" >&2
+	return 0
+fi
+
 # Helper function to only output debug info if ZANGARMARSH_VERBOSE is true
 log_debug() {
 	local message="$1"
-	[[ "$ZANGARMARSH_VERBOSE" != "true" ]] && return 0
+	[[ "${ZANGARMARSH_VERBOSE:-}" != "true" ]] && return 0
 	echo "$message" >&2
 }
 

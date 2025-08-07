@@ -84,10 +84,12 @@ EOF
 	fi
 
 	# Find the first index of the $QUEST_LOG_MARKER
-	local first_marker_index=$(grep -n "$QUEST_LOG_MARKER" "$CLAUDE_FILE" | cut -d: -f1 | head -n1)
+	local first_marker_index
+	first_marker_index=$(grep -n "$QUEST_LOG_MARKER" "$CLAUDE_FILE" | cut -d: -f1 | head -n1 || true)
 
 	# If the file does not contain the $QUEST_LOG_MARKER, append it to the end of the file
 	if ! grep -q "$QUEST_LOG_MARKER" "$CLAUDE_FILE"; then
+		echo "Updating $CLAUDE_FILE."
 		cat <<EOF >>"$CLAUDE_FILE"
 $QUEST_LOG_MARKER
 $(cat "$claude_temp_file")
@@ -97,12 +99,17 @@ EOF
 	fi
 
 	# Find the last index of the $QUEST_LOG_MARKER
-	local last_marker_index=$(grep -n "$QUEST_LOG_MARKER" "$CLAUDE_FILE" | cut -d: -f1 | tail -n1)
+	local last_marker_index
+	last_marker_index=$(grep -n "$QUEST_LOG_MARKER" "$CLAUDE_FILE" | cut -d: -f1 | tail -n1 || true)
 
 	# If the file contains the $QUEST_LOG_MARKER, replace the content between the markers with the new content
-	sed -i "$first_marker_index,$last_marker_index d" "$CLAUDE_FILE"
-	cat "$claude_temp_file" >>"$CLAUDE_FILE"
-	echo "$QUEST_LOG_MARKER" >>"$CLAUDE_FILE"
+	echo "Updating $CLAUDE_FILE."
+	sed -i '' "$first_marker_index,$last_marker_index d" "$CLAUDE_FILE"
+	{
+		echo "$QUEST_LOG_MARKER"
+		cat "$claude_temp_file"
+		echo "$QUEST_LOG_MARKER"
+	} >>"$CLAUDE_FILE"
 }
 
 # Create rules
@@ -110,7 +117,7 @@ fill_quest_log() {
 	echo -e "\nFilling quest log."
 
 	# Read the 'SCHEMA_FILE', convert to JSON because I prefer to work with JSON in shell
-	SCHEMA_CONTENTS=$(yq '.' "$SCHEMA_FILE")
+	SCHEMA_CONTENTS=$(yq -o json '.' "$SCHEMA_FILE")
 
 	if [[ ! -d "$CURSOR_RULES_DIR" ]]; then
 		mkdir -p "$CURSOR_RULES_DIR"

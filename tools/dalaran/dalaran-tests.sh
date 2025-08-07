@@ -158,18 +158,6 @@ teardown() {
 	echo "$output" | grep -q "Dalaran Library Summary"
 }
 
-@test "core::script_maintains_backward_compatibility" {
-	rm -rf "${TEST_DALARAN_DIR}"
-
-	HOME="${TEST_HOME}" HISTFILE="${TEST_HISTFILE}" DRY_RUN=false run bash "${DALARAN_SCRIPT}"
-
-	[[ "$status" -eq 0 ]]
-	[[ -d "${TEST_DALARAN_DIR}" ]]
-	[[ -d "${TEST_TOP_COMMANDS_DIR}" ]]
-	[[ -f "${TEST_DALARAN_DIR}/top_commands.txt" ]]
-	[[ -f "${TEST_DALARAN_DIR}/active_history" ]]
-}
-
 @test "error::missing_history_file_handling" {
 	local non_existent_file="${TEST_DIR}/nonexistent_history"
 

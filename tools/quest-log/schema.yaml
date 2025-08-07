@@ -3,7 +3,7 @@
 
 - name: always
   file: always.md
-  icon: 💡
+  icon: "💡"
   description: Applied to every request.
   keywords:
     - '💡'
@@ -16,7 +16,7 @@
 
 - name: author
   file: author.md
-  icon: 📝
+  icon: "📝"
   description: Applied to github pull requests, jira tasks, README's, and other documentation.
   keywords:
     - '📝'
@@ -36,7 +36,7 @@
 # Style Guides
 - name: python
   file: python.md
-  icon: 🐍
+  icon: "🐍"
   description: Applied to python code.
   keywords:
     - 'python'
@@ -51,7 +51,7 @@
 
 - name: shell
   file: shell.md
-  icon: 🐚
+  icon: "🐚"
   description: Applied to shell scripts.
   keywords:
     - 'shell'
@@ -66,7 +66,7 @@
 # Reference Data
 - name: lotr
   file: lotr.md
-  icon: 📚
+  icon: "📚"
   description: Applied to Lord of the Rings reference data for mock data, test users, and environment names.
   keywords:
     - 'lotr'
@@ -79,7 +79,7 @@
 
 - name: warcraft
   file: warcraft.md
-  icon: 📚
+  icon: "📚"
   description: Applied to World of Warcraft reference data for mock data, test users, and environment names.
   keywords:
     - 'warcraft'
