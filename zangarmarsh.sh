@@ -32,7 +32,7 @@ load_common_components() {
 		if [[ -f "$file_path" ]]; then
 			# shellcheck disable=SC1090
 			source "$file_path" 2>/dev/null || {
-				[[ "$ZANGARMARSH_VERBOSE" == "true" ]] && echo "Failed to source $file_path" >&2
+				[[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "Failed to source $file_path" >&2
 			}
 		fi
 	done
@@ -41,7 +41,7 @@ load_common_components() {
 # Configure bash-specific settings and history
 load_bash_components() {
 	# Bash history configuration
-	[[ "$ZANGARMARSH_VERBOSE" == "true" ]] && echo "Loading bash history configuration" >&2
+	[[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "Loading bash history configuration" >&2
 	export HISTFILE="${HISTFILE:-$HOME/.bash_history}"
 	export HISTSIZE=100000
 	export HISTFILESIZE=100000
@@ -59,7 +59,7 @@ load_bash_components() {
 	# Ensure history file exists and is writable
 	if [[ ! -f "$HISTFILE" ]]; then
 		touch "$HISTFILE" 2>/dev/null || {
-			[[ "$ZANGARMARSH_VERBOSE" == "true" ]] && echo "Cannot create history file $HISTFILE" >&2
+			[[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "Cannot create history file $HISTFILE" >&2
 		}
 	fi
 }
@@ -67,13 +67,13 @@ load_bash_components() {
 load_common_components
 
 SHELL_NAME=$(ps -p $$ -o comm= 2>/dev/null | tail -1)
-[[ "$ZANGARMARSH_VERBOSE" == "true" ]] && echo "Shell detection: ZSH_VERSION='$ZSH_VERSION', BASH_VERSION='$BASH_VERSION', SHELL_NAME='$SHELL_NAME'" >&2
-if [[ -n "$ZSH_VERSION" ]] || [[ "$SHELL_NAME" == *zsh ]]; then
-	[[ "$ZANGARMARSH_VERBOSE" == "true" ]] && echo "Sourcing profile/zsh/profile.sh" >&2
+[[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "Shell detection: ZSH_VERSION='${ZSH_VERSION:-}', BASH_VERSION='${BASH_VERSION:-}', SHELL_NAME='$SHELL_NAME'" >&2
+if [[ -n "${ZSH_VERSION:-}" ]] || [[ "$SHELL_NAME" == *zsh ]]; then
+	[[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "Sourcing profile/zsh/profile.sh" >&2
 	# shellcheck disable=SC1091
 	source "$ZANGARMARSH_ROOT/profile/zsh/profile.sh"
-elif [[ -n "$BASH_VERSION" ]] || [[ "$SHELL_NAME" == *bash ]]; then
-	[[ "$ZANGARMARSH_VERBOSE" == "true" ]] && echo "Loading bash components" >&2
+elif [[ -n "${BASH_VERSION:-}" ]] || [[ "$SHELL_NAME" == *bash ]]; then
+	[[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "Loading bash components" >&2
 	load_bash_components
 else
 	echo "Unsupported shell: $SHELL" >&2

@@ -1,6 +1,26 @@
 #!/usr/bin/env bash
 
-nvm() {
+# Lazy loading wrapper for expensive operations
+lazy_load() {
+	local func_name="$1"
+	local load_command="$2"
+
+	eval "
+	$func_name() {
+		unset -f $func_name
+		eval '$load_command'
+		if declare -f $func_name >/dev/null 2>&1; then
+			$func_name \"\$@\"
+		else
+			echo \"Failed to load $func_name after lazy loading\" >&2
+			return 1
+		fi
+	}
+	"
+}
+
+# Original NVM function with lazy loading capability
+_nvm_load() {
 	# Set up NVM environment
 	export NVM_DIR="$HOME/.nvm"
 	nvm_script=""
@@ -8,7 +28,12 @@ nvm() {
 	# Determine NVM script location based on platform
 	case "$PLATFORM" in
 	macos)
-		nvm_script="/opt/homebrew/opt/nvm/nvm.sh"
+		# Try Homebrew installation first, then default location
+		if [[ -n "$HOMEBREW_PREFIX" && -s "$HOMEBREW_PREFIX/opt/nvm/nvm.sh" ]]; then
+			nvm_script="$HOMEBREW_PREFIX/opt/nvm/nvm.sh"
+		else
+			nvm_script="$NVM_DIR/nvm.sh"
+		fi
 		;;
 	linux | wsl)
 		nvm_script="$NVM_DIR/nvm.sh"
@@ -38,13 +63,7 @@ nvm() {
 		\. "$NVM_DIR/bash_completion" 2>/dev/null || true
 	fi
 
-	# Execute nvm with any passed arguments
-	if command -v nvm >/dev/null 2>&1; then
-		nvm "$@"
-	else
-		echo "NVM command not available after sourcing" >&2
-		return 0
-	fi
+	# NVM is now loaded globally, no need to call it again
 }
 
 penv() {
@@ -177,3 +196,21 @@ Environment: $PWD/$env_name
 
 EOF
 }
+
+# Set up lazy loading for expensive operations (using configuration)
+if [[ "${ZANGARMARSH_LAZY_LOADING:-true}" == "true" ]] && [[ "${ZANGARMARSH_ENABLE_NVM:-true}" == "true" ]]; then
+	# Create lazy-loaded nvm function that will load the real NVM when first called
+	nvm() {
+		unset -f nvm
+		_nvm_load
+		if command -v nvm >/dev/null 2>&1; then
+			nvm "$@"
+		else
+			echo "NVM command not available after loading" >&2
+			return 1
+		fi
+	}
+elif [[ "${ZANGARMARSH_ENABLE_NVM:-true}" == "true" ]]; then
+	# Load NVM immediately if lazy loading is disabled but NVM is enabled
+	_nvm_load
+fi

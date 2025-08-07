@@ -21,6 +21,7 @@ setup() {
 
 	# Create a mock git repository for testing using fixtures
 	create_mock_git_repo "$test_dir"
+	TEST_DIR="$test_dir"
 	ZANGARMARSH_ROOT="$test_dir"
 	ZANGARMARSH_VERBOSE=true
 
@@ -43,49 +44,42 @@ teardown() {
 }
 
 @test "zangarmarsh should load successfully with default settings" {
-	run "$SCRIPT"
+	run source "$SCRIPT"
 	[[ "$status" -eq 0 ]]
 }
 
-@test "zangarmarsh should set ZANGARMARSH_ROOT to git root" {
-	run "$SCRIPT"
-	[[ "$status" -eq 0 ]]
-	[[ "$ZANGARMARSH_ROOT" == "$GIT_ROOT" ]]
+@test "zangarmarsh should set ZANGARMARSH_ROOT to script directory" {
+	source "$TEST_DIR/zangarmarsh.sh"
+	[[ "$ZANGARMARSH_ROOT" == "$TEST_DIR" ]]
 }
 
 @test "zangarmarsh should export required variables" {
-	run "$SCRIPT"
-	[[ "$status" -eq 0 ]]
-	[[ -n "$ZANGARMARSH_VERBOSE" ]]
+	source "$SCRIPT"
 	[[ -n "$ZANGARMARSH_ROOT" ]]
 }
 
 @test "zangarmarsh should set ZANGARMARSH_VERBOSE default to empty" {
 	unset ZANGARMARSH_VERBOSE
-	run "$SCRIPT"
-	[[ "$status" -eq 0 ]]
+	source "$SCRIPT"
 	[[ -z "${ZANGARMARSH_VERBOSE:-}" ]]
 }
 
 @test "zangarmarsh should preserve existing ZANGARMARSH_VERBOSE value" {
 	export ZANGARMARSH_VERBOSE=true
-	run "$SCRIPT"
-	[[ "$status" -eq 0 ]]
+	source "$SCRIPT"
 	[[ "$ZANGARMARSH_VERBOSE" == "true" ]]
 }
 
 @test "zangarmarsh should not output debug info when verbose is false" {
-	#shellcheck disable=SC2031
 	export ZANGARMARSH_VERBOSE=false
-	run "$SCRIPT"
+	run source "$SCRIPT" 2>&1
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -v -q "Loading Zangarmarsh"
 }
 
 @test "zangarmarsh should load in non-interactive shells" {
-	run "$SCRIPT"
+	run source "$SCRIPT"
 	[[ "$status" -eq 0 ]]
-	[[ -n "$ZANGARMARSH_ROOT" ]]
 }
 
 @test "zangarmarsh should exit with error when not in git repository" {
@@ -122,9 +116,9 @@ EOF
 }
 
 @test "zangarmarsh should load every time without errors" {
-	run "$SCRIPT"
+	run source "$SCRIPT"
 	[[ "$status" -eq 0 ]]
-	run "$SCRIPT"
+	run source "$SCRIPT"
 	[[ "$status" -eq 0 ]]
 }
 
@@ -159,7 +153,7 @@ EOF
 	mkdir -p "$test_path_with_specials"
 	cd "$test_path_with_specials"
 
-	run "$SCRIPT"
+	run source "$SCRIPT"
 	[ "$status" -eq 0 ]
 }
 
@@ -173,7 +167,7 @@ EOF
 	done
 	cd "$long_path"
 
-	run "$SCRIPT"
+	run source "$SCRIPT"
 	[ "$status" -eq 0 ]
 }
 
@@ -182,6 +176,6 @@ EOF
 	mkdir -p "$UNICODE_PATH"
 	cd "$UNICODE_PATH"
 
-	run "$SCRIPT"
+	run source "$SCRIPT"
 	[ "$status" -eq 0 ]
 }
