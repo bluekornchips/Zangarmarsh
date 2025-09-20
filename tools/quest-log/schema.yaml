@@ -11,6 +11,9 @@
     - 'core'
     - 'standards'
     - 'always'
+    - 'development'
+    - 'coding'
+    - 'practice'
   cursor:
     alwaysApply: true
 
@@ -30,6 +33,9 @@
     - 'doc'
     - 'documentation'
     - 'summary'
+    - 'pr'
+    - 'pull request'
+    - 'github'
   cursor:
     alwaysApply: false
 
@@ -60,6 +66,9 @@
     - 'sh'
     - 'script'
     - 'bats'
+    - 'command'
+    - 'terminal'
+    - 'cli'
   cursor:
     alwaysApply: false
 
@@ -87,5 +96,9 @@
     - 'wow'
     - 'test data'
     - 'mock'
+    - 'game'
+    - 'character'
+    - 'location'
+    - 'quest'
   cursor:
     alwaysApply: false

@@ -16,7 +16,7 @@ ZANGARMARSH_ROOT="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 export ZANGARMARSH_ROOT
 
 # Common configuration files to load
-readonly COMMON_FILES=(
+COMMON_FILES=(
 	"aliases.sh"
 	"functions.sh"
 	"ssh.sh"

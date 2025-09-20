@@ -6,8 +6,8 @@
 
 - Debug prefixes: "INFO", "WARNING", "ERROR", "DEBUG", "PASS", "FAIL", "CRITICAL", "TRACE"
 - Ellipses: "...", "—", "-", " - "
-- Emojis or non-ASCII characters
-- Double asterisks for bolding
+- Emojis or non-ASCII characters, except in rule definitions
+- Double asterisks for bolding, except in rule definitions
 
 ### Git Commands
 

@@ -10,27 +10,118 @@
 
 ### Always Use
 
-- Heredocs for multi-line strings
+- Heredocs for multi-line stringsqy
 - Bats for testing
 - `#!/usr/bin/env bash` for executables
 - Error messages to STDERR: `echo "Error" >&2`
 
-## File Structure
+## File Structure Example
 
 ```bash
 #!/usr/bin/env bash
 #
 # Description of script purpose
+#
+set -euo pipefail
+
+usage() {
+  cat <<EOF
+Usage: $(basename "$0") [OPTIONS]
+
+Description of script purpose
+
+OPTIONS:
+  -h, --help  Show this help message
+
+ENVIRONMENT VARIABLES (If any)
+  ALICE=bob           # Environment variable name and description
+
+EOF
+}
+
+# functions
+# ...
+#
+
+# {Description of the function}
+#
+# Inputs:
+# - $1, {argument name}, {description}
+#
+# Side Effects: (If any)
+# - {side effect}, {description}
+function_name() {
+  return 0 # Always return explicit status codes
+}
+
+# Main entry point, can be named anything but "main" is fallback default
+main(){
+  echo -e "\n===\Entry: ${BASH_SOURCE[0]:-$0}\n==="
+  # Check required input args, if needed
+  # Check environment variables, if needed
+  # Check external dependencies, if needed
+  # Continue with script logic and calls to other functions, if needed
+  # ...
+  # Return success or error
+  echo -e "\n===\Exit: ${BASH_SOURCE[0]:-$0}\n==="
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  # Set input args, if needed
+  # If input args are in fact needed, always handle -h | --help and unknown options at a bare minimum
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      -h | --help)
+        usage
+        exit 0
+      ;;
+      *)
+        echo "Unknown option '$1'" >&2
+        echo "Use '$(basename "$0") --help' for usage information" >&2
+        exit 1
+      ;;
+    esac
+  done
+
+	main "$@"
+	exit $?
+fi
+
 ```
 
-### Function Comments
+### Functions
 
 Any function that is not both obvious and short must have a function header comment. Exceptions are made for test scripts and test functions; these do not need comments unless already added by the user.
 
 ```bash
-# Function description
-function cleanup() {
-  # Implementation comment
+# A helper function to print text
+#
+# Inputs:
+# - $1, text, text to print
+print_text() {
+  local text="$1"
+  if [[ -z "$text" ]]; then
+    echo "Text is required" >&2
+    return 1
+  fi
+
+  echo "Input text: $text"
+
+
+  return 0
+}
+
+# Sets the global variable for NAME
+#
+# Inputs:
+# - $1, name, text to set for NAME
+#
+# Side Effects:
+# - NAME, sets the global name variable
+set_global_name() {
+  local name="$1"
+  NAME="$name"
+  export NAME
 }
 ```
 
@@ -102,11 +193,62 @@ fi
 
 ## Testing
 
+- Always prefix the test with the function name for direct function testing.
+- Use proper spacing between any changes or inputs before the run command to show what is being tested, changed, or mocked.
+- Never execute actual changes with tests unless explicitly called for as defined with `@test 'LIVE:: test description' {`
+- Use `setup_file` to set up the test environment and source the script for external dependencies.
+- Use `setup` to set up the test environment and source the script for external dependencies.
+
 ```bash
-# Bats example
-@test "script handles unknown options" {
+#!/usr/bin/env bats
+#
+# Test file for script.sh
+#
+GIT_ROOT="$(git rev-parse --show-toplevel || echo "")"
+SCRIPT="$GIT_ROOT/path/to/script.sh"
+[[ ! -f "$SCRIPT" ]] && echo "Script not found: $SCRIPT" >&2 && exit 1
+
+setup_file(){
+  # If needed check access to API's, databases, etc.
+
+  return 0
+}
+
+setup(){
+  # Source the script
+  #shellcheck disable=SC1091
+  source "$SCRIPT"
+
+  # Define variables
+  VAR_A="test"
+
+  # Export variables, if needed
+  export VAR_A
+
+  return 0
+}
+
+########################################################
+# Mocks
+########################################################
+mock_functionality(){
+  #shellcheck disable=SC2091
+  function_name(){
+    echo "function_name mocked"
+    return 0
+  }
+
+  export -f function_name
+}
+
+########################################################
+# function name
+########################################################
+@test "function_name::script handles unknown options" {
+  local var="test"
+
   run bash "$HOME/scripts/bin/script.sh"
-  [ "$status" -eq 1 ]
+  [[ "$status" -eq 1 ]]
   echo "$output" | grep -q "Unknown option"
 }
 ```
@@ -119,3 +261,5 @@ fi
 - Use process substitution for pipes to while
 - Use explicit paths for wildcards: `rm -v ./*`
 - Use builtins over external commands when possible
+- Always `return` explicit status codes.
+- Never use `exit` in functions, only call outside of function definitions.

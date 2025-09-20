@@ -22,32 +22,6 @@ EXAMPLES:
 EOF
 }
 
-SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
-SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
-QUEST_LOG_ROOT="$SCRIPT_DIR"
-QUESTMARKER_FILE="$QUEST_LOG_ROOT/QUEST_MARKER.txt"
-
-QUEST_LOG_MARKER=$(cat "$QUESTMARKER_FILE")
-
-readonly CLAUDE_FILE="CLAUDE.md"
-readonly QUEST_DIR="$SCRIPT_DIR/quests"
-readonly CURSOR_RULES_DIR=".cursor/rules"
-
-# Environment variables with defaults
-SCHEMA_FILE=${SCHEMA_FILE:-"$SCRIPT_DIR/schema.yaml"}
-BACKUP_ENABLED=${BACKUP_ENABLED:-false}
-TARGET_DIR=${TARGET_DIR:-$PWD}
-
-if [[ ! -d "$TARGET_DIR" ]]; then
-	echo "Target directory is required" >&2
-	exit 1
-fi
-
-if [[ ! -r "$SCHEMA_FILE" ]]; then
-	echo "Schema file not found: $SCHEMA_FILE" >&2
-	exit 1
-fi
-
 # Create rules for cursor
 create_cursor_rule_file() {
 	local name="$1"
@@ -102,15 +76,15 @@ EOF
 	local last_marker_index
 	last_marker_index=$(grep -n "$QUEST_LOG_MARKER" "$CLAUDE_FILE" | cut -d: -f1 | tail -n1 || true)
 
-    echo "Updating $CLAUDE_FILE."
-    tmp_file=$(mktemp)
-    sed "${first_marker_index},${last_marker_index}d" "$CLAUDE_FILE" >"$tmp_file"
-    {
-        echo "$QUEST_LOG_MARKER"
-        cat "$claude_temp_file"
-        echo "$QUEST_LOG_MARKER"
-    } >>"$tmp_file"
-    mv "$tmp_file" "$CLAUDE_FILE"
+	echo "Updating $CLAUDE_FILE."
+	tmp_file=$(mktemp)
+	sed "${first_marker_index},${last_marker_index}d" "$CLAUDE_FILE" >"$tmp_file"
+	{
+		echo "$QUEST_LOG_MARKER"
+		cat "$claude_temp_file"
+		echo "$QUEST_LOG_MARKER"
+	} >>"$tmp_file"
+	mv "$tmp_file" "$CLAUDE_FILE"
 }
 
 # Create rules
@@ -170,6 +144,8 @@ EOF
 }
 
 main() {
+	echo -e "\n=====\nRunning ${BASH_SOURCE[0]:-$0}\n====="
+
 	# Check for yq availability
 	if ! command -v yq &>/dev/null; then
 		echo "yq is required but not installed." >&2
@@ -179,6 +155,32 @@ main() {
 	# Check for jq availability
 	if ! command -v jq &>/dev/null; then
 		echo "jq is required but not installed." >&2
+		exit 1
+	fi
+
+	SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
+	SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+	QUEST_LOG_ROOT="$SCRIPT_DIR"
+	QUESTMARKER_FILE="$QUEST_LOG_ROOT/QUEST_MARKER.txt"
+
+	QUEST_LOG_MARKER=$(cat "$QUESTMARKER_FILE")
+
+	readonly CLAUDE_FILE="CLAUDE.md"
+	readonly QUEST_DIR="$SCRIPT_DIR/quests"
+	readonly CURSOR_RULES_DIR=".cursor/rules"
+
+	# Environment variables with defaults
+	SCHEMA_FILE=${SCHEMA_FILE:-"$SCRIPT_DIR/schema.yaml"}
+	BACKUP_ENABLED=${BACKUP_ENABLED:-false}
+	TARGET_DIR=${TARGET_DIR:-$PWD}
+
+	if [[ ! -d "$TARGET_DIR" ]]; then
+		echo "Target directory is required" >&2
+		exit 1
+	fi
+
+	if [[ ! -r "$SCHEMA_FILE" ]]; then
+		echo "Schema file not found: $SCHEMA_FILE" >&2
 		exit 1
 	fi
 
@@ -205,8 +207,12 @@ main() {
 	done
 
 	fill_quest_log "$TARGET_DIR"
+
+	echo -e "=====\nFinished ${BASH_SOURCE[0]:-$0}\n====="
+
 }
 
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
 	main "$@"
+	exit $?
 fi
