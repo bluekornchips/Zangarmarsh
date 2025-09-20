@@ -21,7 +21,7 @@
 - [ ] Step 2
 ```
 
-**Notes:**
+Notes:
 
 - Use backticks for code, file paths, and commands
 - Always describe the why, not just the what
@@ -30,16 +30,16 @@
 ### Jira Ticket
 
 ```markdown
-**Summary:** [Concise objective]
+Summary: [Concise objective]
 
-**Description:** [Context and background]
+Description: [Context and background]
 
-**Acceptance Criteria:**
+Acceptance Criteria:
 
 - [ ] Requirement 1
 - [ ] Requirement 2
 
-**Steps:**
+Steps:
 
 1. Step 1
 2. Step 2

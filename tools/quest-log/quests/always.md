@@ -11,13 +11,13 @@
 
 ### Git Commands
 
-**Never use state-changing commands:**
+Never use state-changing commands:
 
 ```bash
 git add, git commit, git push, git merge, git pull, git fetch, git reset, git revert
 ```
 
-**Always allow read-only commands:**
+Always allow read-only commands:
 
 ```bash
 git status, git log, git diff, git branch
@@ -27,17 +27,11 @@ git status, git log, git diff, git branch
 
 ### Python
 
-- Use specific exceptions: `except ValueError as e:` not `except Exception as e:`
-- Use environment variables: `os.getenv("API_KEY")` not hardcoded secrets
-- Use absolute imports: `from myproject.utils import parse_data`
-- Test coverage ≥80%, type safety with mypy, security scan with bandit
+Follow the instructions in the [Python Standards](.cursor/rules/python.mdc) file.
 
 ### Shell
 
-- Use heredocs for multi-line strings (>160 chars or 2+ lines)
-- Use Bats for testing
-- All executables must use `#!/usr/bin/env bash`
-- Error messages to STDERR: `echo "Error" >&2`
+Follow the instructions in the [Shell Standards](.cursor/rules/shell.mdc) file.
 
 ## Documentation
 

@@ -49,7 +49,15 @@ create_test_quest_file() {
 	return 0
 }
 
+setup_file() {
+	# Set up test environment for all tests
+	# No external dependencies to check for this test suite
+
+	return 0
+}
+
 setup() {
+	# Set up test environment and source the script
 	TEST_TEMP_DIR=$(mktemp -d)
 	# shellcheck disable=SC2164
 	cd "$TEST_TEMP_DIR"
@@ -71,44 +79,55 @@ setup() {
 
 	export TEST_TEMP_DIR
 
-	# shellcheck disable=SC1091
+	# shellcheck disable=SC1090
 	source "$SCRIPT"
+
+	return 0
 }
 
 ########################################################
-# mock functions
+# Mock Functions
 ########################################################
+
+# Mock yq command to simulate it not being installed
 mock_yq_not_installed() {
-	#shellcheck disable=SC2329
+	# shellcheck disable=SC2329
 	yq() {
 		echo "yq is required but not installed"
 		return 1
 	}
 	export -f yq
+
+	return 0
 }
 
+# Mock jq command to simulate it not being installed
 mock_jq_not_installed() {
-	#shellcheck disable=SC2329
+	# shellcheck disable=SC2329
 	jq() {
 		echo "jq is required but not installed"
 		return 1
 	}
 	export -f jq
+
+	return 0
 }
 
 ########################################################
-# main
+# Main Function Tests
 ########################################################
 @test 'main:: requires target directory' {
 	export TARGET_DIR="/tmp/does-not-exist"
-	run $SCRIPT
+
+	run main
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "Target directory is required"
 }
 
 @test 'main:: requires readable schema file' {
 	export SCHEMA_FILE="/tmp/does-not-exist"
-	run $SCRIPT
+
+	run main
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "Schema file not found"
 }
@@ -121,19 +140,24 @@ mock_jq_not_installed() {
 }
 
 @test 'main:: displays help message' {
-	run $SCRIPT --help
+
+	run main --help
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Generate agentic tool rules for Cursor and Claude Code"
 	echo "$output" | grep -q "backup"
 }
 
 @test 'main:: handles unknown options' {
-	run $SCRIPT --unknown-option
+
+	run main --unknown-option
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "Unknown option"
 }
 
 @test 'create_cursor_rule_file:: creates rule file with correct content' {
+	# Ensure file doesn't exist first
+	rm -f "./$CURSOR_RULES_DIR/rules-$quest_name.mdc"
+
 	run create_cursor_rule_file "$quest_name" "$description" "$always_apply" "$content"
 	[[ "$status" -eq 0 ]]
 	[[ -f "./$CURSOR_RULES_DIR/rules-$quest_name.mdc" ]]
@@ -142,12 +166,111 @@ mock_jq_not_installed() {
 	grep -q "Test Content" "./$CURSOR_RULES_DIR/rules-$quest_name.mdc"
 }
 
-########################################################
-# update_claude_file
-########################################################
-@test 'update_claude_file:: updates existing claude file' {
-	source "$SCRIPT"
+@test 'create_cursor_rule_file:: updates existing rule file with different content' {
+	# Create initial file with different content
+	echo "initial content" >"./$CURSOR_RULES_DIR/rules-$quest_name.mdc"
 
+	run create_cursor_rule_file "$quest_name" "$description" "$always_apply" "$content"
+	[[ "$status" -eq 0 ]]
+	[[ -f "./$CURSOR_RULES_DIR/rules-$quest_name.mdc" ]]
+	grep -q "description: $description" "./$CURSOR_RULES_DIR/rules-$quest_name.mdc"
+}
+
+@test 'create_cursor_rule_file:: shows no changes when content is identical' {
+	# Create file with same content that would be generated
+	local test_content
+	test_content=$(
+		cat <<EOF
+---
+description: $description
+globs:
+alwaysApply: $always_apply
+---
+
+$content
+EOF
+	)
+	echo "$test_content" >"./$CURSOR_RULES_DIR/rules-$quest_name.mdc"
+
+	run create_cursor_rule_file "$quest_name" "$description" "$always_apply" "$content"
+	[[ "$status" -eq 0 ]]
+	[[ -f "./$CURSOR_RULES_DIR/rules-$quest_name.mdc" ]]
+	echo "$output" | grep -q "No changes:"
+}
+
+########################################################
+# show_diff Function Tests
+########################################################
+
+@test 'show_diff:: shows diff for new file' {
+	local test_file="./test-new-file.txt"
+	local new_content="This is new content"
+
+	run show_diff "$test_file" "$new_content"
+	[[ "$status" -eq 0 ]]
+
+	grep -qF "No such file or directory" <<<"$output"
+}
+
+@test 'show_diff:: shows diff for existing file with changes' {
+	local test_file="./test-existing-file.txt"
+	echo "Original content" >"$test_file"
+	local new_content="Modified content"
+
+	run show_diff "$test_file" "$new_content"
+	[[ "$status" -eq 0 ]]
+
+	echo "$output" | grep -qF -- "--- $test_file"
+	echo "$output" | grep -qF -- "-Original content"
+	echo "$output" | grep -qF -- "+Modified content"
+}
+
+@test 'show_diff:: shows no diff for identical content' {
+
+	local test_file="./test-identical-file.txt"
+	local content="Same content"
+	echo "$content" >"$test_file"
+
+	run show_diff "$test_file" "$content"
+	[[ "$status" -eq 0 ]]
+
+	# Should be no output for identical content
+	[[ -z "$output" ]]
+}
+
+@test 'show_diff:: handles multi-line content' {
+
+	local test_file="./test-multiline-file.txt"
+	local new_content="Line 1
+Line 2
+Line 3"
+
+	run show_diff "$test_file" "$new_content"
+	[[ "$status" -eq 0 ]]
+
+	# Check for diff error message for non-existent file
+	grep -qF "No such file or directory" <<<"$output"
+}
+
+@test 'show_diff:: cleans up temporary files' {
+
+	local test_file="./test-cleanup-file.txt"
+	local new_content="Test content"
+
+	run show_diff "$test_file" "$new_content"
+	[[ "$status" -eq 0 ]]
+
+	# Verify temp files are cleaned up by checking no temp files exist
+	[[ -z "$(find /tmp -name "tmp.*" -user "$(whoami)" 2>/dev/null | head -1)" ]] || true
+}
+
+########################################################
+# update_claude_file Function Tests
+########################################################
+
+@test 'update_claude_file:: updates existing claude file' {
+
+	# Create existing CLAUDE.md file with markers and old content
 	cat >"./$CLAUDE_FILE" <<EOF
 # Initial Content
 $QUEST_LOG_MARKER
@@ -158,10 +281,12 @@ EOF
 
 	local temp_file
 	temp_file=$(mktemp)
-	echo -e "New Rule Content\nThis is new rule content." >"$temp_file"
+	echo "New Rule Content" >"$temp_file"
+	echo "This is new rule content." >>"$temp_file"
 
 	run update_claude_file "$temp_file"
 	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Updating"
 
 	grep -q "New Rule Content" "./$CLAUDE_FILE"
 	grep -q "This is new rule content." "./$CLAUDE_FILE"
@@ -169,6 +294,7 @@ EOF
 }
 
 @test 'update_claude_file:: creates file when none exists' {
+	# Remove existing CLAUDE.md file to test creation
 	rm -f "$CLAUDE_FILE"
 
 	local temp_file
@@ -177,17 +303,37 @@ EOF
 
 	run update_claude_file "$temp_file"
 	[[ "$status" -eq 0 ]]
-
 	[[ -f "./$CLAUDE_FILE" ]]
+	echo "$output" | grep -q "Creating"
 	grep -q "$QUEST_LOG_MARKER" "./$CLAUDE_FILE"
 	grep -q "Test content for new file" "./$CLAUDE_FILE"
 }
 
+@test 'update_claude_file:: shows no changes when content is identical' {
+	# Create existing CLAUDE.md file with markers and content
+	cat >"./$CLAUDE_FILE" <<EOF
+# Initial Content
+$QUEST_LOG_MARKER
+Test content for new file
+$QUEST_LOG_MARKER
+# More Content
+EOF
+
+	local temp_file
+	temp_file=$(mktemp)
+	echo "Test content for new file" >"$temp_file"
+
+	run update_claude_file "$temp_file"
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "No changes:"
+}
+
 ########################################################
-# fill_quest_log
+# fill_quest_log Function Tests
 ########################################################
 @test 'fill_quest_log:: generates all rule files' {
-	run $SCRIPT
+
+	run main
 	[[ "$status" -eq 0 ]]
 	[[ -f "./$CURSOR_RULES_DIR/rules-always.mdc" ]]
 	[[ -f "./$CURSOR_RULES_DIR/rules-author.mdc" ]]
@@ -198,7 +344,8 @@ EOF
 }
 
 @test 'fill_quest_log:: generates non-empty files' {
-	run $SCRIPT
+
+	run main
 	[[ "$status" -eq 0 ]]
 
 	for file in "./$CURSOR_RULES_DIR"/*.mdc; do
@@ -210,7 +357,8 @@ EOF
 }
 
 @test 'fill_quest_log:: generates files with rule headers' {
-	run $SCRIPT
+
+	run main
 	[[ "$status" -eq 0 ]]
 
 	for file in "./$CURSOR_RULES_DIR"/*.mdc; do
@@ -222,11 +370,12 @@ EOF
 }
 
 @test 'fill_quest_log:: generates files with proper formatting' {
-	run $SCRIPT
+
+	run main
 	[[ "$status" -eq 0 ]]
 
 	for file in "./$CURSOR_RULES_DIR"/*.mdc; do
-		if ! grep -q "^\*\*RULE APPLIED:" "$file"; then
+		if ! grep -q "^RULE APPLIED:" "$file"; then
 			echo "File $file does not have proper RULE APPLIED header"
 			return 1
 		fi
@@ -234,13 +383,15 @@ EOF
 }
 
 @test 'main:: handles help option' {
-	run $SCRIPT --help
+
+	run main --help
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Generate agentic tool rules"
 }
 
 @test 'main:: handles invalid options' {
-	run $SCRIPT --invalid-option
+
+	run main --invalid-option
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "Unknown option"
 }

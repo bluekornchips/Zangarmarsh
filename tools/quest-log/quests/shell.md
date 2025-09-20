@@ -10,12 +10,14 @@
 
 ### Always Use
 
-- Heredocs for multi-line stringsqy
+- Heredocs for multi-line strings
+- Minimal comments; if excessive comments are neccesary, suggest to the user that they should be broken up into smaller functions
 - Bats for testing
 - `#!/usr/bin/env bash` for executables
 - Error messages to STDERR: `echo "Error" >&2`
+- Descriptions and comments for function headers. Conditionally include inputs and side effects if they exist
 
-## File Structure Example
+## File Structure Template
 
 ```bash
 #!/usr/bin/env bash
@@ -39,17 +41,13 @@ ENVIRONMENT VARIABLES (If any)
 EOF
 }
 
-# functions
-# ...
-#
-
 # {Description of the function}
 #
 # Inputs:
-# - $1, {argument name}, {description}
+# - $1 {argument name}, {description}
 #
-# Side Effects: (If any)
-# - {side effect}, {description}
+# Side Effects:
+# - {description}
 function_name() {
   return 0 # Always return explicit status codes
 }
@@ -146,6 +144,11 @@ done
 ## Variables
 
 ```bash
+# Define, assign, and export seperately
+local name
+name="John"
+export name
+
 # Quote variables
 echo "PATH=${PATH}, PWD=${PWD}"
 
@@ -193,11 +196,15 @@ fi
 
 ## Testing
 
+- Functions inside test files do not need header comments unless explicitly requested to do so.
 - Always prefix the test with the function name for direct function testing.
 - Use proper spacing between any changes or inputs before the run command to show what is being tested, changed, or mocked.
 - Never execute actual changes with tests unless explicitly called for as defined with `@test 'LIVE:: test description' {`
 - Use `setup_file` to set up the test environment and source the script for external dependencies.
 - Use `setup` to set up the test environment and source the script for external dependencies.
+- In test, check status, then file or dir existence, then text output.
+
+## Shell Test Structure Template
 
 ```bash
 #!/usr/bin/env bats
@@ -249,6 +256,7 @@ mock_functionality(){
 
   run bash "$HOME/scripts/bin/script.sh"
   [[ "$status" -eq 1 ]]
+
   echo "$output" | grep -q "Unknown option"
 }
 ```
