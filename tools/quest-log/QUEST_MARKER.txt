@@ -1,1 +1,1 @@
-###QUEST_LOG_MARKER###
+###!QUEST_LOG!###

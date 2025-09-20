@@ -1,14 +1,14 @@
 # Quest Log
 
-Generate AI assistant rules for Cursor and Claude Code.
+Generate AI assistant rules for Cursor and Claude Code based on project-specific rule templates.
 
 ## Overview
 
-The quest-log tool analyzes your project structure and generates:
+The quest-log tool processes rule templates defined in `schema.yaml` and generates:
 
-- CLAUDE.md: Core development standards for Claude Code
-- Cursor Rules: Individual rule files for Cursor IDE
-- Backup System: Safe backup of existing rules before overwriting
+- CLAUDE.md: Core development standards for Claude Code wrapped in quest log markers
+- Cursor Rules: Individual rule files in `.cursor/rules/` directory for Cursor IDE
+- Rule Processing: Converts quest template files into AI assistant rule formats
 
 ## Install
 
@@ -23,120 +23,111 @@ None required.
 # Generate rules in specified directory
 ./tools/quest-log/quest-log.sh /path/to/project
 
-# Backup existing rules before generating new ones
-./tools/quest-log/quest-log.sh --backup
-
 # Show help
 ./tools/quest-log/quest-log.sh --help
 ```
 
 ## Configuration
 
-The tool uses a YAML schema file (`schema.yaml`) to define:
+The tool uses a YAML schema file (`schema.yaml`) to define rule templates including:
 
-- Source Files: Template files for different rule types
-- Output Formats: How rules should be generated
-- File Locations: Where generated files should be placed
+- Rule Names: Unique identifiers for each rule type
+- Source Files: Template files containing rule content
+- Keywords: Trigger words for rule activation
+- Icons: Visual identifiers for each rule type
+- Cursor Settings: Whether rules should always apply
 
 ### Environment Variables
 
-- `BACKUP_ENABLED`: Enable backup mode (default: false)
 - `TARGET_DIR`: Directory to generate rules in (default: current directory)
+- `SCHEMA_FILE`: Path to schema file (default: ./schema.yaml)
 
 ## Generated Files
 
 ### CLAUDE.md
 
-Contains core development standards wrapped in markers:
+Contains AI assistant rules wrapped in quest log markers:
 
 ```markdown
-##_USER_RULES_##
+###!QUEST_LOG!###
 
-# Enhanced Development Standards
+# Core Development Rules
 
-... ##_USER_RULES_##
+... ###!QUEST_LOG!###
 ```
+
+The file is created if it doesn't exist, or updated between existing markers if present.
 
 ### Cursor Rules (.cursor/rules/)
 
-Individual rule files for Cursor IDE:
+Individual rule files for Cursor IDE based on quest templates:
 
-- `rules-vital.mdc`: Core development standards
-- `rules-author.mdc`: Documentation guidelines
-- `rules-python-styles.mdc`: Python coding standards
-- `rules-shell-styles.mdc`: Shell scripting standards
-- `rules-lotr-data.mdc`: Lord of the Rings test data
-- `rules-wow-data.mdc`: World of Warcraft test data
+- `rules-always.mdc`: Core development standards that always apply
+- `rules-author.mdc`: Documentation guidelines for authoring content
+- `rules-python.mdc`: Python coding standards and best practices
+- `rules-shell.mdc`: Shell scripting standards and guidelines
+- `rules-lotr.mdc`: Lord of the Rings reference data rules
+- `rules-warcraft.mdc`: World of Warcraft reference data rules
+
+Each rule file includes the rule content, trigger keywords, and Cursor-specific metadata.
 
 ## Rule Types
 
-### Core Standards (vital.mdc)
+### Core Standards (rules-always.mdc)
 
-Essential development practices that apply to all languages:
+Essential development practices that apply to every request:
 
-- Comment and logging standards
-- Git command restrictions
-- Documentation requirements
-- Code quality gates
+- Universal development standards and restrictions
+- Git command usage guidelines
+- Code quality and documentation requirements
+- Best practices enforcement
 
 ### Language-Specific Standards
 
-Python Standards (python-styles.mdc)
+Python Standards (rules-python.mdc)
 
-- Type hints and error handling
-- Testing with pytest and coverage
-- Security scanning with bandit
-- Async/await best practices
+Applied to Python code with keywords: python, python3, py, pytest, pycharm, venv, virtualenv
 
-Shell Standards (shell-styles.mdc)
+Shell Standards (rules-shell.mdc)
 
-- Bash scripting best practices
-- ShellCheck compliance
-- Function and variable naming
-- Error handling patterns
+Applied to shell scripts with keywords: shell, bash, zsh, sh, script, bats, command, terminal, cli
 
-### Documentation Standards (author.mdc)
+### Documentation Standards (rules-author.mdc)
 
-Guidelines for generating high-quality documentation:
+Applied to documentation tasks with keywords: author, authoring, README, JIRA, ticket, description, doc, documentation, summary, pr, pull request, github
 
-- PR description templates
-- README.md structure
-- API documentation format
-- Technical specification templates
+### Reference Data Standards
 
-### Test Data Standards
+Lord of the Rings Data (rules-lotr.mdc)
 
-Lord of the Rings Data (lotr-data.mdc)
+Applied to Lord of the Rings reference data with keywords: lotr, lord of the rings, middle earth, test data, mock
 
-- Character names for mock data
-- Location names for environments
-- Quotes for test content
+World of Warcraft Data (rules-warcraft.mdc)
 
-World of Warcraft Data (wow-data.mdc)
-
-- Faction-based test data
-- Azeroth location names
-- Game-specific terminology
+Applied to World of Warcraft reference data with keywords: warcraft, world of warcraft, wow, test data, mock, game, character, location, quest
 
 ## Integration
 
 ### With Cursor IDE
 
-1. Generate rules in your project directory
-2. Cursor will automatically detect and apply the rules
-3. Rules are applied based on file patterns and content
+1. Generate rules in your project directory using `./tools/quest-log/quest-log.sh`
+2. Cursor automatically detects rule files in `.cursor/rules/` directory
+3. Rules are applied based on keywords and content patterns defined in the schema
+4. Each rule file contains metadata specifying when it should be triggered
 
 ### With Claude Code
 
-1. Generate rules to create CLAUDE.md
-2. Claude Code will use the wrapped rules section
-3. Rules are applied globally to the project
+1. Generate rules to create or update `CLAUDE.md` in the target directory
+2. Claude Code recognizes the content wrapped between `###!QUEST_LOG!###` markers
+3. Rules are applied based on the keywords and content within the markers
+4. The tool can update existing CLAUDE.md files by replacing content between markers
 
 ## Requirements
 
-- yq: YAML processor for schema parsing
-- Bash: Shell environment for script execution
-- Standard Unix tools: grep, sed, awk, etc.
+- yq: YAML processor for parsing the schema file
+- jq: JSON processor for manipulating quest data
+- Bash: Shell environment for script execution (version 4.0+)
+- Standard Unix tools: grep, sed, cat, mktemp, mkdir
 
 ## Testing
 
@@ -146,14 +137,18 @@ The tool includes comprehensive Bats tests:
 # Run all tests
 bats tools/quest-log/tests/quest-log-tests.sh
 
-# Run specific test
-bats tools/quest-log/tests/quest-log-tests.sh -f "test name"
+# Run specific test function
+bats tools/quest-log/tests/quest-log-tests.sh -f "function_name"
+
+# Run tests matching pattern
+bats tools/quest-log/tests/quest-log-tests.sh -f "pattern"
 ```
 
 Tests cover:
 
-- Schema validation
-- File generation
-- Backup functionality
-- Error handling
-- Template processing
+- Schema parsing and validation
+- Rule file generation for all quest types
+- CLAUDE.md file creation and updating
+- Error handling for missing dependencies
+- Command-line argument processing
+- File system operations
