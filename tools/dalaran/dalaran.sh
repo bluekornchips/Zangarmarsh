@@ -35,36 +35,6 @@ history with the historical top commands.
 EOF
 }
 
-# Create backup of current history file
-#
-# Inputs:
-# - $1, source_file, path to the source history file
-# - $2, backup_file, path to the backup file to create
-#
-# Side Effects:
-# - Creates a backup file of the current history
-# - Returns error code if backup fails
-create_backup() {
-	local source_file="$1"
-	local backup_file="$2"
-
-	[[ -z "${source_file}" ]] && echo "Source file cannot be empty" >&2 && return 1
-	[[ ! -f "${source_file}" ]] && echo "Source file not found: ${source_file}" >&2 && return 1
-	[[ -z "${backup_file}" ]] && echo "Backup file cannot be empty" >&2 && return 1
-	[[ ! -f "${backup_file}" ]] && echo "Backup file not found: ${backup_file}" >&2 && return 1
-
-	[[ "${DRY_RUN}" == "true" ]] && return 0
-
-	if ! cp "$source_file" "$backup_file"; then
-		echo "Failed to copy $source_file to $backup_file" >&2
-		return 1
-	fi
-
-	local backup_count
-	backup_count=$(wc -l <"${backup_file}")
-	echo "Backed up ${backup_count} commands to: $(basename "${backup_file}")"
-}
-
 # Extract top commands from history file
 #
 # Inputs:
@@ -362,7 +332,6 @@ EOF
 main() {
 	echo -e "\n===\Entry: ${BASH_SOURCE[0]:-$0}\n==="
 
-	
 	while [[ $# -gt 0 ]]; do
 		case $1 in
 		-h | --help)
@@ -395,7 +364,6 @@ main() {
 		exit $?
 	fi
 
-
 	# Handle environment variables with defaults
 	[[ -z "${DRY_RUN:-}" ]] && DRY_RUN="false"
 
@@ -412,7 +380,6 @@ main() {
 	local top_n_commands
 	local current_history
 	local timestamp
-	local backup_file
 	local top_commands_file
 	local dalaran_library_history
 	local working_history
@@ -455,10 +422,15 @@ EOF
 		fi
 	fi
 
-	# Backup current history
-	if ! create_backup "${current_history}" "${backup_file}"; then
-		echo "Failed to create backup" >&2
-		return 1
+	# Create backup of current history
+	if [[ "${DRY_RUN}" != "true" ]]; then
+		if ! cp "${current_history}" "${backup_file}"; then
+			echo "Failed to backup ${current_history} to ${backup_file}" >&2
+			return 1
+		fi
+		local backup_count
+		backup_count=$(wc -l <"${backup_file}")
+		echo "Backed up ${backup_count} commands to: $(basename "${backup_file}")"
 	fi
 
 	if ! extract_top_commands "${current_history}" "${top_commands_file}" "${top_n_commands}"; then
