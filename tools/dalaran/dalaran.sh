@@ -390,12 +390,6 @@ main() {
 	archive_spellbook_file="${archive_dir}/spellbook.txt"
 	silenced_file="${dalaran_dir}/silenced.txt"
 
-	ARCANE_LINGUIST_SCRIPT="$(dirname "${BASH_SOURCE[0]}")/arcane-linguist.sh"
-	if [[ ! -f "${ARCANE_LINGUIST_SCRIPT}" ]]; then
-		echo "Could not find arcane-linguist.sh script" >&2
-		return 1
-	fi
-
 	if [[ -n "${silenced_spells:-}" ]]; then
 		if ! update_silenced_spells "${silenced_file}" "${silenced_spells}"; then
 			echo "Failed to update silenced spells" >&2
@@ -439,7 +433,16 @@ EOF
 	return 0
 }
 
+ARCANE_LINGUIST_SCRIPT="$(dirname "${BASH_SOURCE[0]}")/arcane-linguist.sh"
+if [[ ! -f "${ARCANE_LINGUIST_SCRIPT}" ]]; then
+	echo "Could not find arcane-linguist.sh script" >&2
+	return 1
+fi
+
+export ARCANE_LINGUIST_SCRIPT
+
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+
 	main "$@"
 	exit $?
 fi

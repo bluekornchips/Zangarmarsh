@@ -973,7 +973,7 @@ EOF
 	HOME="$fake_home"
 	DRY_RUN=false
 
-	run env DRY_RUN=false "$SCRIPT" --silence="ls,pwd"
+	run "$SCRIPT" --silence="ls,pwd"
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Silenced spell: ls"
 	echo "$output" | grep -q "Silenced spell: pwd"
@@ -992,15 +992,24 @@ EOF
 	HOME="$fake_home"
 	DRY_RUN=false
 
-	run env DRY_RUN=false "$SCRIPT" --silence="kubectl get pods && grep \"test\" -A 5,docker ps | grep running"
+	complex_spells=(
+		"kubectl get pods && grep \"test\" -A 5"
+		"docker ps | grep running"
+		"SOME_VAR=\"test\" && \
+		export SOME_VAR && \
+		echo \"\$SOME_VAR\""
+	)
+
+	run "$SCRIPT" --silence="${complex_spells[*]}"
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Silenced spell:"
 
 	local silenced_file
 	silenced_file="${fake_home}/.dalaran/silenced.txt"
 	[[ -f "$silenced_file" ]]
-	grep -Fq 'kubectl get pods && grep "test" -A 5' "$silenced_file"
-	grep -Fq "docker ps | grep running" "$silenced_file"
+	for spell in "${complex_spells[@]}"; do
+		grep -Fq "$spell" "$silenced_file"
+	done
 }
 
 @test "main:: silenced option with empty value" {
@@ -1075,4 +1084,89 @@ EOF
 	run "$SCRIPT"
 	[[ "$status" -ne 0 ]]
 	echo "$output" | grep -q "History file not found"
+}
+
+########################################################
+# Real world live tests with actual history
+########################################################
+@test "LIVE:: extract_top_spells can process actual zsh history file" {
+	local history_file="/home/tristan/.zsh_history"
+
+	[[ ! -f "$history_file" ]] && skip "No zsh history file found"
+
+	DRY_RUN=false
+	local output_file
+	output_file=$(mktemp)
+
+	run extract_top_spells "$history_file" "$output_file" 100
+	[[ "$status" -eq 0 ]]
+	[[ -f "$output_file" ]]
+
+	local extracted_count
+	extracted_count=$(wc -l <"$output_file")
+	[[ "$extracted_count" -gt 0 ]]
+}
+
+@test "LIVE:: create_archive processes actual history successfully" {
+	local history_file="/home/tristan/.zsh_history"
+
+	[[ ! -f "$history_file" ]] && skip "No zsh history file found"
+
+	DRY_RUN=false
+	local temp_histfile
+	local archive_file
+	local spellbook_file
+	temp_histfile=$(mktemp)
+	archive_file="${DIR}/live_test/.zsh_history"
+	spellbook_file="${DIR}/live_test/spellbook.txt"
+
+	cp "$history_file" "$temp_histfile"
+	HISTFILE="$temp_histfile"
+
+	run create_archive "$archive_file" "$spellbook_file" 50
+	[[ "$status" -eq 0 ]]
+	[[ -f "$archive_file" ]]
+	[[ -f "$spellbook_file" ]]
+
+	local archive_count
+	local spellbook_count
+	archive_count=$(wc -l <"$archive_file")
+	spellbook_count=$(wc -l <"$spellbook_file")
+
+	[[ "$archive_count" -gt 0 ]]
+	[[ "$spellbook_count" -gt 0 ]]
+
+	rm -f "$temp_histfile"
+}
+
+@test "LIVE:: main full workflow with actual history" {
+	local history_file="/home/tristan/.zsh_history"
+
+	[[ ! -f "$history_file" ]] && skip "No zsh history file found"
+
+	local fake_home
+	fake_home=$(mktemp -d)
+	HOME="$fake_home"
+	DRY_RUN=false
+
+	local temp_histfile
+	temp_histfile=$(mktemp)
+	cp "$history_file" "$temp_histfile"
+	HISTFILE="$temp_histfile"
+
+	echo "Processing history file: $history_file" >&3
+	echo "Total commands in history file: $(wc -l <"$history_file")" >&3
+
+	run "$SCRIPT"
+	[[ "$status" -eq 0 ]]
+
+	local spellbook_file="${fake_home}/.dalaran/spellbook.txt"
+	[[ -f "$spellbook_file" ]]
+
+	local spellbook_count
+	spellbook_count=$(wc -l <"$spellbook_file")
+	[[ "$spellbook_count" -gt 0 ]]
+	echo "Total commands in spellbook file: $spellbook_count" >&3
+
+	rm -f "$temp_histfile"
 }

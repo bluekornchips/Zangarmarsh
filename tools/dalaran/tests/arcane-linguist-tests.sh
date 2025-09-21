@@ -61,24 +61,20 @@ SCRIPT="$GIT_ROOT/tools/dalaran/arcane-linguist.sh"
 
 	[[ ! -f "$history_file" ]] && skip "No zsh history file found"
 
-	{
-		echo -e "\nReading history file: $history_file"
-		echo "Total commands found in history file: $(wc -l <"$history_file")"
-	} >&0
+	echo "Reading history file: $history_file" >&3
+	echo "Total commands found in history file: $(wc -l <"$history_file")" >&3
 
 	failed_commands=0
 	while IFS= read -r line; do
 		run bash -c 'echo "$line" | '"$SCRIPT"
 		[[ "$status" -eq 0 ]]
 		if [[ "$status" -ne 0 ]]; then
-			((failed_commands++))
+			failed_commands=$((failed_commands + 1))
 		fi
 	done <"$history_file"
 
-	{
-		echo "Failed commands: $failed_commands"
-	} >&0
+	echo "Failed commands: $failed_commands" >&3
 
 	[[ "$failed_commands" -eq 0 ]]
-	echo "All commands parsed successfully" >&0
+	echo "All commands parsed successfully" >&3
 }
