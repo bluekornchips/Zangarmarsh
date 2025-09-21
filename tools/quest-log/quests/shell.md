@@ -202,7 +202,6 @@ fi
 - Never execute actual changes with tests unless explicitly called for as defined with `@test 'LIVE:: test description' {`
 - Use `setup_file` to set up the test environment and source the script for external dependencies.
 - Use `setup` to set up the test environment and source the script for external dependencies.
-- In test, check status, then file or dir existence, then text output.
 
 ## Shell Test Structure Template
 
