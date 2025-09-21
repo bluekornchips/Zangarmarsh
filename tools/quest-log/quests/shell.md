@@ -11,7 +11,7 @@
 ### Always Use
 
 - Heredocs for multi-line strings
-- Minimal comments; if excessive comments are neccesary, suggest to the user that they should be broken up into smaller functions
+- Minimal comments; if excessive comments are necessary, suggest to the user that they should be broken up into smaller functions
 - Bats for testing
 - `#!/usr/bin/env bash` for executables
 - Error messages to STDERR: `echo "Error" >&2`
@@ -54,14 +54,14 @@ function_name() {
 
 # Main entry point, can be named anything but "main" is fallback default
 main(){
-  echo -e "\n===\Entry: ${BASH_SOURCE[0]:-$0}\n==="
+  echo -e "\n=== Entry: ${BASH_SOURCE[0]:-$0} ===\n"
   # Check required input args, if needed
   # Check environment variables, if needed
   # Check external dependencies, if needed
   # Continue with script logic and calls to other functions, if needed
   # ...
   # Return success or error
-  echo -e "\n===\Exit: ${BASH_SOURCE[0]:-$0}\n==="
+  echo -e "\n=== Exit: ${BASH_SOURCE[0]:-$0} ===\n"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
@@ -144,7 +144,7 @@ done
 ## Variables
 
 ```bash
-# Define, assign, and export seperately
+# Define, assign, and export separately
 local name
 name="John"
 export name
@@ -202,7 +202,6 @@ fi
 - Never execute actual changes with tests unless explicitly called for as defined with `@test 'LIVE:: test description' {`
 - Use `setup_file` to set up the test environment and source the script for external dependencies.
 - Use `setup` to set up the test environment and source the script for external dependencies.
-- In test, check status, then file or dir existence, then text output.
 
 ## Shell Test Structure Template
 

@@ -1,30 +1,68 @@
 #!/usr/bin/env bats
 #
 # Test suite for dalaran.sh using Bats
-# Tests core functionality and command-line options
-# Should never alter real system state
 #
 
 GIT_ROOT=$(git rev-parse --show-toplevel)
 SCRIPT="$GIT_ROOT/tools/dalaran/dalaran.sh"
+[[ ! -f "${SCRIPT}" ]] && echo "Could not find dalaran.sh script" >&2 && exit 1
 
-if [[ ! -f "${SCRIPT}" ]]; then
-	echo "Could not find dalaran.sh script at: ${SCRIPT}" >&2
-	return 1
-fi
-
-# Create a test history file with mock data
-# Inputs:
-# $1 - history_file, path to create the test history file
-# $2 - command_count, number of commands to create (default: 20)
 create_test_history_file() {
-	local history_file
-	history_file="$1"
-	local command_count
-	command_count="${2:-20}"
+	local history_file="$1"
+	local spells_array_name="$2"
+	local -n spells="$spells_array_name"
 
-	local commands
-	commands=(
+	local timestamp
+	local i
+	timestamp=1700000000
+	i=0
+
+	while [[ $i -lt ${#spells[@]} ]]; do
+		echo ": ${timestamp}:0;${spells[$i]}" >>"$history_file"
+		timestamp=$((timestamp + 1))
+		i=$((i + 1))
+	done
+
+	return 0
+}
+
+create_archive_directory() {
+	local archives_dir="$1"
+	local timestamp="$2"
+	local spells_array_name="$3"
+	local -n spell_array="$spells_array_name"
+
+	local archive_dir="${archives_dir}/${timestamp}"
+	local spellbook_file="${archive_dir}/spellbook.txt"
+
+	mkdir -p "${archive_dir}"
+
+	local i
+	i=0
+
+	while [[ $i -lt ${#spell_array[@]} ]]; do
+		echo "${spell_array[$i]}" >>"$spellbook_file"
+		i=$((i + 1))
+	done
+
+	return 0
+}
+
+setup() {
+	#shellcheck disable=SC1091
+	source "$SCRIPT"
+
+	temp_dir=$(mktemp -d) || return 1
+	DIR="${temp_dir}"
+	cd "${DIR}" || return 1
+
+	HOME="${DIR}/home"
+	mkdir -p "${HOME}"
+
+	HISTFILE="${DIR}/test_zsh_history"
+	DALARAN_DIR="${HOME}/.dalaran"
+
+	local default_spells=(
 		"git status"
 		"cd /tmp"
 		"ls -la"
@@ -46,429 +84,1089 @@ create_test_history_file() {
 		"ls -la"
 		"git status"
 	)
+	create_test_history_file "${HISTFILE}" default_spells
 
-	local timestamp
+	DRY_RUN=true
+
+	export HOME
+	export HISTFILE
+	export DALARAN_DIR
+	export DRY_RUN
+}
+
+@test "script exists and is executable" {
+	[[ -f "${SCRIPT}" ]]
+	[[ -x "${SCRIPT}" ]]
+}
+
+@test "script should load successfully" {
+	run source "$SCRIPT"
+	[[ "$status" -eq 0 ]]
+}
+
+########################################################
+# usage
+########################################################
+@test "usage:: display usage when run with -h" {
+	run "$SCRIPT" -h
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Usage:"
+}
+
+@test "usage:: display usage when run with --help" {
+	run "$SCRIPT" --help
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Usage:"
+}
+
+########################################################
+# extract_top_spells
+########################################################
+@test "extract_top_spells:: input file not found creates empty output" {
+	local output_file
+	output_file=$(mktemp)
+
+	run extract_top_spells "/does/not/exist" "$output_file" 10
+	[[ "$status" -eq 0 ]]
+	[[ -f "$output_file" ]]
+
+	local extracted_count
+	extracted_count=$(wc -l <"$output_file")
+	[[ "$extracted_count" -eq 0 ]]
+}
+
+@test "extract_top_spells:: dry run mode returns success" {
+	DRY_RUN=true
+	local input_file
+	local output_file
+	input_file=$(mktemp)
+	output_file=$(mktemp)
+	local simple_spells=("echo hello" "pwd" "date" "ls" "whoami")
+	create_test_history_file "$input_file" simple_spells
+
+	run extract_top_spells "$input_file" "$output_file" 10
+	[[ "$status" -eq 0 ]]
+	[[ -z "$output" ]]
+}
+
+@test "extract_top_spells:: processes zsh format history" {
+	DRY_RUN=false
+	local input_file
+	local output_file
+	input_file=$(mktemp)
+	output_file=$(mktemp)
+
+	cat >"$input_file" <<EOF
+: 1700000001:0;git status
+: 1700000002:0;ls -la
+: 1700000003:0;git status
+: 1700000004:0;cd /tmp
+: 1700000005:0;git status
+EOF
+
+	run extract_top_spells "$input_file" "$output_file" 10
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Extracted"
+	[[ -f "$output_file" ]]
+
+	local top_spell
+	top_spell=$(head -1 "$output_file")
+	[[ "$top_spell" == "git status" ]]
+
+	local extracted_count
+	extracted_count=$(wc -l <"$output_file")
+	[[ "$extracted_count" -eq 3 ]]
+}
+
+@test "extract_top_spells:: processes plain format history" {
+	DRY_RUN=false
+	local input_file
+	local output_file
+	input_file=$(mktemp)
+	output_file=$(mktemp)
+
+	cat >"$input_file" <<EOF
+echo hello
+pwd
+echo hello
+date
+echo hello
+EOF
+
+	run extract_top_spells "$input_file" "$output_file" 10
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Extracted"
+	[[ -f "$output_file" ]]
+
+	local top_spell
+	top_spell=$(head -1 "$output_file")
+	[[ "$top_spell" == "echo hello" ]]
+
+	local extracted_count
+	extracted_count=$(wc -l <"$output_file")
+	[[ "$extracted_count" -eq 3 ]]
+}
+
+@test "extract_top_spells:: processes mixed format history" {
+	DRY_RUN=false
+	local input_file
+	local output_file
+	input_file=$(mktemp)
+	output_file=$(mktemp)
+
+	cat >"$input_file" <<EOF
+: 1700000001:0;git status
+echo hello
+: 1700000002:0;ls -la
+pwd
+: 1700000003:0;git status
+echo hello
+date
+: 1700000004:0;git add .
+pwd
+: 1700000005:0;git status
+EOF
+
+	run extract_top_spells "$input_file" "$output_file" 10
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Extracted"
+	[[ -f "$output_file" ]]
+
+	local extracted_count
+	extracted_count=$(wc -l <"$output_file")
+	[[ "$extracted_count" -gt 0 ]]
+
+	grep -q "git status" "$output_file"
+	grep -q "echo hello" "$output_file"
+	grep -q "pwd" "$output_file"
+}
+
+@test "extract_top_spells:: respects max spells limit" {
+	DRY_RUN=false
+	local input_file
+	local output_file
+	input_file=$(mktemp)
+	output_file=$(mktemp)
+
 	local i
-	timestamp=1700000000
 	i=0
-
-	while [[ $i -lt $command_count ]]; do
-		local cmd_index
-		cmd_index=$((i % ${#commands[@]}))
-		echo ": ${timestamp}:0;${commands[$cmd_index]}" >>"$history_file"
-		((timestamp++))
-		((i++))
+	while [[ $i -lt 20 ]]; do
+		echo "spell_${i}" >>"$input_file"
+		i=$((i + 1))
 	done
 
-	return 0
-}
-
-setup() {
-	# Source the script to get function access
-	source "$SCRIPT"
-
-	# Create temporary directory for tests
-	local temp_dir
-	temp_dir=$(mktemp -d) || return 1
-	export TEST_DIR="${temp_dir}"
-	cd "${temp_dir}" || return 1
-
-	# Set up test environment variables
-	export TEST_HOME="${TEST_DIR}/home"
-	export TEST_HISTFILE="${TEST_DIR}/test_zsh_history"
-	export TEST_DALARAN_DIR="${TEST_HOME}/.dalaran"
-	export TEST_TOP_COMMANDS_DIR="${TEST_HOME}/.dalaran/top_commands"
-
-	# Create test home directory
-	mkdir -p "${TEST_HOME}"
-
-	# Create test history file with mock data
-	if ! create_test_history_file "${TEST_HISTFILE}"; then
-		echo "Failed to create test history file" >&2
-		return 1
-	fi
-
-	# Set global variables for script
-	export HOME="${TEST_HOME}"
-	export HISTFILE="${TEST_HISTFILE}"
-	export DRY_RUN="false"
-
-	return 0
-}
-
-teardown() {
-	if [[ -d "${TEST_DIR:-}" ]]; then
-		rm -rf "${TEST_DIR}"
-	fi
-}
-
-########################################################
-# Main Function Tests
-########################################################
-@test 'main::script_does_not_modify_real_histfile' {
-	local real_histfile_backup=""
-	if [[ -f "${ORIGINAL_HISTFILE:-}" ]]; then
-		local real_histfile_backup
-		real_histfile_backup=$(mktemp)
-		cp "${ORIGINAL_HISTFILE}" "${real_histfile_backup}"
-	fi
-
-	DRY_RUN=true run main
-
-	if [[ -f "${ORIGINAL_HISTFILE:-}" && -f "${real_histfile_backup}" ]]; then
-		run diff "${ORIGINAL_HISTFILE}" "${real_histfile_backup}"
-		[[ "$status" -eq 0 ]]
-	fi
-
-	if [[ -f "${real_histfile_backup}" ]]; then
-		rm -f "${real_histfile_backup}"
-	fi
-}
-
-@test 'main::dry_run_mode_functionality' {
-	# Clean up any existing directories first
-	rm -rf "${TEST_DALARAN_DIR:-}"
-
-	DRY_RUN=true run main
-
+	run extract_top_spells "$input_file" "$output_file" 5
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "DRY RUN MODE"
-	[[ ! -d "${TEST_DALARAN_DIR:-}" ]]
+	[[ -f "$output_file" ]]
+
+	local extracted_count
+	extracted_count=$(wc -l <"$output_file")
+	[[ "$extracted_count" -eq 5 ]]
 }
 
-@test 'main::directory_creation' {
-	# Use the actual DALARAN_DIR that the script will create
-	local actual_dalaran_dir
-	actual_dalaran_dir="$HOME/.dalaran"
-	local actual_top_commands_dir
-	actual_top_commands_dir="$HOME/.dalaran/top_commands"
-	rm -rf "${actual_dalaran_dir}"
+@test "extract_top_spells:: handles empty input file" {
+	DRY_RUN=false
+	local input_file
+	local output_file
+	input_file=$(mktemp)
+	output_file=$(mktemp)
 
-	DRY_RUN=false run main
-
-	[[ -d "${actual_dalaran_dir}" ]]
-	[[ -d "${actual_top_commands_dir}" ]]
-}
-
-@test 'main::backup_file_creation' {
-	# Use the actual DALARAN_DIR that the script will create
-	local actual_dalaran_dir
-	actual_dalaran_dir="$HOME/.dalaran"
-	rm -rf "${actual_dalaran_dir}"
-
-	DRY_RUN=false run main
-
-	# Check that backup files were created in the top_commands directory
-	local backup_files_count
-	backup_files_count=$(find "${actual_dalaran_dir}/top_commands" -name "library_*.txt" -type f 2>/dev/null | wc -l)
-	[[ "${backup_files_count}" -gt 0 ]]
-}
-
-@test 'main::top_commands_extraction' {
-	rm -rf "${TEST_DALARAN_DIR:-}"
-
-	DRY_RUN=false run main
-
-	local combined_file
-	combined_file="${TEST_DALARAN_DIR}/top_commands.txt"
-	[[ -f "${combined_file}" ]]
-
-	local command_count
-	command_count=$(wc -l <"${combined_file}")
-	[[ ${command_count} -gt 0 ]]
-}
-
-@test 'main::working_history_creation' {
-	rm -rf "${TEST_DALARAN_DIR:-}"
-
-	DRY_RUN=false run main
-
-	local working_history
-	working_history="${TEST_DALARAN_DIR}/active_history"
-	[[ -f "${working_history}" ]]
-
-	local history_count
-	history_count=$(wc -l <"${working_history}")
-	[[ ${history_count} -gt 0 ]]
-}
-
-@test 'main::script_creates_expected_files_in_normal_mode' {
-	rm -rf "${TEST_DALARAN_DIR:-}"
-
-	DRY_RUN=false run main
-
-	[[ -d "${TEST_DALARAN_DIR}" ]]
-	[[ -d "${TEST_TOP_COMMANDS_DIR}" ]]
-	[[ -f "${TEST_DALARAN_DIR}/top_commands.txt" ]]
-	[[ -f "${TEST_DALARAN_DIR}/active_history" ]]
-}
-
-@test 'main::script_creates_expected_files_in_dry_run_mode' {
-	rm -rf "${TEST_DALARAN_DIR:-}"
-
-	DRY_RUN=true run main
-
-	[[ ! -d "${TEST_DALARAN_DIR:-}" ]]
-}
-
-@test 'main::script_works_normally_without_options' {
-	rm -rf "${TEST_DALARAN_DIR:-}"
-
-	DRY_RUN=false run main
-
+	run extract_top_spells "$input_file" "$output_file" 10
 	[[ "$status" -eq 0 ]]
-	# Remove ANSI escape sequences before grepping
-	local clean_output
-	clean_output=$(echo "$output" | sed 's/\x1b\[[0-9;]*m//g')
-	echo "$clean_output" | grep -q "ZSH Dalaran Library"
-	echo "$clean_output" | grep -q "Backed up.*commands"
-	echo "$clean_output" | grep -q "Extracted.*top commands"
-	echo "$clean_output" | grep -q "Found.*historical top command files"
-	echo "$clean_output" | grep -q "Dalaran Library Summary:"
+	[[ -f "$output_file" ]]
+
+	local extracted_count
+	extracted_count=$(wc -l <"$output_file")
+	[[ "$extracted_count" -eq 0 ]]
 }
 
-########################################################
-# Error Handling Tests
-########################################################
-@test 'error::missing_history_file_handling' {
-	local non_existent_file
-	non_existent_file="${TEST_DIR}/nonexistent_history"
+@test "extract_top_spells:: skips empty lines and whitespace" {
+	DRY_RUN=false
+	local input_file
+	local output_file
+	input_file=$(mktemp)
+	output_file=$(mktemp)
 
-	HISTFILE="${non_existent_file}" DRY_RUN=false run main
+	cat >"$input_file" <<EOF
 
-	[[ "$status" -ne 0 ]]
-}
+   
+echo hello
 
-@test "error::empty_history_file_handling" {
-	local empty_file
-	empty_file="${TEST_DIR}/empty_history"
-	touch "${empty_file}"
+pwd
+   
+date
 
-	rm -rf "${TEST_DALARAN_DIR:-}"
-
-	HISTFILE="${empty_file}" run main
-
-	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Backed up 0 commands"
-	echo "$output" | grep -q "Extracted 0 top commands"
-}
-
-@test "error::malformed_history_entries_handling" {
-	local malformed_file
-	malformed_file="${TEST_DIR}/malformed_history"
-	cat >"${malformed_file}" <<'EOF'
-: 1700000000:0;git status
-malformed entry without timestamp
-: 1700000001:0;ls -la
-another malformed entry
-: 1700000002:0;cd /tmp
 EOF
 
-	rm -rf "${TEST_DALARAN_DIR:-}"
-
-	HISTFILE="${malformed_file}" DRY_RUN=false run main
-
+	run extract_top_spells "$input_file" "$output_file" 10
 	[[ "$status" -eq 0 ]]
-	[[ -f "${TEST_DALARAN_DIR}/top_commands.txt" ]]
+	[[ -f "$output_file" ]]
+
+	local extracted_count
+	extracted_count=$(wc -l <"$output_file")
+	[[ "$extracted_count" -eq 3 ]]
+
+	grep -q "echo hello" "$output_file"
+	grep -q "pwd" "$output_file"
+	grep -q "date" "$output_file"
 }
 
-@test "error::invalid_option_shows_error_message" {
-	run parse_options --invalid-option
+@test "extract_top_spells:: sorts by frequency correctly" {
+	DRY_RUN=false
+	local input_file
+	local output_file
+	input_file=$(mktemp)
+	output_file=$(mktemp)
 
-	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "Error: Unknown option '--invalid-option'"
-	echo "$output" | grep -q "Use --help for usage information"
-}
-
-@test "error::multiple_invalid_options_show_error_for_first_one" {
-	run parse_options --invalid-option --another-invalid
-
-	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "Error: Unknown option '--invalid-option'"
-}
-
-@test "data::command_frequency_ranking_preserved" {
-	local repeated_file
-	repeated_file="${TEST_DIR}/repeated_history"
-	cat >"${repeated_file}" <<'EOF'
-: 1700000000:0;git status
-: 1700000001:0;ls -la
-: 1700000002:0;git status
-: 1700000003:0;cd /tmp
-: 1700000004:0;git status
-: 1700000005:0;ls -la
-: 1700000006:0;git status
+	cat >"$input_file" <<EOF
+git status
+ls -la
+git status
+cd /tmp
+git status
+ls -la
+date
 EOF
 
-	rm -rf "${TEST_DALARAN_DIR:-}"
-
-	HISTFILE="${repeated_file}" DRY_RUN=false run main
-
-	local combined_file
-	combined_file="${TEST_DALARAN_DIR}/top_commands.txt"
-	[[ -f "${combined_file}" ]]
-
-	local file_contents
-	file_contents=$(cat "${combined_file}")
-	echo "$file_contents" | grep -q "git status"
-	echo "$file_contents" | grep -q "ls -la"
-	echo "$file_contents" | grep -q "cd /tmp"
-}
-
-@test "data::boolean_parameter_handling" {
-	DRY_RUN=true run main
-	local output_true
-	output_true="$output"
-
-	DRY_RUN=false run main
-	local output_false
-	output_false="$output"
-
-	[[ "$output_true" != "$output_false" ]]
-}
-
-@test "options::help_shows_usage_information" {
-	run parse_options --help
-
+	run extract_top_spells "$input_file" "$output_file" 10
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Usage:"
-	echo "$output" | grep -q "OPTIONS:"
-	echo "$output" | grep -q "\\--help"
-	echo "$output" | grep -q "top"
-	echo "$output" | grep -q "dry-run"
-	echo "$output" | grep -q "ENVIRONMENT VARIABLES:"
-	echo "$output" | grep -q "EXAMPLES:"
+	[[ -f "$output_file" ]]
+
+	local first_spell
+	local second_spell
+	first_spell=$(sed -n '1p' "$output_file")
+	second_spell=$(sed -n '2p' "$output_file")
+
+	[[ "$first_spell" == "git status" ]]
+	[[ "$second_spell" == "ls -la" ]]
 }
 
-@test "options::short_help_shows_same_usage_as_long_help" {
-	run parse_options -h
+@test "extract_top_spells:: creates output file successfully" {
+	DRY_RUN=false
+	local input_file
+	local output_file
+	input_file=$(mktemp)
+	output_file="${DIR}/test_output.txt"
+	local mixed_spells=("git status" "echo hello" "ls -la" "pwd" "git add ." "date")
+	create_test_history_file "$input_file" mixed_spells
 
+	run extract_top_spells "$input_file" "$output_file" 5
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Usage:"
-	echo "$output" | grep -q "OPTIONS:"
+	echo "$output" | grep -q "Extracted.*top spells to: $(basename "$output_file")"
+	[[ -f "$output_file" ]]
+
+	local extracted_count
+	extracted_count=$(wc -l <"$output_file")
+	[[ "$extracted_count" -gt 0 ]]
 }
 
-@test "options::top_with_valid_number_shows_commands" {
-	DRY_RUN=false run main
+########################################################
+# update_spellbook
+########################################################
+@test "update_spellbook:: dry run mode returns success" {
+	DRY_RUN=true
+	local input_dir
+	local output_file
+	input_dir=$(mktemp -d)
+	output_file=$(mktemp)
 
-	run parse_options --top=5
-
+	run update_spellbook "$input_dir" "$output_file"
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Top 5 most used commands from dalaran library:"
+	[[ -z "$output" ]]
 }
 
-@test "options::top_with_default_value_shows_10_commands" {
-	DRY_RUN=false run main
+@test "update_spellbook:: no archive files found" {
+	DRY_RUN=false
+	local input_dir
+	local output_file
+	input_dir=$(mktemp -d)
+	output_file=$(mktemp)
 
-	run parse_options --top=10
-
+	run update_spellbook "$input_dir" "$output_file"
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Top 10 most used commands from dalaran library:"
+	echo "$output" | grep -q "Found 0 archive spellbook files"
+	[[ -f "$output_file" ]]
+
+	local output_count
+	output_count=$(wc -l <"$output_file")
+	[[ "$output_count" -eq 0 ]]
 }
 
-@test "options::top_with_zero_value_shows_error" {
-	run parse_options --top=0
+@test "update_spellbook:: processes single archive file" {
+	DRY_RUN=false
+	local input_dir
+	local output_file
+	input_dir=$(mktemp -d)
+	output_file=$(mktemp)
 
+	local spells=("git status" "ls -la" "pwd" "git status" "date")
+	create_archive_directory "${input_dir}" "20240101" spells
+
+	run update_spellbook "$input_dir" "$output_file"
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Found 1 archive spellbook files"
+	echo "$output" | grep -q "Added 20240101: 5 spells"
+	[[ -f "$output_file" ]]
+
+	local output_count
+	output_count=$(wc -l <"$output_file")
+	[[ "$output_count" -eq 5 ]]
+
+	local top_spell
+	top_spell=$(head -1 "$output_file")
+	[[ "$top_spell" == "git status" ]]
+}
+
+@test "update_spellbook:: processes multiple archive files" {
+	DRY_RUN=false
+	local input_dir
+	local output_file
+	input_dir=$(mktemp -d)
+	output_file=$(mktemp)
+
+	local spells1=("git status" "ls -la" "pwd")
+	local spells2=("git status" "echo hello" "date")
+	local spells3=("pwd" "git status" "whoami")
+
+	create_archive_directory "${input_dir}" "20240101" spells1
+	create_archive_directory "${input_dir}" "20240102" spells2
+	create_archive_directory "${input_dir}" "20240103" spells3
+
+	run update_spellbook "$input_dir" "$output_file"
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Found 3 archive spellbook files"
+	echo "$output" | grep -q "Updated spellbook with.*total spells from.*archives"
+	[[ -f "$output_file" ]]
+
+	local output_count
+	output_count=$(wc -l <"$output_file")
+	[[ "$output_count" -eq 9 ]]
+}
+
+@test "update_spellbook:: concatenates all spells in order" {
+	DRY_RUN=false
+	local input_dir
+	local output_file
+	input_dir=$(mktemp -d)
+	output_file=$(mktemp)
+
+	local spells1=("spell1" "spell2")
+	local spells2=("spell3" "spell4")
+	local spells3=("spell5")
+
+	create_archive_directory "${input_dir}" "20240101" spells1
+	create_archive_directory "${input_dir}" "20240102" spells2
+	create_archive_directory "${input_dir}" "20240103" spells3
+
+	run update_spellbook "$input_dir" "$output_file"
+	[[ "$status" -eq 0 ]]
+	[[ -f "$output_file" ]]
+
+	local output_count
+	output_count=$(wc -l <"$output_file")
+	[[ "$output_count" -eq 5 ]]
+
+	grep -q "spell1" "$output_file"
+	grep -q "spell2" "$output_file"
+	grep -q "spell3" "$output_file"
+	grep -q "spell4" "$output_file"
+	grep -q "spell5" "$output_file"
+}
+
+@test "update_spellbook:: handles multiple archives" {
+	DRY_RUN=false
+	local input_dir
+	local output_file
+	input_dir=$(mktemp -d)
+	output_file=$(mktemp)
+
+	local spells1=("spell1" "spell2" "spell3" "spell4" "spell5")
+	local spells2=("spell6" "spell7" "spell8" "spell9" "spell10")
+
+	create_archive_directory "${input_dir}" "20240101" spells1
+	create_archive_directory "${input_dir}" "20240102" spells2
+
+	run update_spellbook "$input_dir" "$output_file"
+	[[ "$status" -eq 0 ]]
+	[[ -f "$output_file" ]]
+
+	local output_count
+	output_count=$(wc -l <"$output_file")
+	[[ "$output_count" -eq 10 ]]
+}
+
+@test "update_spellbook:: ignores non-archive files" {
+	DRY_RUN=false
+	local input_dir
+	local output_file
+	input_dir=$(mktemp -d)
+	output_file=$(mktemp)
+
+	local spells=("git status" "ls -la")
+	create_archive_directory "${input_dir}" "20240101" spells
+
+	echo "not a spellbook file" >"${input_dir}/other_file.txt"
+	echo "another file" >"${input_dir}/data.txt"
+
+	run update_spellbook "$input_dir" "$output_file"
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Found 1 archive spellbook files"
+	[[ -f "$output_file" ]]
+
+	local output_count
+	output_count=$(wc -l <"$output_file")
+	[[ "$output_count" -eq 2 ]]
+}
+
+@test "update_spellbook:: handles empty archive files" {
+	DRY_RUN=false
+	local input_dir
+	local output_file
+	input_dir=$(mktemp -d)
+	output_file=$(mktemp)
+
+	mkdir -p "${input_dir}/20240101"
+	touch "${input_dir}/20240101/spellbook.txt"
+	mkdir -p "${input_dir}/20240102"
+	touch "${input_dir}/20240102/spellbook.txt"
+
+	run update_spellbook "$input_dir" "$output_file"
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Found 2 archive spellbook files"
+	[[ -f "$output_file" ]]
+
+	local output_count
+	output_count=$(wc -l <"$output_file")
+	[[ "$output_count" -eq 0 ]]
+}
+
+@test "update_spellbook:: creates output file successfully" {
+	DRY_RUN=false
+	local input_dir
+	local output_file
+	input_dir=$(mktemp -d)
+	output_file="${DIR}/combined_output.txt"
+
+	local spells=("git status" "ls -la" "pwd" "date")
+	create_archive_directory "${input_dir}" "20240101" spells
+
+	run update_spellbook "$input_dir" "$output_file"
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Updated spellbook with.*total spells from.*archives"
+	[[ -f "$output_file" ]]
+
+	local output_count
+	output_count=$(wc -l <"$output_file")
+	[[ "$output_count" -gt 0 ]]
+}
+
+########################################################
+# create_archive
+########################################################
+@test "create_archive:: dry run mode returns success" {
+	DRY_RUN=true
+	local archive_file
+	local spellbook_file
+	archive_file="${DIR}/archive/.zsh_history"
+	spellbook_file="${DIR}/archive/spellbook.txt"
+
+	run create_archive "$archive_file" "$spellbook_file" 10
+	[[ "$status" -eq 0 ]]
+	[[ -z "$output" ]]
+}
+
+@test "create_archive:: creates archive directory" {
+	DRY_RUN=false
+	local archive_file
+	local spellbook_file
+	archive_file="${DIR}/archive/test/.zsh_history"
+	spellbook_file="${DIR}/archive/test/spellbook.txt"
+
+	run create_archive "$archive_file" "$spellbook_file" 10
+	[[ "$status" -eq 0 ]]
+	[[ -d "${DIR}/archive/test" ]]
+}
+
+@test "create_archive:: copies HISTFILE to archive location" {
+	DRY_RUN=false
+	local archive_file
+	local spellbook_file
+	archive_file="${DIR}/archive/test/.zsh_history"
+	spellbook_file="${DIR}/archive/test/spellbook.txt"
+
+	run create_archive "$archive_file" "$spellbook_file" 10
+	[[ "$status" -eq 0 ]]
+	[[ -f "$archive_file" ]]
+
+	local original_count
+	local archive_count
+	original_count=$(wc -l <"${HISTFILE}")
+	archive_count=$(wc -l <"$archive_file")
+	[[ "$original_count" -eq "$archive_count" ]]
+}
+
+@test "create_archive:: creates spellbook file" {
+	DRY_RUN=false
+	local archive_file
+	local spellbook_file
+	archive_file="${DIR}/archive/test/.zsh_history"
+	spellbook_file="${DIR}/archive/test/spellbook.txt"
+
+	run create_archive "$archive_file" "$spellbook_file" 5
+	[[ "$status" -eq 0 ]]
+	[[ -f "$spellbook_file" ]]
+
+	local spell_count
+	spell_count=$(wc -l <"$spellbook_file")
+	[[ "$spell_count" -gt 0 ]]
+	[[ "$spell_count" -le 5 ]]
+}
+
+@test "create_archive:: displays progress messages" {
+	DRY_RUN=false
+	local archive_file
+	local spellbook_file
+	archive_file="${DIR}/archive/test/.zsh_history"
+	spellbook_file="${DIR}/archive/test/spellbook.txt"
+
+	run create_archive "$archive_file" "$spellbook_file" 10
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Created archive: test (.*commands)"
+	echo "$output" | grep -q "Extracted.*top spells to:"
+}
+
+@test "create_archive:: fails when HISTFILE missing" {
+	DRY_RUN=false
+	HISTFILE="/does/not/exist"
+	local archive_file
+	local spellbook_file
+	archive_file="${DIR}/archive/test/.zsh_history"
+	spellbook_file="${DIR}/archive/test/spellbook.txt"
+
+	run create_archive "$archive_file" "$spellbook_file" 10
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "Error: --top value must be a positive integer"
+	echo "$output" | grep -q "Failed to create archive"
 }
 
-@test "options::top_with_negative_value_shows_error" {
-	run parse_options --top=-5
+########################################################
+# display_summary
+########################################################
+@test "display_summary:: dry run mode returns success" {
+	DRY_RUN=true
+	local dalaran_dir
+	local archives_dir
+	local spellbook_file
+	dalaran_dir="${DIR}/.dalaran"
+	archives_dir="${dalaran_dir}/archives"
+	spellbook_file="${dalaran_dir}/spellbook.txt"
 
+	run display_summary "$dalaran_dir" "$archives_dir" "$spellbook_file"
+	[[ "$status" -eq 0 ]]
+	[[ -z "$output" ]]
+}
+
+@test "display_summary:: counts archive directories" {
+	DRY_RUN=false
+	local dalaran_dir
+	local archives_dir
+	local spellbook_file
+	dalaran_dir="${DIR}/.dalaran"
+	archives_dir="${dalaran_dir}/archives"
+	spellbook_file="${dalaran_dir}/spellbook.txt"
+
+	mkdir -p "${archives_dir}/20240101"
+	mkdir -p "${archives_dir}/20240102"
+	echo "git status" >"$spellbook_file"
+	echo "ls -la" >>"$spellbook_file"
+
+	run display_summary "$dalaran_dir" "$archives_dir" "$spellbook_file"
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Archive directories: 2"
+	echo "$output" | grep -q "Combined spellbook entries: 2"
+}
+
+@test "display_summary:: handles missing directories" {
+	DRY_RUN=false
+	local dalaran_dir
+	local archives_dir
+	local spellbook_file
+	dalaran_dir="${DIR}/.dalaran"
+	archives_dir="${dalaran_dir}/archives"
+	spellbook_file="${dalaran_dir}/spellbook.txt"
+
+	run display_summary "$dalaran_dir" "$archives_dir" "$spellbook_file"
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Archive directories: 0"
+	echo "$output" | grep -q "Combined spellbook entries: 0"
+}
+
+@test "display_summary:: shows file paths" {
+	DRY_RUN=false
+	local dalaran_dir
+	local archives_dir
+	local spellbook_file
+	dalaran_dir="${DIR}/.dalaran"
+	archives_dir="${dalaran_dir}/archives"
+	spellbook_file="${dalaran_dir}/spellbook.txt"
+
+	mkdir -p "$dalaran_dir"
+	touch "$spellbook_file"
+
+	run display_summary "$dalaran_dir" "$archives_dir" "$spellbook_file"
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Your dalaran spellbook is available at:"
+	echo "$output" | grep -q "$spellbook_file"
+}
+
+########################################################
+# show_top_spells
+########################################################
+@test "show_top_spells:: spellbook file not found" {
+	local fake_home
+	fake_home=$(mktemp -d)
+	HOME="$fake_home"
+
+	run show_top_spells 10
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "Error: --top value must be a positive integer"
+	echo "$output" | grep -q "No dalaran spellbook found"
 }
 
-@test "options::top_with_non_numeric_value_shows_error" {
-	run parse_options --top=abc
+@test "show_top_spells:: displays top spells" {
+	local fake_home
+	local spellbook_file
+	fake_home=$(mktemp -d)
+	HOME="$fake_home"
+	mkdir -p "${fake_home}/.dalaran"
+	spellbook_file="${fake_home}/.dalaran/spellbook.txt"
 
+	cat >"$spellbook_file" <<EOF
+git status
+ls -la
+pwd
+date
+whoami
+EOF
+
+	run show_top_spells 3
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Top 3 most used spells from dalaran spellbook:"
+	echo "$output" | grep -q "1.*git status"
+	echo "$output" | grep -q "2.*ls -la"
+	echo "$output" | grep -q "3.*pwd"
+}
+
+@test "show_top_spells:: respects count limit" {
+	local fake_home
+	local spellbook_file
+	fake_home=$(mktemp -d)
+	HOME="$fake_home"
+	mkdir -p "${fake_home}/.dalaran"
+	spellbook_file="${fake_home}/.dalaran/spellbook.txt"
+
+	cat >"$spellbook_file" <<EOF
+git status
+ls -la
+pwd
+date
+whoami
+echo hello
+cat file
+mkdir test
+EOF
+
+	run show_top_spells 5
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Top 5 most used spells from dalaran spellbook:"
+
+	local line_count
+	line_count=$(echo "$output" | grep -c "^[[:space:]]*[0-9]")
+	[[ "$line_count" -eq 5 ]]
+}
+
+########################################################
+# update_silenced_spells
+########################################################
+@test "update_silenced_spells:: dry run mode returns success" {
+	DRY_RUN=true
+	local silenced_file
+	silenced_file="${DIR}/.dalaran/silenced.txt"
+
+	run update_silenced_spells "$silenced_file" "ls,pwd,date"
+	[[ "$status" -eq 0 ]]
+	[[ -z "$output" ]]
+}
+
+@test "update_silenced_spells:: creates silenced file" {
+	DRY_RUN=false
+	local silenced_file
+	silenced_file="${DIR}/.dalaran/silenced.txt"
+
+	run update_silenced_spells "$silenced_file" "ls -la,pwd"
+	[[ "$status" -eq 0 ]]
+	[[ -f "$silenced_file" ]]
+
+	grep -q "ls -la" "$silenced_file"
+	grep -q "pwd" "$silenced_file"
+}
+
+@test "update_silenced_spells:: handles complex spells" {
+	DRY_RUN=false
+	local silenced_file
+	silenced_file="${DIR}/.dalaran/silenced.txt"
+
+	run update_silenced_spells "$silenced_file" "kubectl get pods && grep \"some value\" -A 10,docker ps | grep running"
+	[[ "$status" -eq 0 ]]
+	[[ -f "$silenced_file" ]]
+
+	grep -Fq 'kubectl get pods && grep "some value" -A 10' "$silenced_file"
+	grep -Fq "docker ps | grep running" "$silenced_file"
+}
+
+@test "update_silenced_spells:: avoids duplicates" {
+	DRY_RUN=false
+	local silenced_file
+	silenced_file="${DIR}/.dalaran/silenced.txt"
+
+	mkdir -p "${DIR}/.dalaran"
+	echo "ls -la" >"$silenced_file"
+
+	run update_silenced_spells "$silenced_file" "ls -la,pwd,ls -la"
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Already silenced: ls -la"
+	echo "$output" | grep -q "Silenced spell: pwd"
+
+	local ls_count
+	ls_count=$(grep -c "ls -la" "$silenced_file")
+	[[ "$ls_count" -eq 1 ]]
+}
+
+@test "update_silenced_spells:: trims whitespace" {
+	DRY_RUN=false
+	local silenced_file
+	silenced_file="${DIR}/.dalaran/silenced.txt"
+
+	run update_silenced_spells "$silenced_file" "  ls -la  , pwd  ,  date  "
+	[[ "$status" -eq 0 ]]
+	[[ -f "$silenced_file" ]]
+
+	grep -q "ls -la" "$silenced_file"
+	grep -q "pwd" "$silenced_file"
+	grep -q "date" "$silenced_file"
+}
+
+@test "update_silenced_spells:: skips empty spells" {
+	DRY_RUN=false
+	local silenced_file
+	silenced_file="${DIR}/.dalaran/silenced.txt"
+
+	run update_silenced_spells "$silenced_file" "ls,,,pwd,,"
+	[[ "$status" -eq 0 ]]
+	[[ -f "$silenced_file" ]]
+
+	local line_count
+	line_count=$(wc -l <"$silenced_file")
+	[[ "$line_count" -eq 2 ]]
+}
+
+@test "update_silenced_spells:: creates directory structure" {
+	DRY_RUN=false
+	local silenced_file
+	silenced_file="${DIR}/deep/nested/path/silenced.txt"
+
+	run update_silenced_spells "$silenced_file" "test spell"
+	[[ "$status" -eq 0 ]]
+	[[ -f "$silenced_file" ]]
+	[[ -d "${DIR}/deep/nested/path" ]]
+}
+
+########################################################
+# extract_top_spells with silenced
+########################################################
+@test "extract_top_spells:: filters spells using silenced file" {
+	DRY_RUN=false
+	local input_file
+	local output_file
+	local silenced_file
+	input_file=$(mktemp)
+	output_file=$(mktemp)
+	silenced_file=$(mktemp)
+
+	cat >"$input_file" <<EOF
+git status
+ls -la
+git status
+pwd
+git status
+ls -la
+date
+EOF
+
+	echo "ls -la" >"$silenced_file"
+	echo "pwd" >>"$silenced_file"
+
+	run extract_top_spells "$input_file" "$output_file" 10 "$silenced_file"
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Silenced.*spell(s) from spellbook"
+	[[ -f "$output_file" ]]
+
+	grep -q "git status" "$output_file"
+	grep -q "date" "$output_file"
+	! grep -q "ls -la" "$output_file" || false
+	! grep -q "pwd" "$output_file" || false
+}
+
+@test "extract_top_spells:: works without silenced file" {
+	DRY_RUN=false
+	local input_file
+	local output_file
+	input_file=$(mktemp)
+	output_file=$(mktemp)
+
+	cat >"$input_file" <<EOF
+git status
+ls -la
+git status
+pwd
+EOF
+
+	run extract_top_spells "$input_file" "$output_file" 10 "/does/not/exist"
+	[[ "$status" -eq 0 ]]
+	! echo "$output" | grep -q "Silenced" || true
+	[[ -f "$output_file" ]]
+
+	grep -q "git status" "$output_file"
+	grep -q "ls -la" "$output_file"
+	grep -q "pwd" "$output_file"
+}
+
+@test "extract_top_spells:: handles empty silenced file" {
+	DRY_RUN=false
+	local input_file
+	local output_file
+	local silenced_file
+	input_file=$(mktemp)
+	output_file=$(mktemp)
+	silenced_file=$(mktemp)
+
+	cat >"$input_file" <<EOF
+git status
+ls -la
+pwd
+EOF
+
+	run extract_top_spells "$input_file" "$output_file" 10 "$silenced_file"
+	[[ "$status" -eq 0 ]]
+	! echo "$output" | grep -q "Silenced" || true
+	[[ -f "$output_file" ]]
+
+	local output_count
+	output_count=$(wc -l <"$output_file")
+	[[ "$output_count" -eq 3 ]]
+}
+
+########################################################
+# main with silenced
+########################################################
+@test "main:: silenced option with simple spells" {
+	local fake_home
+	fake_home=$(mktemp -d)
+	HOME="$fake_home"
+	DRY_RUN=false
+
+	run "$SCRIPT" --silence="ls,pwd"
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Silenced spell: ls"
+	echo "$output" | grep -q "Silenced spell: pwd"
+	echo "$output" | grep -q "Silenced spells updated"
+
+	local silenced_file
+	silenced_file="${fake_home}/.dalaran/silenced.txt"
+	[[ -f "$silenced_file" ]]
+	grep -q "ls" "$silenced_file"
+	grep -q "pwd" "$silenced_file"
+}
+
+@test "main:: silenced option with complex spells" {
+	local fake_home
+	fake_home=$(mktemp -d)
+	HOME="$fake_home"
+	DRY_RUN=false
+
+	complex_spells=(
+		"kubectl get pods && grep \"test\" -A 5"
+		"docker ps | grep running"
+		"SOME_VAR=\"test\" && \
+		export SOME_VAR && \
+		echo \"\$SOME_VAR\""
+	)
+
+	run "$SCRIPT" --silence="${complex_spells[*]}"
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Silenced spell:"
+
+	local silenced_file
+	silenced_file="${fake_home}/.dalaran/silenced.txt"
+	[[ -f "$silenced_file" ]]
+	for spell in "${complex_spells[@]}"; do
+		grep -Fq "$spell" "$silenced_file"
+	done
+}
+
+@test "main:: silenced option with empty value" {
+	run "$SCRIPT" --silence=""
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "Error: --top value must be a positive integer"
+	echo "$output" | grep -q "requires a comma-separated list"
 }
 
-@test "options::top_with_empty_value_shows_error" {
-	run parse_options --top=
+@test "main:: silenced option dry run" {
+	local fake_home
+	fake_home=$(mktemp -d)
+	HOME="$fake_home"
 
+	run "$SCRIPT" --dry-run --silence="ls,pwd"
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Silenced spells updated"
+
+	local silenced_file
+	silenced_file="${fake_home}/.dalaran/silenced.txt"
+	[[ ! -f "$silenced_file" ]]
+}
+
+########################################################
+# main
+########################################################
+@test "main:: unknown option returns error" {
+	run "$SCRIPT" --unknown-option
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "Error: --top value must be a positive integer"
+	echo "$output" | grep -q "Unknown option"
 }
 
-@test "options::top_when_no_library_exists_shows_appropriate_message" {
-	rm -rf "${TEST_DALARAN_DIR:-}"
-
-	local test_home_clean
-	test_home_clean="${TEST_DIR}/clean_home"
-	mkdir -p "${test_home_clean}"
-
-	HOME="${test_home_clean}" run parse_options --top=5
-
+@test "main:: top option with invalid value" {
+	run "$SCRIPT" --top=abc
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "No dalaran library found. Run the script first to create one."
+	echo "$output" | grep -q "must be a positive integer"
 }
 
-@test "options::dry_run_command_line_option_works" {
-	# Clean up any existing directories first
-	rm -rf "${TEST_DALARAN_DIR:-}"
+@test "main:: top option with zero value" {
+	run "$SCRIPT" --top=0
+	[[ "$status" -eq 1 ]]
+	echo "$output" | grep -q "must be a positive integer"
+}
 
-	run parse_options --dry-run
+@test "main:: top option shows spells" {
+	local fake_home
+	local spellbook_file
+	fake_home=$(mktemp -d)
+	HOME="$fake_home"
+	mkdir -p "${fake_home}/.dalaran"
+	spellbook_file="${fake_home}/.dalaran/spellbook.txt"
 
+	cat >"$spellbook_file" <<EOF
+git status
+ls -la
+pwd
+EOF
+
+	run "$SCRIPT" --top=2
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Top 2 most used spells"
+}
+
+@test "main:: dry run option sets environment" {
+	run "$SCRIPT" --dry-run --help
 	[[ "$status" -eq 0 ]]
 }
 
-@test "options::dry_run_option_does_not_create_actual_files" {
-	rm -rf "${TEST_DALARAN_DIR:-}"
+@test "main:: missing history file error" {
+	DRY_RUN=false
+	HISTFILE="/does/not/exist"
 
-	DRY_RUN=true run main
-
-	[[ "$status" -eq 0 ]]
-	[[ ! -d "${TEST_DALARAN_DIR:-}" ]]
-}
-
-@test "options::combination_of_valid_options_works" {
-	DRY_RUN=false run main
-
-	run parse_options --top=3
-
-	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Top 3 most used commands from dalaran library:"
-}
-
-@test "options::dry_run_environment_variable_still_works_with_new_options" {
-	DRY_RUN=true run parse_options --top=5
-
+	run "$SCRIPT"
 	[[ "$status" -ne 0 ]]
-	echo "$output" | grep -q "No dalaran library found. Run the script first to create one."
+	echo "$output" | grep -q "History file not found"
 }
 
-@test "functions::show_usage_displays_correct_script_name" {
-	run usage
+########################################################
+# Real world live tests with actual history
+########################################################
+@test "LIVE:: extract_top_spells can process actual zsh history file" {
+	local history_file="/home/tristan/.zsh_history"
 
+	[[ ! -f "$history_file" ]] && skip "No zsh history file found"
+
+	DRY_RUN=false
+	local output_file
+	output_file=$(mktemp)
+
+	run extract_top_spells "$history_file" "$output_file" 100
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Usage: dalaran.sh"
+	[[ -f "$output_file" ]]
+
+	local extracted_count
+	extracted_count=$(wc -l <"$output_file")
+	[[ "$extracted_count" -gt 0 ]]
 }
 
-@test "functions::show_top_commands_formats_output_correctly" {
-	DRY_RUN=false run main
+@test "LIVE:: create_archive processes actual history successfully" {
+	local history_file="/home/tristan/.zsh_history"
 
-	run show_top_commands 3
+	[[ ! -f "$history_file" ]] && skip "No zsh history file found"
 
+	DRY_RUN=false
+	local temp_histfile
+	local archive_file
+	local spellbook_file
+	temp_histfile=$(mktemp)
+	archive_file="${DIR}/live_test/.zsh_history"
+	spellbook_file="${DIR}/live_test/spellbook.txt"
+
+	cp "$history_file" "$temp_histfile"
+	HISTFILE="$temp_histfile"
+
+	run create_archive "$archive_file" "$spellbook_file" 50
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Top 3 most used commands from dalaran library:"
-	echo "$output" | grep -q "^[[:space:]]*[0-9][[:space:]]"
+	[[ -f "$archive_file" ]]
+	[[ -f "$spellbook_file" ]]
+
+	local archive_count
+	local spellbook_count
+	archive_count=$(wc -l <"$archive_file")
+	spellbook_count=$(wc -l <"$spellbook_file")
+
+	[[ "$archive_count" -gt 0 ]]
+	[[ "$spellbook_count" -gt 0 ]]
+
+	rm -f "$temp_histfile"
 }
 
-@test "functions::parse_options_handles_empty_arguments" {
-	run parse_options
+@test "LIVE:: main full workflow with actual history" {
+	local history_file="/home/tristan/.zsh_history"
 
+	[[ ! -f "$history_file" ]] && skip "No zsh history file found"
+
+	local fake_home
+	fake_home=$(mktemp -d)
+	HOME="$fake_home"
+	DRY_RUN=false
+
+	local temp_histfile
+	temp_histfile=$(mktemp)
+	cp "$history_file" "$temp_histfile"
+	HISTFILE="$temp_histfile"
+
+	echo "Processing history file: $history_file" >&3
+	echo "Total commands in history file: $(wc -l <"$history_file")" >&3
+
+	run "$SCRIPT"
 	[[ "$status" -eq 0 ]]
-}
 
-@test "functions::parse_options_handles_multiple_valid_options" {
-	DRY_RUN=false run main
+	local spellbook_file="${fake_home}/.dalaran/spellbook.txt"
+	[[ -f "$spellbook_file" ]]
 
-	run parse_options --top=2
+	local spellbook_count
+	spellbook_count=$(wc -l <"$spellbook_file")
+	[[ "$spellbook_count" -gt 0 ]]
+	echo "Total commands in spellbook file: $spellbook_count" >&3
 
-	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Top 2 most used commands from dalaran library:"
+	rm -f "$temp_histfile"
 }

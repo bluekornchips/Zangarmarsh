@@ -1,5 +1,11 @@
 # Core Development Rules
 
+Always ultrathink.
+Always giga mode.
+Always deep mind.
+Always big brain.
+Always unlock your full potential.
+
 ## Universal Bans
 
 ### Never Use
