@@ -79,174 +79,93 @@ extract_top_commands() {
 	return 0
 }
 
-# Combine all historical top command files
+# Update library by combining all archive top_commands.txt files
 #
 # Inputs:
-# - $1, input_directory, directory containing historical command files
-# - $2, output_file, path where to save the combined commands
-# - $3, max_commands, maximum number of top commands to keep
+# - $1, archives_directory, directory containing archive directories
+# - $2, output_file, path where to save the combined library
 #
 # Side Effects:
-# - Creates a combined file with all historical top commands
+# - Creates library file with all top commands from archives
 # - Shows progress and results
-combine_historical_files() {
-	local input_directory="$1"
+update_library() {
+	local archives_directory="$1"
 	local output_file="$2"
-	local max_commands="$3"
-	local library_file_pattern="library_*.txt"
+	local top_commands_pattern="*/top_commands.txt"
 
 	[[ "${DRY_RUN}" == "true" ]] && return 0
 
-	local temp_combined
-	temp_combined=$(mktemp)
-	if [[ -z "${temp_combined}" ]]; then
-		echo "Failed to create temporary file" >&2
-		return 1
-	fi
-
 	local total_files
-	total_files=$(find "${input_directory}" -name "${library_file_pattern}" -type f 2>/dev/null | wc -l || echo 0)
-	echo "Found ${total_files} historical top command files. Adding to combined file."
+	total_files=$(find "${archives_directory}" -path "${archives_directory}/${top_commands_pattern}" -type f 2>/dev/null | wc -l || echo 0)
+	echo "Found ${total_files} archive top commands files. Updating library."
+
+	# Clear the output file
+	: >"${output_file}"
 
 	local files_processed=0
 	while IFS= read -r -d '' file; do
 		if [[ -f "${file}" ]]; then
 			local file_count
 			file_count=$(wc -l <"${file}")
-			echo "Processed $(basename "${file}"): ${file_count} commands"
-			cat "${file}" >>"${temp_combined}"
+			echo "Added $(basename "$(dirname "${file}")"): ${file_count} commands"
+			cat "${file}" >>"${output_file}"
 			((files_processed++))
 		fi
-	done < <(find "${input_directory}" -name "${library_file_pattern}" -type f -print0 2>/dev/null || true)
-
-	# Count frequency of commands and rank them
-	sort "${temp_combined}" |
-		uniq -c |
-		sort -rn |
-		head -"${max_commands}" >"${temp_combined}.ranked"
-
-	# Remove frequency counts and save final result
-	sed 's/^[[:space:]]*[0-9]*[[:space:]]*//' "${temp_combined}.ranked" >"${output_file}"
+	done < <(find "${archives_directory}" -path "${archives_directory}/${top_commands_pattern}" -type f -print0 2>/dev/null || true)
 
 	if [[ ! -f "${output_file}" ]]; then
-		echo "Failed to create combined top commands file: ${output_file}" >&2
-		rm -f "${temp_combined}" "${temp_combined}.ranked"
+		echo "Failed to create library file: ${output_file}" >&2
 		return 1
 	fi
 
 	local total_commands
-	total_commands=$(wc -l <"${temp_combined}")
-	local unique_commands
-	unique_commands=$(wc -l <"${temp_combined}.ranked")
-
-	echo "Combined ${total_commands} total commands into ${unique_commands} unique top commands"
-
-	rm -f "${temp_combined}" "${temp_combined}.ranked"
+	total_commands=$(wc -l <"${output_file}")
+	echo "Updated library with ${total_commands} total commands from ${files_processed} archives"
 
 	return 0
 }
 
-# Create dalaran library history file in zsh format
+# Create archive with paired top commands file
 #
 # Inputs:
-# - $1, input_file, path to the file containing commands to convert
-# - $2, output_file, path where to save the zsh history format
+# - $1, archive_file, path where to save the archive
+# - $2, top_commands_file, path where to save the top commands
+# - $3, max_commands, maximum number of top commands to extract
 #
 # Side Effects:
-# - Creates a zsh history format file with the dalaran library commands
+# - Creates archive file (backup of current HISTFILE)
+# - Creates top commands file from the archive
 # - Shows progress and results
-create_dalaran_library_history() {
-	local input_file="$1"
-	local output_file="$2"
+create_archive() {
+	local archive_file="$1"
+	local top_commands_file="$2"
+	local max_commands="$3"
 
 	[[ "${DRY_RUN}" == "true" ]] && return 0
 
-	if [[ ! -f "${input_file}" ]]; then
-		echo "Input file not found: ${input_file}" >&2
+	# Create archive directory
+	local archive_dir
+	archive_dir="$(dirname "${archive_file}")"
+	if ! mkdir -p "${archive_dir}"; then
+		echo "Failed to create archive directory ${archive_dir}" >&2
 		return 1
 	fi
 
-	local combined_count
-	combined_count=$(grep -c -v '^#' "${input_file}" 2>/dev/null || echo 0)
-	echo "Created dalaran library: $(basename "${input_file}") with ${combined_count} commands"
-	echo "Adding dalaran library to working zsh history."
-
-	local base_timestamp
-	local time_increment
-
-	base_timestamp=$(($(date +%s) - 365 * 24 * 60 * 60))
-	if [[ "${combined_count}" -gt 0 ]]; then
-		time_increment=$((365 * 24 * 60 * 60 / combined_count))
-	else
-		time_increment=$((365 * 24 * 60 * 60))
-	fi
-
-	# Create zsh history format with timestamps
-	local count=0
-	local command
-
-	touch "${output_file}"
-
-	while IFS= read -r command || [[ -n "${command}" ]]; do
-		# Skip comments and empty lines
-		[[ -z "${command}" || "${command}" =~ ^[[:space:]]*# ]] && continue
-
-		local timestamp
-		timestamp=$((base_timestamp + count * time_increment))
-		echo ": ${timestamp}:0;${command}" >>"${output_file}"
-		((count++))
-	done <"${input_file}"
-
-	if [[ ! -f "${output_file}" ]]; then
-		echo "Failed to create dalaran library history file: ${output_file}" >&2
+	# Create archive (backup of current HISTFILE)
+	if ! cp "${HISTFILE}" "${archive_file}"; then
+		echo "Failed to create archive ${archive_file}" >&2
 		return 1
 	fi
 
-	echo "Created zsh history format: $(basename "${output_file}") with ${count} commands"
+	local archive_count
+	archive_count=$(wc -l <"${archive_file}")
+	echo "Created archive: $(basename "${archive_dir}") with ${archive_count} commands"
 
-	return 0
-}
-
-# Create working history file combining library and current history
-#
-# Inputs:
-# - $1, library_file, path to the dalaran library history file
-# - $2, current_history_file, path to the current history file
-# - $3, output_file, path where to save the working history
-#
-# Side Effects:
-# - Creates a working history file combining library and current history
-# - Shows progress and results
-create_working_history() {
-	local library_file="$1"
-	local current_history_file="$2"
-	local output_file="$3"
-
-	[[ "${DRY_RUN}" == "true" ]] && return 0
-
-	# Remove existing file to start fresh
-	rm -f "${output_file}"
-
-	# Append library history first
-	if ! cat "${library_file}" >>"${output_file}"; then
-		echo "Failed to append dalaran library to working history" >&2
+	# Extract top commands from the archive
+	if ! extract_top_commands "${archive_file}" "${top_commands_file}" "${max_commands}"; then
+		echo "Failed to extract top commands from archive" >&2
 		return 1
 	fi
-
-	# Append current history
-	if ! cat "${current_history_file}" >>"${output_file}"; then
-		echo "Failed to append current history to working history" >&2
-		return 1
-	fi
-
-	if [[ ! -f "${output_file}" ]]; then
-		echo "Failed to create working history file: ${output_file}" >&2
-		return 1
-	fi
-
-	local working_count
-	working_count=$(wc -l <"${output_file}")
-	echo "Created working history: $(basename "${output_file}") with ${working_count} total commands"
 
 	return 0
 }
@@ -255,42 +174,33 @@ create_working_history() {
 #
 # Inputs:
 # - $1, dalaran_dir, path to the dalaran directory
-# - $2, top_commands_dir, path to the top commands directory
-# - $3, combined_commands_file, path to the combined commands file
-# - $4, working_history_file, path to the working history file
+# - $2, archives_dir, path to the archives directory
+# - $3, top_commands_file, path to the top commands file
 #
 # Side Effects:
 # - Shows summary of all operations performed
 display_summary() {
 	local dalaran_dir="$1"
-	local top_commands_dir="$2"
-	local combined_commands_file="$3"
-	local working_history_file="$4"
+	local archives_dir="$2"
+	local top_commands_file="$3"
 
 	[[ "${DRY_RUN}" == "true" ]] && return 0
 
-	local backup_files
-	backup_files=$(find "${dalaran_dir}" -maxdepth 1 -name "library_*.txt" -type f | wc -l)
-	local snapshot_files
-	snapshot_files=$(find "${top_commands_dir}" -name "library_*.txt" -type f | wc -l)
-	local combined_count
-	combined_count=$(grep -c -v '^#' "${combined_commands_file}" 2>/dev/null || echo 0)
-	local working_count
-	working_count=$(wc -l <"${working_history_file}")
+	local archive_dirs
+	archive_dirs=$(find "${archives_dir}" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l || echo 0)
+	local top_commands_count
+	top_commands_count=$(grep -c -v '^#' "${top_commands_file}" 2>/dev/null || echo 0)
 
 	cat <<EOF
 
-Dalaran Library Summary:
-    Backup files: ${backup_files}
-    Top command snapshots: ${snapshot_files}
-    Library commands: ${combined_count}
-    Working history total: ${working_count}
+Dalaran Summary:
+    Archive directories: ${archive_dirs}
+    Combined top commands: ${top_commands_count}
 
-To use your dalaran library-enhanced history:
-    export HISTFILE="${working_history_file}"
-    fc -R  # Reload history
+Your dalaran top commands are available at:
+    ${top_commands_file}
 
-Run this script periodically to keep your library updated.
+Run this script periodically to keep your archives updated.
 EOF
 }
 
@@ -305,18 +215,18 @@ EOF
 show_top_commands() {
 	local top_count="$1"
 	local dalaran_dir="$HOME/.dalaran"
-	local combined_file="${dalaran_dir}/top_commands.txt"
+	local top_commands_file="${dalaran_dir}/top_commands.txt"
 
-	if [[ ! -f "${combined_file}" ]]; then
-		echo "No dalaran library found. Run the script first to create one."
+	if [[ ! -f "${top_commands_file}" ]]; then
+		echo "No dalaran top commands found. Run the script first to create them."
 		return 1
 	fi
 
 	cat <<EOF
 
-Top ${top_count} most used commands from dalaran library:
-================================================
-$(head -"${top_count}" "${combined_file}" | nl)
+Top ${top_count} most used commands from dalaran:
+===============================================
+$(head -"${top_count}" "${top_commands_file}" | nl)
 EOF
 }
 
@@ -367,37 +277,32 @@ main() {
 	# Handle environment variables with defaults
 	[[ -z "${DRY_RUN:-}" ]] && DRY_RUN="false"
 
-	# Parse command line options
-	if ! parse_options "$@"; then
-		usage
-		return 1
-	fi
+	# Ensure HISTFILE is set to default if not already set
+	HISTFILE="${HISTFILE:-$HOME/.zsh_history}"
 
-	[[ -z "${history_file}" ]] && echo "Empty history file path" >&2
-	[[ ! -f "${history_file}" ]] && echo "History file not found: ${history_file}" >&2
+	# Validate that history file exists
+	[[ ! -f "${HISTFILE}" ]] && echo "History file not found: ${HISTFILE}" >&2
 
 	# Configuration
-	local top_n_commands
-	local current_history
+	local dalaran_dir
 	local timestamp
-	local top_commands_file
-	local dalaran_library_history
-	local working_history
 
-	local dalaran_dir="$HOME/.dalaran"
-	local top_commands_dir="${dalaran_dir}/top_commands"
-	local combined_top_commands="${dalaran_dir}/top_commands.txt"
+	local top_commands_file
+	local archives_dir
+	local archive_dir
+	local archive_file
+	local archive_top_commands_file
+
+	dalaran_dir="$HOME/.dalaran"
+	timestamp=$(date +"%Y%m%d_%H%M%S")
 
 	top_n_commands=${TOP_N_COMMANDS:-1000}
-	current_history="${HISTFILE:-$HOME/.zsh_history}"
-	timestamp=$(date +"%Y%m%d_%H%M%S")
-	backup_file="${dalaran_dir}/library_${timestamp}.txt"
-	top_commands_file="${top_commands_dir}/library_${timestamp}.txt"
-	dalaran_library_history="${dalaran_dir}/library"
-	working_history="${dalaran_dir}/active_history"
 
-	# Validate input
-	validate_input "${current_history}"
+	top_commands_file="${dalaran_dir}/top_commands.txt"
+	archives_dir="${dalaran_dir}/archives"
+	archive_dir="${archives_dir}/${timestamp}"
+	archive_file="${archive_dir}/.zsh_history"
+	archive_top_commands_file="${archive_dir}/top_commands.txt"
 
 	if [[ "${DRY_RUN}" == "true" ]]; then
 		cat <<EOF
@@ -414,46 +319,27 @@ EOF
 	fi
 
 	if [[ "${DRY_RUN}" == "true" ]]; then
-		echo "Would create directories: ${dalaran_dir} and ${top_commands_dir}"
+		echo "Would create directories: ${dalaran_dir} and ${archives_dir}"
 	else
-		if ! mkdir -p "${dalaran_dir}" "${top_commands_dir}"; then
-			echo "Failed to create directories: ${dalaran_dir} and ${top_commands_dir}" >&2
+		if ! mkdir -p "${dalaran_dir}" "${archives_dir}"; then
+			echo "Failed to create directories: ${dalaran_dir} and ${archives_dir}" >&2
 			return 1
 		fi
 	fi
 
-	# Create backup of current history
-	if [[ "${DRY_RUN}" != "true" ]]; then
-		if ! cp "${current_history}" "${backup_file}"; then
-			echo "Failed to backup ${current_history} to ${backup_file}" >&2
-			return 1
-		fi
-		local backup_count
-		backup_count=$(wc -l <"${backup_file}")
-		echo "Backed up ${backup_count} commands to: $(basename "${backup_file}")"
-	fi
-
-	if ! extract_top_commands "${current_history}" "${top_commands_file}" "${top_n_commands}"; then
-		echo "Failed to extract top commands" >&2
+	# Create archive with paired top commands file
+	if ! create_archive "${archive_file}" "${archive_top_commands_file}" "${top_n_commands}"; then
+		echo "Failed to create archive" >&2
 		return 1
 	fi
 
-	if ! combine_historical_files "${top_commands_dir}" "${combined_top_commands}" "${top_n_commands}"; then
-		echo "Failed to combine historical files" >&2
+	# Update library from all archive top commands files
+	if ! update_library "${archives_dir}" "${top_commands_file}"; then
+		echo "Failed to update library" >&2
 		return 1
 	fi
 
-	if ! create_dalaran_library_history "${combined_top_commands}" "${dalaran_library_history}"; then
-		echo "Failed to create dalaran library history" >&2
-		return 1
-	fi
-
-	if ! create_working_history "${dalaran_library_history}" "${current_history}" "${working_history}"; then
-		echo "Failed to create working history" >&2
-		return 1
-	fi
-
-	display_summary "${dalaran_dir}" "${top_commands_dir}" "${combined_top_commands}" "${working_history}"
+	display_summary "${dalaran_dir}" "${archives_dir}" "${top_commands_file}"
 
 	echo -e "\n===\Exit: ${BASH_SOURCE[0]:-$0}\n==="
 
