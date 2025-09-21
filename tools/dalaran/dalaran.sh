@@ -1,23 +1,24 @@
 #!/usr/bin/env bash
 #
-# ZSH Command Dalaran Library Script
+# ZSH Command Dalaran Spellbook Script
 # Builds and maintains a collection of the most-used commands over time
 #
-set -eo pipefail
+set -euo pipefail
 
 # Display usage information
 usage() {
 	cat <<EOF
 Usage: $(basename "$0") [OPTIONS]
 
-ZSH Command Dalaran Library Script
+ZSH Command Dalaran Spellbook Script
 Builds and maintains a collection of the most-used commands over time.
 
 OPTIONS:
-    -h, --help          Show this help message
-    --top=N             Show the top N most used spells (default: 10)
-    --silence="spell1,spell2"  Add spells to silenced exclusion list
-    --dry-run           Show what would be done without making changes
+    -h, --help          				Show this help message
+    --top=N             				Show the top N most used spells (default: 100)
+    --silence="spell1,spell2"  	Add spells to silenced exclusion list
+    --dry-run              			Show what would be done without making changes
+    --archive=true          		Create an archive of the current history
 
 ENVIRONMENT VARIABLES:
     DRY_RUN=true        Enable dry run mode
@@ -25,11 +26,11 @@ ENVIRONMENT VARIABLES:
     HISTFILE=path       Path to zsh history file (default: ~/.zsh_history)
 
 EXAMPLES:
-    $(basename "$0")                    # Run with default settings
-    $(basename "$0") --top=20          # Show top 20 spells
-    $(basename "$0") --dry-run         # Show what would be done
-    $(basename "$0") --silence="ls,pwd" # Add spells to exclusion list
-    DRY_RUN=true $(basename "$0")      # Alternative dry run method
+    $(basename "$0")                    	# Run with default settings
+    $(basename "$0") --top=20          		# Show top 20 spells
+    $(basename "$0") --dry-run         		# Show what would be done
+    $(basename "$0") --silence="ls,pwd" 	# Add spells to exclusion list
+    DRY_RUN=true $(basename "$0")      		# Alternative dry run method
 
 The script creates a spellbook of your most frequently used commands
 and maintains archives of your command history with silenced spell
@@ -52,7 +53,6 @@ update_silenced_spells() {
 
 	[[ "${DRY_RUN}" == "true" ]] && return 0
 
-	# Create dalaran directory if it doesn't exist
 	local dalaran_dir
 	dalaran_dir="$(dirname "${silenced_file}")"
 	if ! mkdir -p "${dalaran_dir}"; then
@@ -60,7 +60,6 @@ update_silenced_spells() {
 		return 1
 	fi
 
-	# Create or touch the silenced file
 	touch "${silenced_file}"
 
 	# Parse comma-separated spells and add to silenced file
@@ -69,10 +68,6 @@ update_silenced_spells() {
 	local spells_added=0
 
 	for spell in ${spells_string}; do
-		# Trim whitespace
-		spell=$(echo "${spell}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-
-		# Skip empty spells
 		[[ -z "${spell}" ]] && continue
 
 		# Check if spell already exists in silenced file
@@ -109,11 +104,10 @@ extract_top_spells() {
 	local input_file="$1"
 	local output_file="$2"
 	local max_spells="$3"
-	local silenced_file="$4"
+	local silenced_file="${4:-}"
 
 	[[ "${DRY_RUN}" == "true" ]] && return 0
 
-	# Create a temporary file for processing
 	local temp_spells
 	temp_spells=$(mktemp)
 
@@ -184,10 +178,10 @@ update_spellbook() {
 	[[ "${DRY_RUN}" == "true" ]] && return 0
 
 	local total_files
-	total_files=$(find "${archives_directory}" -path "${archives_directory}/${spellbook_pattern}" -type f 2>/dev/null | wc -l || echo 0)
+	total_files=$(find "${archives_directory}" -path "${archives_directory}/${spellbook_pattern}" \
+		-type f 2>/dev/null | wc -l || echo 0)
 	echo "Found ${total_files} archive spellbook files. Updating spellbook."
 
-	# Clear the output file
 	: >"${output_file}"
 
 	local files_processed=0
@@ -199,7 +193,8 @@ update_spellbook() {
 			cat "${file}" >>"${output_file}"
 			((files_processed++))
 		fi
-	done < <(find "${archives_directory}" -path "${archives_directory}/${spellbook_pattern}" -type f -print0 2>/dev/null || true)
+	done < <(find "${archives_directory}" -path "${archives_directory}/${spellbook_pattern}" \
+		-type f -print0 2>/dev/null || true)
 
 	if [[ ! -f "${output_file}" ]]; then
 		echo "Failed to create spellbook file: ${output_file}" >&2
@@ -208,7 +203,9 @@ update_spellbook() {
 
 	local total_spells
 	total_spells=$(wc -l <"${output_file}")
-	echo "Updated spellbook with ${total_spells} total spells from ${files_processed} archives"
+	local summary
+	summary="Updated spellbook with ${total_spells} total spells from ${files_processed} archives"
+	echo "${summary}"
 
 	return 0
 }
@@ -229,11 +226,10 @@ create_archive() {
 	local archive_file="$1"
 	local spellbook_file="$2"
 	local max_spells="$3"
-	local silenced_file="$4"
+	local silenced_file="${4:-}"
 
 	[[ "${DRY_RUN}" == "true" ]] && return 0
 
-	# Create archive directory
 	local archive_dir
 	archive_dir="$(dirname "${archive_file}")"
 	if ! mkdir -p "${archive_dir}"; then
@@ -241,7 +237,7 @@ create_archive() {
 		return 1
 	fi
 
-	# Create archive (backup of current HISTFILE)
+	# Creat backup of current HISTFILE
 	if ! cp "${HISTFILE}" "${archive_file}"; then
 		echo "Failed to create archive ${archive_file}" >&2
 		return 1
@@ -251,7 +247,6 @@ create_archive() {
 	archive_count=$(wc -l <"${archive_file}")
 	echo "Created archive: $(basename "${archive_dir}") with ${archive_count} spells"
 
-	# Extract top spells from the archive
 	if ! extract_top_spells "${archive_file}" "${spellbook_file}" "${max_spells}" "${silenced_file}"; then
 		echo "Failed to extract top spells from archive" >&2
 		return 1
@@ -320,17 +315,19 @@ $(head -"${top_count}" "${spellbook_file}" | nl)
 EOF
 }
 
-# Main entry point for the dalaran library script
+# Main entry point for the dalaran spellbook script
 #
 # Inputs:
 # - All command line arguments
 #
 # Side Effects:
 # - Processes command line options
-# - Creates and maintains the dalaran library
+# - Creates and maintains the dalaran spellbook
 # - Exits with appropriate status code
 main() {
 	echo -e "\n===\Entry: ${BASH_SOURCE[0]:-$0}\n==="
+
+	local show_top=0
 
 	while [[ $# -gt 0 ]]; do
 		case $1 in
@@ -342,7 +339,7 @@ main() {
 			show_top=1
 			top_count="${1#--top=}"
 			if [[ ! "${top_count}" =~ ^[0-9]+$ ]] || [[ "${top_count}" -lt 1 ]]; then
-				echo "Error: --top value must be a positive integer" >&2
+				echo "--top value must be a positive integer" >&2
 				return 1
 			fi
 			shift
@@ -350,7 +347,7 @@ main() {
 		--silence=*)
 			silenced_spells="${1#--silence=}"
 			if [[ -z "${silenced_spells}" ]]; then
-				echo "Error: --silence requires a comma-separated list of spells" >&2
+				echo "--silence requires a comma-separated list of spells" >&2
 				return 1
 			fi
 			shift
@@ -360,7 +357,7 @@ main() {
 			shift
 			;;
 		*)
-			echo "Error: Unknown option '$1'" >&2
+			echo "Unknown option '$1'" >&2
 			echo "Use --help for usage information" >&2
 			return 1
 			;;
@@ -404,7 +401,6 @@ main() {
 	archive_spellbook_file="${archive_dir}/spellbook.txt"
 	silenced_file="${dalaran_dir}/silenced.txt"
 
-	# Handle silenced spells if provided
 	if [[ -n "${silenced_spells:-}" ]]; then
 		if ! update_silenced_spells "${silenced_file}" "${silenced_spells}"; then
 			echo "Failed to update silenced spells" >&2
@@ -414,36 +410,28 @@ main() {
 		return 0
 	fi
 
-	if [[ "${DRY_RUN}" == "true" ]]; then
-		cat <<EOF
+	cat <<EOF
 ========================================
-ZSH Dalaran Library [DRY RUN MODE]
-========================================
-EOF
-	else
-		cat <<EOF
-========================================
-ZSH Dalaran Library
+ZSH Dalaran Spellbook
 ========================================
 EOF
-	fi
 
 	if [[ "${DRY_RUN}" == "true" ]]; then
 		echo "Would create directories: ${dalaran_dir} and ${archives_dir}"
 	else
 		if ! mkdir -p "${dalaran_dir}" "${archives_dir}"; then
-			echo "Failed to create directories: ${dalaran_dir} and ${archives_dir}" >&2
+			local dir_error
+			dir_error="Failed to create directories: ${dalaran_dir} and ${archives_dir}"
+			echo "${dir_error}" >&2
 			return 1
 		fi
 	fi
 
-	# Create archive with paired spellbook file
 	if ! create_archive "${archive_file}" "${archive_spellbook_file}" "${top_n_spells}" "${silenced_file}"; then
 		echo "Failed to create archive" >&2
 		return 1
 	fi
 
-	# Update spellbook from all archive spellbook files
 	if ! update_spellbook "${archives_dir}" "${spellbook_file}"; then
 		echo "Failed to update spellbook" >&2
 		return 1

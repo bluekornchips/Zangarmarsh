@@ -49,6 +49,7 @@ create_archive_directory() {
 }
 
 setup() {
+	#shellcheck disable=SC1091
 	source "$SCRIPT"
 
 	temp_dir=$(mktemp -d) || return 1
@@ -60,8 +61,6 @@ setup() {
 
 	HISTFILE="${DIR}/test_zsh_history"
 	DALARAN_DIR="${HOME}/.dalaran"
-	TOP_COMMANDS_DIR="${HOME}/.dalaran/top_commands"
-	BACKUP_HIST_FILE="$(mktemp)"
 
 	local default_spells=(
 		"git status"
@@ -92,7 +91,6 @@ setup() {
 	export HOME
 	export HISTFILE
 	export DALARAN_DIR
-	export TOP_COMMANDS_DIR
 	export DRY_RUN
 }
 
@@ -913,8 +911,8 @@ EOF
 
 	grep -q "git status" "$output_file"
 	grep -q "date" "$output_file"
-	! grep -q "ls -la" "$output_file"
-	! grep -q "pwd" "$output_file"
+	! grep -q "ls -la" "$output_file" || false
+	! grep -q "pwd" "$output_file" || false
 }
 
 @test "extract_top_spells:: works without silenced file" {
@@ -933,7 +931,7 @@ EOF
 
 	run extract_top_spells "$input_file" "$output_file" 10 "/does/not/exist"
 	[[ "$status" -eq 0 ]]
-	! echo "$output" | grep -q "Silenced"
+	! echo "$output" | grep -q "Silenced" || true
 	[[ -f "$output_file" ]]
 
 	grep -q "git status" "$output_file"
@@ -958,7 +956,7 @@ EOF
 
 	run extract_top_spells "$input_file" "$output_file" 10 "$silenced_file"
 	[[ "$status" -eq 0 ]]
-	! echo "$output" | grep -q "Silenced"
+	! echo "$output" | grep -q "Silenced" || true
 	[[ -f "$output_file" ]]
 
 	local output_count
