@@ -3,7 +3,7 @@
 # ZSH Command Dalaran Library Script
 # Builds and maintains a collection of the most-used commands over time
 #
-set -euo pipefail
+set -eo pipefail
 
 # Display usage information
 usage() {
@@ -35,39 +35,6 @@ history with the historical top commands.
 EOF
 }
 
-# Constants
-readonly DALARAN_DIR="$HOME/.dalaran"
-readonly TOP_COMMANDS_DIR="${DALARAN_DIR}/top_commands"
-readonly COMBINED_TOP_COMMANDS="${DALARAN_DIR}/top_commands.txt"
-
-# Validate input history file exists and is accessible
-#
-# Inputs:
-# - $1, history_file, the path to the history file to validate
-#
-# Side Effects:
-# - Returns error code if validation fails
-validate_input() {
-	local history_file="$1"
-
-	if [[ -z "${history_file}" ]]; then
-		echo "Empty history file path" >&2
-		return 1
-	fi
-
-	if [[ ! -f "${history_file}" ]]; then
-		echo "History file not found: ${history_file}" >&2
-		return 1
-	fi
-
-	if [[ ! -r "${history_file}" ]]; then
-		echo "History file not readable: ${history_file}" >&2
-		return 1
-	fi
-
-	return 0
-}
-
 # Create backup of current history file
 #
 # Inputs:
@@ -80,6 +47,11 @@ validate_input() {
 create_backup() {
 	local source_file="$1"
 	local backup_file="$2"
+
+	[[ -z "${source_file}" ]] && echo "Source file cannot be empty" >&2 && return 1
+	[[ ! -f "${source_file}" ]] && echo "Source file not found: ${source_file}" >&2 && return 1
+	[[ -z "${backup_file}" ]] && echo "Backup file cannot be empty" >&2 && return 1
+	[[ ! -f "${backup_file}" ]] && echo "Backup file not found: ${backup_file}" >&2 && return 1
 
 	[[ "${DRY_RUN}" == "true" ]] && return 0
 
@@ -231,7 +203,7 @@ create_dalaran_library_history() {
 
 	local base_timestamp
 	local time_increment
-	
+
 	base_timestamp=$(($(date +%s) - 365 * 24 * 60 * 60))
 	if [[ "${combined_count}" -gt 0 ]]; then
 		time_increment=$((365 * 24 * 60 * 60 / combined_count))
@@ -242,6 +214,9 @@ create_dalaran_library_history() {
 	# Create zsh history format with timestamps
 	local count=0
 	local command
+
+	touch "${output_file}"
+
 	while IFS= read -r command || [[ -n "${command}" ]]; do
 		# Skip comments and empty lines
 		[[ -z "${command}" || "${command}" =~ ^[[:space:]]*# ]] && continue
@@ -359,8 +334,10 @@ EOF
 # - Returns error code if library not found
 show_top_commands() {
 	local top_count="$1"
+	local dalaran_dir="$HOME/.dalaran"
+	local combined_file="${dalaran_dir}/top_commands.txt"
 
-	if [[ ! -f "${COMBINED_TOP_COMMANDS}" ]]; then
+	if [[ ! -f "${combined_file}" ]]; then
 		echo "No dalaran library found. Run the script first to create one."
 		return 1
 	fi
@@ -369,22 +346,23 @@ show_top_commands() {
 
 Top ${top_count} most used commands from dalaran library:
 ================================================
-$(head -"${top_count}" "${COMBINED_TOP_COMMANDS}" | nl)
+$(head -"${top_count}" "${combined_file}" | nl)
 EOF
 }
 
-# Parse command line options
+# Main entry point for the dalaran library script
 #
 # Inputs:
 # - All command line arguments
 #
 # Side Effects:
-# - Sets global variables based on options
-# - Returns error code for invalid options
-parse_options() {
-	local show_top=0
-	local top_count=10
+# - Processes command line options
+# - Creates and maintains the dalaran library
+# - Exits with appropriate status code
+main() {
+	echo -e "\n===\Entry: ${BASH_SOURCE[0]:-$0}\n==="
 
+	
 	while [[ $# -gt 0 ]]; do
 		case $1 in
 		-h | --help)
@@ -417,31 +395,18 @@ parse_options() {
 		exit $?
 	fi
 
-	return 0
-}
-
-# Main entry point for the dalaran library script
-#
-# Inputs:
-# - All command line arguments
-#
-# Side Effects:
-# - Processes command line options
-# - Creates and maintains the dalaran library
-# - Exits with appropriate status code
-main() {
-	echo -e "\n===\Entry: ${BASH_SOURCE[0]:-$0}\n==="
 
 	# Handle environment variables with defaults
-	local dry_run
-	dry_run=${DRY_RUN:-false}
-	DRY_RUN="${dry_run}"
+	[[ -z "${DRY_RUN:-}" ]] && DRY_RUN="false"
 
 	# Parse command line options
 	if ! parse_options "$@"; then
 		usage
 		return 1
 	fi
+
+	[[ -z "${history_file}" ]] && echo "Empty history file path" >&2
+	[[ ! -f "${history_file}" ]] && echo "History file not found: ${history_file}" >&2
 
 	# Configuration
 	local top_n_commands
@@ -452,19 +417,20 @@ main() {
 	local dalaran_library_history
 	local working_history
 
+	local dalaran_dir="$HOME/.dalaran"
+	local top_commands_dir="${dalaran_dir}/top_commands"
+	local combined_top_commands="${dalaran_dir}/top_commands.txt"
+
 	top_n_commands=${TOP_N_COMMANDS:-1000}
 	current_history="${HISTFILE:-$HOME/.zsh_history}"
 	timestamp=$(date +"%Y%m%d_%H%M%S")
-	backup_file="${DALARAN_DIR}/library_${timestamp}.txt"
-	top_commands_file="${TOP_COMMANDS_DIR}/library_${timestamp}.txt"
-	dalaran_library_history="${DALARAN_DIR}/library"
-	working_history="${DALARAN_DIR}/active_history"
+	backup_file="${dalaran_dir}/library_${timestamp}.txt"
+	top_commands_file="${top_commands_dir}/library_${timestamp}.txt"
+	dalaran_library_history="${dalaran_dir}/library"
+	working_history="${dalaran_dir}/active_history"
 
 	# Validate input
-	if ! validate_input "${current_history}"; then
-		echo "Failed to validate input history file" >&2
-		return 1
-	fi
+	validate_input "${current_history}"
 
 	if [[ "${DRY_RUN}" == "true" ]]; then
 		cat <<EOF
@@ -481,10 +447,10 @@ EOF
 	fi
 
 	if [[ "${DRY_RUN}" == "true" ]]; then
-		echo "Would create directories: ${DALARAN_DIR} and ${TOP_COMMANDS_DIR}"
+		echo "Would create directories: ${dalaran_dir} and ${top_commands_dir}"
 	else
-		if ! mkdir -p "${DALARAN_DIR}" "${TOP_COMMANDS_DIR}"; then
-			echo "Failed to create directories: ${DALARAN_DIR} and ${TOP_COMMANDS_DIR}" >&2
+		if ! mkdir -p "${dalaran_dir}" "${top_commands_dir}"; then
+			echo "Failed to create directories: ${dalaran_dir} and ${top_commands_dir}" >&2
 			return 1
 		fi
 	fi
@@ -500,12 +466,12 @@ EOF
 		return 1
 	fi
 
-	if ! combine_historical_files "${TOP_COMMANDS_DIR}" "${COMBINED_TOP_COMMANDS}" "${top_n_commands}"; then
+	if ! combine_historical_files "${top_commands_dir}" "${combined_top_commands}" "${top_n_commands}"; then
 		echo "Failed to combine historical files" >&2
 		return 1
 	fi
 
-	if ! create_dalaran_library_history "${COMBINED_TOP_COMMANDS}" "${dalaran_library_history}"; then
+	if ! create_dalaran_library_history "${combined_top_commands}" "${dalaran_library_history}"; then
 		echo "Failed to create dalaran library history" >&2
 		return 1
 	fi
@@ -515,7 +481,7 @@ EOF
 		return 1
 	fi
 
-	display_summary "${DALARAN_DIR}" "${TOP_COMMANDS_DIR}" "${COMBINED_TOP_COMMANDS}" "${working_history}"
+	display_summary "${dalaran_dir}" "${top_commands_dir}" "${combined_top_commands}" "${working_history}"
 
 	echo -e "\n===\Exit: ${BASH_SOURCE[0]:-$0}\n==="
 
