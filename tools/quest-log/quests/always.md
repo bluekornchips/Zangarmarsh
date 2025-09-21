@@ -1,5 +1,7 @@
 # Core Development Rules
 
+Always ultra think, deep mind, giga brain.
+
 ## Universal Bans
 
 ### Never Use

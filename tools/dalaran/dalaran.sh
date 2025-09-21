@@ -17,8 +17,8 @@ OPTIONS:
     -h, --help          				Show this help message
     --top=N             				Show the top N most used spells (default: 100)
     --silence="spell1,spell2"  	Add spells to silenced exclusion list
-    --dry-run              			Show what would be done without making changes
-    --archive=true          		Create an archive of the current history
+		--dry-run              			Show what would be done without making changes
+		--archive=true          		Create an archive of the current history
 
 ENVIRONMENT VARIABLES:
     DRY_RUN=true        Enable dry run mode
@@ -29,8 +29,8 @@ EXAMPLES:
     $(basename "$0")                    	# Run with default settings
     $(basename "$0") --top=20          		# Show top 20 spells
     $(basename "$0") --dry-run         		# Show what would be done
-    $(basename "$0") --silence="ls,pwd" 	# Add spells to exclusion list
-    DRY_RUN=true $(basename "$0")      		# Alternative dry run method
+		$(basename "$0") --silence="ls,pwd" 	# Add spells to exclusion list
+		DRY_RUN=true $(basename "$0")      		# Alternative dry run method
 
 The script creates a spellbook of your most frequently used commands
 and maintains archives of your command history with silenced spell
@@ -108,55 +108,44 @@ extract_top_spells() {
 
 	[[ "${DRY_RUN}" == "true" ]] && return 0
 
+	# Use arcane linguist for spell processing
 	local temp_spells
 	temp_spells=$(mktemp)
 
-	# Extract spells from zsh history using sed, sort, and uniq
-	# Handle zsh history format: ': timestamp:duration;spell' or plain spells
-	{
-		# Extract commands after semicolon from timestamped entries
-		sed -n 's/^: [0-9]*:[0-9]*;//p' "${input_file}"
-		# Extract plain commands (lines not starting with ':')
-		grep -v '^: ' "${input_file}" || true
-	} |
-		grep -v '^[[:space:]]*$' |
+	"${ARCANE_LINGUIST_SCRIPT}" <"$input_file" |
 		sort |
 		uniq -c |
 		sort -rn |
-		head -"${max_spells}" |
-		sed 's/^[[:space:]]*[0-9]*[[:space:]]*//' >"${temp_spells}"
+		head -"$max_spells" |
+		sed 's/^[[:space:]]*[0-9]*[[:space:]]*//' >"$temp_spells"
 
 	# Apply silenced spells filtering if silenced file exists
-	if [[ -f "${silenced_file}" ]]; then
+	if [[ -f "$silenced_file" ]]; then
 		local filtered_spells
 		filtered_spells=$(mktemp)
 		local spells_silenced=0
 
 		while IFS= read -r spell; do
-			if ! grep -Fxq "${spell}" "${silenced_file}"; then
-				echo "${spell}" >>"${filtered_spells}"
+			if ! grep -Fxq "$spell" "$silenced_file"; then
+				echo "$spell" >>"$filtered_spells"
 			else
 				((spells_silenced++))
 			fi
-		done <"${temp_spells}"
+		done <"$temp_spells"
 
-		if [[ ${spells_silenced} -gt 0 ]]; then
-			echo "Silenced ${spells_silenced} spell(s) from spellbook"
+		if [[ $spells_silenced -gt 0 ]]; then
+			echo "Silenced $spells_silenced spell(s) from spellbook"
 		fi
 
-		mv "${filtered_spells}" "${output_file}"
+		mv "$filtered_spells" "$output_file"
+		rm -f "$temp_spells"
 	else
-		mv "${temp_spells}" "${output_file}"
-	fi
-
-	if [[ ! -f "${output_file}" ]]; then
-		echo "Failed to create spellbook file: ${output_file}" >&2
-		return 1
+		mv "$temp_spells" "$output_file"
 	fi
 
 	local top_extracted
-	top_extracted=$(wc -l <"${output_file}")
-	echo "Extracted ${top_extracted} top spells to: $(basename "${output_file}")"
+	top_extracted=$(wc -l <"$output_file")
+	echo "Extracted $top_extracted top spells to: $(basename "$output_file")"
 
 	return 0
 }
@@ -400,6 +389,12 @@ main() {
 	archive_file="${archive_dir}/.zsh_history"
 	archive_spellbook_file="${archive_dir}/spellbook.txt"
 	silenced_file="${dalaran_dir}/silenced.txt"
+
+	ARCANE_LINGUIST_SCRIPT="$(dirname "${BASH_SOURCE[0]}")/arcane-linguist.sh"
+	if [[ ! -f "${ARCANE_LINGUIST_SCRIPT}" ]]; then
+		echo "Could not find arcane-linguist.sh script" >&2
+		return 1
+	fi
 
 	if [[ -n "${silenced_spells:-}" ]]; then
 		if ! update_silenced_spells "${silenced_file}" "${silenced_spells}"; then
