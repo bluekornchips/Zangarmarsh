@@ -20,5 +20,5 @@ alias tfa='terraform apply temp.plan'
 alias gdlf="\$HOME/bluekornchips/gandalf/gandalf"
 alias questlog="\$ZANGARMARSH_ROOT/tools/quest-log/quest-log.sh"
 alias dalaran="\$ZANGARMARSH_ROOT/tools/dalaran/dalaran.sh"
-
+alias trilliax="\$ZANGARMARSH_ROOT/tools/trilliax/trilliax.sh"
 alias bats="bats --verbose-run --timing"

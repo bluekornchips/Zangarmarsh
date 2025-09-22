@@ -131,5 +131,5 @@ Just like Thrall's hammer, this function smashes bugs...  # Do not use themed ex
 """
 
 # Don't use for production values
-SECRET = "warchief_of_the_horde" 
+SECRET = "warchief_of_the_horde"
 ```

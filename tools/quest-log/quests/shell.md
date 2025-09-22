@@ -72,19 +72,21 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
       -h | --help)
         usage
         exit 0
-      ;;
+        ;;
       *)
         echo "Unknown option '$1'" >&2
         echo "Use '$(basename "$0") --help' for usage information" >&2
         exit 1
-      ;;
+        ;;
     esac
+    shift
   done
 
-	main "$@"
-	exit $?
-fi
+}
 
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  main "$@"
+fi
 ```
 
 ### Functions
@@ -125,15 +127,13 @@ set_global_name() {
 
 ## Formatting
 
-- Use 2 spaces for indentation
-- Put `; then` and `; do` on same line as `if`, `for`, or `while`
-- Use blank lines between blocks
-
 ```bash
+# Use 2 spaces indentation
 if [[ -f "$file" ]]; then
   echo "File exists"
 fi
 
+# Put ; then and ; do on same line
 for dir in "${dirs[@]}"; do
   if [[ -d "${dir}" ]]; then
     echo "Directory exists"
@@ -144,12 +144,12 @@ done
 ## Variables
 
 ```bash
-# Define, assign, and export separately
+# Define, assign, export separately
 local name
 name="John"
 export name
 
-# Quote variables
+# Always quote variables
 echo "PATH=${PATH}, PWD=${PWD}"
 
 # Use arrays for lists
@@ -168,7 +168,7 @@ my_func() {
 ## Control Flow
 
 ```bash
-# Test strings
+# Test strings with [[ ]]
 if [[ "${my_var}" == "some_string" ]]; then
   do_something
 fi
@@ -178,7 +178,7 @@ if [[ -z "${my_var}" ]]; then
   do_something
 fi
 
-# Arithmetic
+# Arithmetic with (())
 if (( a < b )); then
   echo "a is less than b"
 fi
@@ -262,11 +262,11 @@ mock_functionality(){
 
 ## Best Practices
 
-- Use `[[ ... ]]` over `[ ... ]`, even in bats tests.
+- Use `[[ ... ]]` over `[ ... ]`
 - Use `$(command)` instead of backticks
 - Use `(( ... ))` for arithmetic
-- Use process substitution for pipes to while
-- Use explicit paths for wildcards: `rm -v ./*`
-- Use builtins over external commands when possible
-- Always `return` explicit status codes.
-- Never use `exit` in functions, only call outside of function definitions.
+- Use process substitution: `while read line; do ... done < <(cmd)`
+- Use explicit paths: `rm -v ./*`
+- Use builtins over external commands
+- Always `return` explicit status codes
+- Never use `exit` in functions
