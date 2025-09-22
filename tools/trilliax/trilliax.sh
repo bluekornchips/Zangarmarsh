@@ -19,9 +19,9 @@ ARGUMENTS:
     DIRECTORY    Directory to clean (default: current directory)
 
 OPTIONS:
-    -a, --all          Clean all targets (overrides --targets)
     -d, --dir          Directory to clean (default: current directory)
-    -t, --targets      Comma-separated list of targets to clean (${AVAILABLE_TARGETS[*]})
+    -t, --targets      Comma-separated list of targets to clean (${AVAILABLE_TARGETS[@]})
+    -a, --all          Clean all targets (overrides --targets)
     -r, --dry-run      Show what would be cleaned without making changes
     -h, --help         Show this help message
 
@@ -35,10 +35,10 @@ CLEANUP OPERATIONS:
     - Node.js files (node_modules, package locks, npm cache)
 
 EXAMPLES:
-    $(basename "$0") --all              # Clean all targets in current directory
-    $(basename "$0") --targets cursor,python  # Clean specific targets
+    $(basename "$0")                    # Clean current directory
     $(basename "$0") /path/to/project   # Clean specific directory
-    $(basename "$0") --dry-run --all    # Preview cleanup for all targets
+    $(basename "$0") --dry-run          # Show what would be cleaned
+    $(basename "$0") --dry-run /path/to/project  # Preview cleanup for specific directory
     $(basename "$0") --help             # Show this help
 
 EOF
@@ -52,7 +52,7 @@ EOF
 #
 # Side Effects:
 # - Sets global array ENABLED_TARGETS with selected targets
-# - Returns 0 on success, 1 on invalid target
+# - Returns 0 on success, 1 on invalid target or no targets specified
 validate_targets() {
 	local targets_string="$1"
 	local all_flag="${2:-false}"
@@ -63,9 +63,9 @@ validate_targets() {
 		return 0
 	fi
 
-	# If no targets specified, fail
+	# If no targets specified, return error
 	if [[ -z "$targets_string" ]]; then
-		echo "No targets specified. Use --targets to specify targets or --all for all targets" >&2
+		echo "No targets specified. Use --targets to specify targets or --all to clean all." >&2
 		return 1
 	fi
 
@@ -89,6 +89,29 @@ validate_targets() {
 	done
 
 	ENABLED_TARGETS=("${enabled_targets[@]}")
+	return 0
+}
+
+# Clean filesystem of empty directories
+#
+# Inputs:
+# - $1, target_dir, directory to clean filesystem from
+# - $2, dry_run, boolean flag for dry-run mode
+#
+# Side Effects:
+# - Removes empty directories
+# - In dry-run mode, shows what would be removed without removing
+# - Returns 0 on success
+clean_fs() {
+	local target_dir="$1"
+	local dry_run="${2:-false}"
+
+	if [[ "$dry_run" == "true" ]]; then
+		find "$target_dir" -type d -empty -exec echo "Would remove: {}" \; 2>/dev/null || true
+	else
+		find "$target_dir" -type d -empty -exec rm -rf {} + 2>/dev/null || true
+	fi
+
 	return 0
 }
 
@@ -247,7 +270,6 @@ clean_node() {
 # Inputs:
 # - $1, target_dir, optional directory to clean (default: current directory)
 # - $2, dry_run, boolean flag for dry-run mode
-# - $3, all_flag, boolean flag for --all option
 #
 # Side Effects:
 # - Performs cleanup operations for selected targets in the specified directory
@@ -256,10 +278,11 @@ clean_node() {
 main() {
 	echo -e "\n=== Entry: ${BASH_SOURCE[0]:-$0} ===\n"
 
+	echo "Apologies for the mess master, I shall tidy up immediately."
+
 	# Set target directory (default to current directory)
 	local target_dir="${1:-.}"
 	local dry_run="${2:-false}"
-	local all_flag="${3:-false}"
 
 	# Validate target directory exists
 	if [[ ! -d "$target_dir" ]]; then
@@ -272,16 +295,12 @@ main() {
 
 	echo "Cleaning directory: $target_dir"
 
-	# Initialize enabled targets based on all_flag
-	if [[ "$all_flag" == "true" ]]; then
-		ENABLED_TARGETS=("${AVAILABLE_TARGETS[@]}")
-	fi
-
 	# Perform cleanup operations for enabled targets
 	local exit_code=0
 	local cleanup_count=0
 
 	for target in "${ENABLED_TARGETS[@]}"; do
+		echo "Filthy, filthy, FILTHY!"
 		case "$target" in
 		"cursor")
 			if clean_cursor "$target_dir" "$dry_run"; then
@@ -319,7 +338,8 @@ main() {
 	done
 
 	if [[ $cleanup_count -eq 0 ]]; then
-		echo "No cleanup operations performed."
+		echo "No targets selected for cleanup."
+		echo "Please don't say such things! The master is back, and things need to be kept tidy."
 	else
 		echo "Clean complete. Performed cleanup for $cleanup_count target types."
 	fi
@@ -340,10 +360,6 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
 	# Parse command line arguments
 	while [[ $# -gt 0 ]]; do
 		case $1 in
-		-a | --all)
-			all_flag="true"
-			shift
-			;;
 		-d | --dir)
 			if [[ -z "$2" ]] || [[ "$2" == -* ]]; then
 				echo "--dir requires a directory path" >&2
@@ -353,6 +369,7 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
 			target_dir="$2"
 			shift 2
 			;;
+
 		-t | --targets)
 			if [[ -z "$2" ]] || [[ "$2" == -* ]]; then
 				echo "--targets requires a comma-separated list of targets" >&2
@@ -362,8 +379,14 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
 			targets_string="$2"
 			shift 2
 			;;
+		-a | --all)
+			all_flag="true"
+			shift
+			;;
 		-r | --dry-run)
-			dry_run="true"
+			if [[ "${DRY_RUN:-}" != "false" ]]; then
+				dry_run=true
+			fi
 			shift
 			;;
 		-h | --help)
@@ -387,6 +410,6 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
 		exit 1
 	fi
 
-	main "$target_dir" "$dry_run" "$all_flag"
+	main "$target_dir" "$dry_run"
 	exit $?
 fi
