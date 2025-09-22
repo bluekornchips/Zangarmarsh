@@ -50,7 +50,7 @@
     - 'markdown'
     - 'communication'
   cursor:
-    alwaysApply: false
+    alwaysApply: true
 
 # Language-Specific Style Guides
 - name: python

@@ -272,6 +272,11 @@ main() {
 
 	echo "Cleaning directory: $target_dir"
 
+	# Initialize enabled targets based on all_flag
+	if [[ "$all_flag" == "true" ]]; then
+		ENABLED_TARGETS=("${AVAILABLE_TARGETS[@]}")
+	fi
+
 	# Perform cleanup operations for enabled targets
 	local exit_code=0
 	local cleanup_count=0

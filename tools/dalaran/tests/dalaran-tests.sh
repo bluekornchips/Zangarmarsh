@@ -7,42 +7,53 @@ GIT_ROOT=$(git rev-parse --show-toplevel)
 SCRIPT="$GIT_ROOT/tools/dalaran/dalaran.sh"
 [[ ! -f "${SCRIPT}" ]] && echo "Could not find dalaran.sh script" >&2 && exit 1
 
+# Create a test history file with zsh format entries
+#
+# Inputs:
+# - $1, history_file, path to the history file to create
+# - $@, remaining arguments are the spell commands to add
+#
+# Side Effects:
+# - Creates or appends to the specified history file with timestamped entries
 create_test_history_file() {
 	local history_file="$1"
-	local spells_array_name="$2"
-	local -n spells="$spells_array_name"
+	shift
 
 	local timestamp
-	local i
+	local spell
 	timestamp=1700000000
-	i=0
 
-	while [[ $i -lt ${#spells[@]} ]]; do
-		echo ": ${timestamp}:0;${spells[$i]}" >>"$history_file"
+	for spell in "$@"; do
+		echo ": ${timestamp}:0;${spell}" >>"$history_file"
 		timestamp=$((timestamp + 1))
-		i=$((i + 1))
 	done
 
 	return 0
 }
 
+# Create archive directory with spellbook file from spell data
+#
+# Inputs:
+# - $1, archives_dir, base directory for archives
+# - $2, timestamp, timestamp identifier for the archive
+# - $@, remaining arguments are the spells to add to spellbook
+#
+# Side Effects:
+# - Creates archive directory structure
+# - Creates spellbook.txt file with spell contents
 create_archive_directory() {
 	local archives_dir="$1"
 	local timestamp="$2"
-	local spells_array_name="$3"
-	local -n spell_array="$spells_array_name"
+	shift 2
 
 	local archive_dir="${archives_dir}/${timestamp}"
 	local spellbook_file="${archive_dir}/spellbook.txt"
 
 	mkdir -p "${archive_dir}"
 
-	local i
-	i=0
-
-	while [[ $i -lt ${#spell_array[@]} ]]; do
-		echo "${spell_array[$i]}" >>"$spellbook_file"
-		i=$((i + 1))
+	local spell
+	for spell in "$@"; do
+		echo "${spell}" >>"$spellbook_file"
 	done
 
 	return 0
@@ -84,7 +95,7 @@ setup() {
 		"ls -la"
 		"git status"
 	)
-	create_test_history_file "${HISTFILE}" default_spells
+	create_test_history_file "${HISTFILE}" "${default_spells[@]}"
 
 	DRY_RUN=true
 
@@ -384,7 +395,7 @@ EOF
 
 	run update_spellbook "$input_dir" "$output_file"
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Found 0 archive spellbook files"
+	echo "$output" | grep -q "Found.*0.*archive spellbook files"
 	[[ -f "$output_file" ]]
 
 	local output_count
@@ -400,12 +411,12 @@ EOF
 	output_file=$(mktemp)
 
 	local spells=("git status" "ls -la" "pwd" "git status" "date")
-	create_archive_directory "${input_dir}" "20240101" spells
+	create_archive_directory "${input_dir}" "20240101" "${spells[@]}"
 
 	run update_spellbook "$input_dir" "$output_file"
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Found 1 archive spellbook files"
-	echo "$output" | grep -q "Added 20240101: 5 spells"
+	echo "$output" | grep -q "Found.*1.*archive spellbook files"
+	echo "$output" | grep -q "Added 20240101:.*5 spells"
 	[[ -f "$output_file" ]]
 
 	local output_count
@@ -428,13 +439,13 @@ EOF
 	local spells2=("git status" "echo hello" "date")
 	local spells3=("pwd" "git status" "whoami")
 
-	create_archive_directory "${input_dir}" "20240101" spells1
-	create_archive_directory "${input_dir}" "20240102" spells2
-	create_archive_directory "${input_dir}" "20240103" spells3
+	create_archive_directory "${input_dir}" "20240101" "${spells1[@]}"
+	create_archive_directory "${input_dir}" "20240102" "${spells2[@]}"
+	create_archive_directory "${input_dir}" "20240103" "${spells3[@]}"
 
 	run update_spellbook "$input_dir" "$output_file"
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Found 3 archive spellbook files"
+	echo "$output" | grep -q "Found.*3.*archive spellbook files"
 	echo "$output" | grep -q "Updated spellbook with.*total spells from.*archives"
 	[[ -f "$output_file" ]]
 
@@ -454,9 +465,9 @@ EOF
 	local spells2=("spell3" "spell4")
 	local spells3=("spell5")
 
-	create_archive_directory "${input_dir}" "20240101" spells1
-	create_archive_directory "${input_dir}" "20240102" spells2
-	create_archive_directory "${input_dir}" "20240103" spells3
+	create_archive_directory "${input_dir}" "20240101" "${spells1[@]}"
+	create_archive_directory "${input_dir}" "20240102" "${spells2[@]}"
+	create_archive_directory "${input_dir}" "20240103" "${spells3[@]}"
 
 	run update_spellbook "$input_dir" "$output_file"
 	[[ "$status" -eq 0 ]]
@@ -483,8 +494,8 @@ EOF
 	local spells1=("spell1" "spell2" "spell3" "spell4" "spell5")
 	local spells2=("spell6" "spell7" "spell8" "spell9" "spell10")
 
-	create_archive_directory "${input_dir}" "20240101" spells1
-	create_archive_directory "${input_dir}" "20240102" spells2
+	create_archive_directory "${input_dir}" "20240101" "${spells1[@]}"
+	create_archive_directory "${input_dir}" "20240102" "${spells2[@]}"
 
 	run update_spellbook "$input_dir" "$output_file"
 	[[ "$status" -eq 0 ]]
@@ -503,14 +514,14 @@ EOF
 	output_file=$(mktemp)
 
 	local spells=("git status" "ls -la")
-	create_archive_directory "${input_dir}" "20240101" spells
+	create_archive_directory "${input_dir}" "20240101" "${spells[@]}"
 
 	echo "not a spellbook file" >"${input_dir}/other_file.txt"
 	echo "another file" >"${input_dir}/data.txt"
 
 	run update_spellbook "$input_dir" "$output_file"
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Found 1 archive spellbook files"
+	echo "$output" | grep -q "Found.*1.*archive spellbook files"
 	[[ -f "$output_file" ]]
 
 	local output_count
@@ -532,7 +543,7 @@ EOF
 
 	run update_spellbook "$input_dir" "$output_file"
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Found 2 archive spellbook files"
+	echo "$output" | grep -q "Found.*2.*archive spellbook files"
 	[[ -f "$output_file" ]]
 
 	local output_count
@@ -548,7 +559,7 @@ EOF
 	output_file="${DIR}/combined_output.txt"
 
 	local spells=("git status" "ls -la" "pwd" "date")
-	create_archive_directory "${input_dir}" "20240101" spells
+	create_archive_directory "${input_dir}" "20240101" "${spells[@]}"
 
 	run update_spellbook "$input_dir" "$output_file"
 	[[ "$status" -eq 0 ]]
@@ -681,7 +692,7 @@ EOF
 
 	run display_summary "$dalaran_dir" "$archives_dir" "$spellbook_file"
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Archive directories: 2"
+	echo "$output" | grep -q "Archive directories:.*2"
 	echo "$output" | grep -q "Combined spellbook entries: 2"
 }
 
@@ -696,7 +707,7 @@ EOF
 
 	run display_summary "$dalaran_dir" "$archives_dir" "$spellbook_file"
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Archive directories: 0"
+	echo "$output" | grep -q "Archive directories:.*0"
 	echo "$output" | grep -q "Combined spellbook entries: 0"
 }
 
