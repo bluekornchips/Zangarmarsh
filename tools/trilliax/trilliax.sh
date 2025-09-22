@@ -3,7 +3,7 @@
 # Trilliax cleanup script
 # Removes generated files and directories from development environments
 #
-set -uo pipefail
+set -eo pipefail
 
 AVAILABLE_TARGETS=("cursor" "claude" "python" "node")
 
@@ -19,8 +19,9 @@ ARGUMENTS:
     DIRECTORY    Directory to clean (default: current directory)
 
 OPTIONS:
+    -a, --all          Clean all targets (overrides --targets)
     -d, --dir          Directory to clean (default: current directory)
-    -t, --targets      Comma-separated list of targets to clean (${AVAILABLE_TARGETS[@]})
+    -t, --targets      Comma-separated list of targets to clean (${AVAILABLE_TARGETS[*]})
     -r, --dry-run      Show what would be cleaned without making changes
     -h, --help         Show this help message
 
@@ -34,10 +35,10 @@ CLEANUP OPERATIONS:
     - Node.js files (node_modules, package locks, npm cache)
 
 EXAMPLES:
-    $(basename "$0")                    # Clean current directory
+    $(basename "$0") --all              # Clean all targets in current directory
+    $(basename "$0") --targets cursor,python  # Clean specific targets
     $(basename "$0") /path/to/project   # Clean specific directory
-    $(basename "$0") --dry-run          # Show what would be cleaned
-    $(basename "$0") --dry-run /path/to/project  # Preview cleanup for specific directory
+    $(basename "$0") --dry-run --all    # Preview cleanup for all targets
     $(basename "$0") --help             # Show this help
 
 EOF
@@ -47,17 +48,25 @@ EOF
 #
 # Inputs:
 # - $1, targets_string, comma-separated list of targets to clean
+# - $2, all_flag, boolean flag for --all option
 #
 # Side Effects:
 # - Sets global array ENABLED_TARGETS with selected targets
 # - Returns 0 on success, 1 on invalid target
 validate_targets() {
 	local targets_string="$1"
+	local all_flag="${2:-false}"
 
-	# If no targets specified, enable all
-	if [[ -z "$targets_string" ]]; then
+	# If --all flag is set, enable all targets
+	if [[ "$all_flag" == "true" ]]; then
 		ENABLED_TARGETS=("${AVAILABLE_TARGETS[@]}")
 		return 0
+	fi
+
+	# If no targets specified, fail
+	if [[ -z "$targets_string" ]]; then
+		echo "No targets specified. Use --targets to specify targets or --all for all targets" >&2
+		return 1
 	fi
 
 	IFS=',' read -ra REQUESTED_TARGETS <<<"$targets_string"
@@ -238,6 +247,7 @@ clean_node() {
 # Inputs:
 # - $1, target_dir, optional directory to clean (default: current directory)
 # - $2, dry_run, boolean flag for dry-run mode
+# - $3, all_flag, boolean flag for --all option
 #
 # Side Effects:
 # - Performs cleanup operations for selected targets in the specified directory
@@ -249,11 +259,7 @@ main() {
 	# Set target directory (default to current directory)
 	local target_dir="${1:-.}"
 	local dry_run="${2:-false}"
-
-	# Initialize enabled targets if not already set
-	if [[ -z "${ENABLED_TARGETS[*]:-}" ]]; then
-		ENABLED_TARGETS=("${AVAILABLE_TARGETS[@]}")
-	fi
+	local all_flag="${3:-false}"
 
 	# Validate target directory exists
 	if [[ ! -d "$target_dir" ]]; then
@@ -308,7 +314,7 @@ main() {
 	done
 
 	if [[ $cleanup_count -eq 0 ]]; then
-		echo "No targets selected for cleanup."
+		echo "No cleanup operations performed."
 	else
 		echo "Clean complete. Performed cleanup for $cleanup_count target types."
 	fi
@@ -324,10 +330,15 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
 	target_dir="."
 	dry_run="${DRY_RUN:-false}"
 	targets_string=""
+	all_flag="false"
 
 	# Parse command line arguments
 	while [[ $# -gt 0 ]]; do
 		case $1 in
+		-a | --all)
+			all_flag="true"
+			shift
+			;;
 		-d | --dir)
 			if [[ -z "$2" ]] || [[ "$2" == -* ]]; then
 				echo "--dir requires a directory path" >&2
@@ -337,7 +348,6 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
 			target_dir="$2"
 			shift 2
 			;;
-
 		-t | --targets)
 			if [[ -z "$2" ]] || [[ "$2" == -* ]]; then
 				echo "--targets requires a comma-separated list of targets" >&2
@@ -348,9 +358,7 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
 			shift 2
 			;;
 		-r | --dry-run)
-			if [[ "${DRY_RUN:-}" != "false" ]]; then
-				dry_run=true
-			fi
+			dry_run="true"
 			shift
 			;;
 		-h | --help)
@@ -370,10 +378,10 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
 		esac
 	done
 
-	if ! validate_targets "$targets_string"; then
+	if ! validate_targets "$targets_string" "$all_flag"; then
 		exit 1
 	fi
 
-	main "$target_dir" "$dry_run"
+	main "$target_dir" "$dry_run" "$all_flag"
 	exit $?
 fi
