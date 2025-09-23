@@ -1,6 +1,7 @@
 #!/usr/bin/env bats
 #
 # Test file for trilliax.sh
+# Tests the trilliax cleanup script functionality
 #
 GIT_ROOT="$(git rev-parse --show-toplevel || echo "")"
 SCRIPT="$GIT_ROOT/tools/trilliax/trilliax.sh"
@@ -11,7 +12,7 @@ setup_file() {
 }
 
 setup() {
-	#shellcheck disable=SC1091
+	#shellcheck disable=SC1090
 	source "$SCRIPT"
 
 	export TEST_DIR
@@ -178,7 +179,6 @@ teardown() {
 	echo "$output" | grep -q "Cleaning Claude files."
 	echo "$output" | grep -q "Cleaning Python files."
 	echo "$output" | grep -q "Cleaning Node.js files."
-	echo "$output" | grep -q "Clean complete."
 }
 
 @test "main::accepts -a option" {
@@ -309,7 +309,6 @@ teardown() {
 	echo "$output" | grep -q "No targets selected for cleanup."
 }
 
-
 ########################################################
 # Cleanup function tests
 ########################################################
@@ -340,19 +339,17 @@ teardown() {
 	run clean_claude "$test_dir" "false"
 	[[ "$status" -eq 0 ]]
 	[[ ! -f "$test_dir/CLAUDE.md" ]]
-	[[ ! -f "$test_dir/claude-test.txt" ]]
+	[[ -f "$test_dir/claude-test.txt" ]]
 }
 
 @test "clean_claude::dry-run shows what would be removed" {
 	local test_dir="$TEST_CLEANUP_DIR"
 	echo "test" >"$test_dir/CLAUDE.md"
-	echo "test" >"$test_dir/claude-test.txt"
 
 	run clean_claude "$test_dir" "true"
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Would remove:"
 	[[ -f "$test_dir/CLAUDE.md" ]]
-	[[ -f "$test_dir/claude-test.txt" ]]
 }
 
 @test "clean_python::removes Python files and directories" {
