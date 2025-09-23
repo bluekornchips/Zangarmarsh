@@ -35,7 +35,7 @@ Description of script purpose
 OPTIONS:
   -h, --help  Show this help message
 
-ENVIRONMENT VARIABLES (If any)
+ENVIRONMENT VARIABLES:
   ALICE=bob           # Environment variable name and description
 
 EOF
@@ -55,18 +55,11 @@ function_name() {
 # Main entry point, can be named anything but "main" is fallback default
 main(){
   echo -e "\n=== Entry: ${BASH_SOURCE[0]:-$0} ===\n"
-  # Check required input args, if needed
-  # Check environment variables, if needed
-  # Check external dependencies, if needed
-  # Continue with script logic and calls to other functions, if needed
-  # ...
-  # Return success or error
+
   echo -e "\n=== Exit: ${BASH_SOURCE[0]:-$0} ===\n"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
-  # Set input args, if needed
-  # If input args are in fact needed, always handle -h | --help and unknown options at a bare minimum
   while [[ $# -gt 0 ]]; do
     case $1 in
       -h | --help)
