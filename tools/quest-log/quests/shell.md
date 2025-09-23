@@ -72,14 +72,11 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
         exit 1
         ;;
     esac
-    shift
   done
 
+  main "$@"
 }
 
-if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
-  main "$@"
-fi
 ```
 
 ### Functions

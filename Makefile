@@ -5,7 +5,6 @@ all: test-all
 
 # Run all tests
 test-all:
-# Profile
 	bats --timing --verbose-run ./profile/tests/zangarmarsh-tests.sh \
 	./profile/tests/prompt-tests.sh \
 	./profile/tests/profile-tests.sh \
