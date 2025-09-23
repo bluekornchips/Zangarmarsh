@@ -3,9 +3,9 @@
 # Trilliax cleanup script
 # Removes generated files and directories from development environments
 #
-set -uo pipefail
+set -euo pipefail
 
-AVAILABLE_TARGETS=("cursor" "claude" "python" "node")
+ENABLED_TARGETS=()
 
 # Display usage information
 usage() {
@@ -16,70 +16,63 @@ Trilliax cleanup script
 Removes generated files and directories from development environments.
 
 ARGUMENTS:
-    DIRECTORY    Directory to clean (default: current directory)
+  DIRECTORY    Directory to clean (default: current directory)
 
 OPTIONS:
-    -d, --dir          Directory to clean (default: current directory)
-    -t, --targets      Comma-separated list of targets to clean (${AVAILABLE_TARGETS[@]})
-    -r, --dry-run      Show what would be cleaned without making changes
-    -h, --help         Show this help message
+  -d, --dir          Directory to clean (default: current directory)
+  -t, --targets      Comma-separated list of targets to clean (cursor,claude,python,node)
+  -a, --all          Clean all targets (overrides --targets)
+  -r, --dry-run      Show what would be cleaned without making changes
+  -h, --help         Show this help message
 
 ENVIRONMENT VARIABLES:
-    DRY_RUN   Enable dry-run mode
+  DRY_RUN   Enable dry-run mode
 
 CLEANUP OPERATIONS:
-    - .cursor directories (recursively)
-    - Claude files (CLAUDE.md and files starting with 'claude')
-    - Python files (virtual environments, cache files, compiled files)
-    - Node.js files (node_modules, package locks, npm cache)
+  - .cursor directories (recursively)
+  - Claude files (CLAUDE.md and files starting with 'claude')
+  - Python files (virtual environments, cache files, compiled files)
+  - Node.js files (node_modules, package locks, npm cache)
 
 EXAMPLES:
-    $(basename "$0")                    # Clean current directory
-    $(basename "$0") /path/to/project   # Clean specific directory
-    $(basename "$0") --dry-run          # Show what would be cleaned
-    $(basename "$0") --dry-run /path/to/project  # Preview cleanup for specific directory
-    $(basename "$0") --help             # Show this help
+  $(basename "$0")                    # Clean current directory
+  $(basename "$0") /path/to/project   # Clean specific directory
+  $(basename "$0") --dry-run          # Show what would be cleaned
+  $(basename "$0") --dry-run /path/to/project  # Preview cleanup for specific directory
+  $(basename "$0") --help             # Show this help
 
 EOF
 }
 
-# Validate and parse target selection
+# Clean filesystem of empty directories
 #
 # Inputs:
-# - $1, targets_string, comma-separated list of targets to clean
+# - $1, target_dir, directory to clean filesystem from
+# - $2, dry_run, boolean flag for dry-run mode
 #
 # Side Effects:
-# - Sets global array ENABLED_TARGETS with selected targets
-# - Returns 0 on success, 1 on invalid target
-validate_targets() {
-	local targets_string="$1"
+# - Removes empty directories
+# - In dry-run mode, shows what would be removed without removing
+# - Returns 0 on success
+clean_fs() {
+	local target_dir="$1"
+	local dry_run="${2:-false}"
 
-	# If no targets specified, enable all
-	if [[ -z "$targets_string" ]]; then
-		ENABLED_TARGETS=("${AVAILABLE_TARGETS[@]}")
+	echo "Cleaning empty directories."
+
+	local dirs_to_remove
+	dirs_to_remove=$(find "$target_dir" -depth -type d -empty 2>/dev/null)
+
+	if [[ "$dry_run" == "true" ]]; then
+		for dir in $dirs_to_remove; do
+			[[ -n "$dir" ]] && echo "Would remove: $dir"
+		done
+
 		return 0
 	fi
 
-	IFS=',' read -ra REQUESTED_TARGETS <<<"$targets_string"
+	find "$target_dir" -depth -type d -empty -delete 2>/dev/null || true
 
-	local enabled_targets=()
-	for target in "${REQUESTED_TARGETS[@]}"; do
-		target=$(echo "$target" | xargs)
-		local valid=false
-		for available in "${AVAILABLE_TARGETS[@]}"; do
-			if [[ "$target" == "$available" ]]; then
-				valid=true
-				break
-			fi
-		done
-		if [[ "$valid" != "true" ]]; then
-			echo "Invalid target '$target'. Available targets: ${AVAILABLE_TARGETS[*]}" >&2
-			return 1
-		fi
-		enabled_targets+=("$target")
-	done
-
-	ENABLED_TARGETS=("${enabled_targets[@]}")
 	return 0
 }
 
@@ -100,15 +93,23 @@ clean_cursor() {
 	local TARGET_DIRS=(".cursor")
 
 	echo "Cleaning .cursor directories."
+
+	local dirs_to_remove=""
+	for pattern in "${TARGET_DIRS[@]}"; do
+		dirs_to_remove="$dirs_to_remove $(find "$target_dir" -type d -name "$pattern" 2>/dev/null)"
+	done
+
 	if [[ "$dry_run" == "true" ]]; then
-		for dir_pattern in "${TARGET_DIRS[@]}"; do
-			find "$target_dir" -type d -name "$dir_pattern" -exec echo "Would remove: {}" \; 2>/dev/null || true
+		for dir in $dirs_to_remove; do
+			[[ -n "$dir" ]] && echo "Would remove: $dir"
 		done
-	else
-		for dir_pattern in "${TARGET_DIRS[@]}"; do
-			find "$target_dir" -type d -name "$dir_pattern" -exec rm -rf {} + 2>/dev/null || true
-		done
+
+		return 0
 	fi
+
+	for dir in $dirs_to_remove; do
+		[[ -n "$dir" ]] && rm -rf "$dir" 2>/dev/null || true
+	done
 
 	return 0
 }
@@ -127,26 +128,26 @@ clean_claude() {
 	local target_dir="$1"
 	local dry_run="${2:-false}"
 
-	local TARGET_FILES=("CLAUDE.md" "claude*")
+	local TARGET_FILES=("CLAUDE.md")
 
 	echo "Cleaning Claude files."
+
+	local files_to_remove=""
+	for pattern in "${TARGET_FILES[@]}"; do
+		files_to_remove="$files_to_remove $(find "$target_dir" -name "$pattern" -type f 2>/dev/null)"
+	done
+
 	if [[ "$dry_run" == "true" ]]; then
-		for file_pattern in "${TARGET_FILES[@]}"; do
-			if [[ "$file_pattern" == "claude*" ]]; then
-				find "$target_dir" -name "$file_pattern" -type f -exec echo "Would remove: {}" \; 2>/dev/null || true
-			else
-				find "$target_dir" -name "$file_pattern" -exec echo "Would remove: {}" \; 2>/dev/null || true
-			fi
+		for file in $files_to_remove; do
+			[[ -n "$file" ]] && echo "Would remove: $file"
 		done
-	else
-		for file_pattern in "${TARGET_FILES[@]}"; do
-			if [[ "$file_pattern" == "claude*" ]]; then
-				find "$target_dir" -name "$file_pattern" -type f -exec rm -f {} + 2>/dev/null || true
-			else
-				find "$target_dir" -name "$file_pattern" -exec rm -f {} + 2>/dev/null || true
-			fi
-		done
+
+		return 0
 	fi
+
+	for file in $files_to_remove; do
+		[[ -n "$file" ]] && rm -f "$file" 2>/dev/null || true
+	done
 
 	return 0
 }
@@ -169,25 +170,26 @@ clean_python() {
 	local TARGET_FILES=("*.pyc" "*.pyo")
 
 	echo "Cleaning Python files."
+
+	local items_to_remove=""
+	for pattern in "${TARGET_DIRS[@]}"; do
+		items_to_remove="$items_to_remove $(find "$target_dir" -type d -name "$pattern" 2>/dev/null)"
+	done
+	for pattern in "${TARGET_FILES[@]}"; do
+		items_to_remove="$items_to_remove $(find "$target_dir" -name "$pattern" 2>/dev/null)"
+	done
+
 	if [[ "$dry_run" == "true" ]]; then
-		# Show directories that would be removed
-		for dir_pattern in "${TARGET_DIRS[@]}"; do
-			find "$target_dir" -type d -name "$dir_pattern" -exec echo "Would remove: {}" \; 2>/dev/null || true
-		done
-		# Show files that would be removed
-		for file_pattern in "${TARGET_FILES[@]}"; do
-			find "$target_dir" -name "$file_pattern" -exec echo "Would remove: {}" \; 2>/dev/null || true
-		done
-	else
-
-		for dir_pattern in "${TARGET_DIRS[@]}"; do
-			find "$target_dir" -type d -name "$dir_pattern" -exec rm -rf {} + 2>/dev/null || true
+		for item in $items_to_remove; do
+			[[ -n "$item" ]] && echo "Would remove: $item"
 		done
 
-		for file_pattern in "${TARGET_FILES[@]}"; do
-			find "$target_dir" -name "$file_pattern" -exec rm -f {} + 2>/dev/null || true
-		done
+		return 0
 	fi
+
+	for item in $items_to_remove; do
+		[[ -n "$item" ]] && rm -rf "$item" 2>/dev/null || true
+	done
 
 	return 0
 }
@@ -210,26 +212,62 @@ clean_node() {
 	local TARGET_FILES=("package-lock.json" "yarn.lock" ".yarnrc.yml" "npm-debug.log*" "yarn-debug.log*" "yarn-error.log*")
 
 	echo "Cleaning Node.js files."
+
+	local items_to_remove=""
+	for pattern in "${TARGET_DIRS[@]}"; do
+		items_to_remove="$items_to_remove $(find "$target_dir" -type d -name "$pattern" 2>/dev/null)"
+	done
+	for pattern in "${TARGET_FILES[@]}"; do
+		items_to_remove="$items_to_remove $(find "$target_dir" -name "$pattern" 2>/dev/null)"
+	done
+
 	if [[ "$dry_run" == "true" ]]; then
-
-		for dir_pattern in "${TARGET_DIRS[@]}"; do
-			find "$target_dir" -type d -name "$dir_pattern" -exec echo "Would remove: {}" \; 2>/dev/null || true
+		for item in $items_to_remove; do
+			[[ -n "$item" ]] && echo "Would remove: $item"
 		done
 
-		for file_pattern in "${TARGET_FILES[@]}"; do
-			find "$target_dir" -name "$file_pattern" -exec echo "Would remove: {}" \; 2>/dev/null || true
-		done
-	else
-
-		for dir_pattern in "${TARGET_DIRS[@]}"; do
-			find "$target_dir" -type d -name "$dir_pattern" -exec rm -rf {} + 2>/dev/null || true
-		done
-
-		for file_pattern in "${TARGET_FILES[@]}"; do
-			find "$target_dir" -name "$file_pattern" -exec rm -f {} + 2>/dev/null || true
-		done
+		return 0
 	fi
 
+	for item in $items_to_remove; do
+		[[ -n "$item" ]] && rm -rf "$item" 2>/dev/null || true
+	done
+
+	return 0
+}
+
+# Validate and parse target selection
+validate_targets() {
+	local targets_string="$1"
+	local all_flag="${2:-false}"
+
+	if [[ "$all_flag" == "true" ]]; then
+		ENABLED_TARGETS=("cursor" "claude" "python" "node")
+		return 0
+	fi
+
+	if [[ -z "$targets_string" ]]; then
+		echo "No targets specified. Use --targets to specify targets or --all to clean all." >&2
+		return 1
+	fi
+
+	IFS=',' read -ra REQUESTED_TARGETS <<<"$targets_string"
+	local enabled_targets=()
+
+	for target in "${REQUESTED_TARGETS[@]}"; do
+		target=$(echo "$target" | xargs)
+		case "$target" in
+		cursor | claude | python | node)
+			enabled_targets+=("$target")
+			;;
+		*)
+			echo "Invalid target '$target'. Available targets: cursor,claude,python,node" >&2
+			return 1
+			;;
+		esac
+	done
+
+	ENABLED_TARGETS=("${enabled_targets[@]}")
 	return 0
 }
 
@@ -246,84 +284,60 @@ clean_node() {
 main() {
 	echo -e "\n=== Entry: ${BASH_SOURCE[0]:-$0} ===\n"
 
-	# Set target directory (default to current directory)
+	echo "Apologies for the mess master, I shall tidy up immediately."
+
 	local target_dir="${1:-.}"
 	local dry_run="${2:-false}"
 
-	# Initialize enabled targets if not already set
-	if [[ -z "${ENABLED_TARGETS[*]:-}" ]]; then
-		ENABLED_TARGETS=("${AVAILABLE_TARGETS[@]}")
-	fi
-
-	# Validate target directory exists
 	if [[ ! -d "$target_dir" ]]; then
 		echo "Directory '$target_dir' does not exist" >&2
 		return 1
 	fi
 
-	# Make target directory absolute path
-	target_dir="$(cd "$target_dir" && pwd)"
-
+	pushd "$target_dir" >/dev/null
+	target_dir="$(pwd)"
+	popd >/dev/null
 	echo "Cleaning directory: $target_dir"
 
-	# Perform cleanup operations for enabled targets
-	local exit_code=0
-	local cleanup_count=0
+	if [[ ${#ENABLED_TARGETS[@]} -eq 0 ]]; then
+		echo "No targets selected for cleanup." >&2
+		return 1
+	fi
 
+	echo "Filthy, filthy, FILTHY!"
+	local cleanup_count=0
 	for target in "${ENABLED_TARGETS[@]}"; do
 		case "$target" in
-		"cursor")
-			if clean_cursor "$target_dir" "$dry_run"; then
-				((cleanup_count++))
-			else
-				echo "Failed to clean .cursor directories" >&2
-				exit_code=1
-			fi
+		cursor)
+			clean_cursor "$target_dir" "$dry_run"
+			cleanup_count=$((cleanup_count + 1))
 			;;
-		"claude")
-			if clean_claude "$target_dir" "$dry_run"; then
-				((cleanup_count++))
-			else
-				echo "Failed to clean Claude files" >&2
-				exit_code=1
-			fi
+		claude)
+			clean_claude "$target_dir" "$dry_run"
+			cleanup_count=$((cleanup_count + 1))
 			;;
-		"python")
-			if clean_python "$target_dir" "$dry_run"; then
-				((cleanup_count++))
-			else
-				echo "Failed to clean Python files" >&2
-				exit_code=1
-			fi
+		python)
+			clean_python "$target_dir" "$dry_run"
+			cleanup_count=$((cleanup_count + 1))
 			;;
-		"node")
-			if clean_node "$target_dir" "$dry_run"; then
-				((cleanup_count++))
-			else
-				echo "Failed to clean Node.js files" >&2
-				exit_code=1
-			fi
+		node)
+			clean_node "$target_dir" "$dry_run"
+			cleanup_count=$((cleanup_count + 1))
 			;;
 		esac
 	done
 
-	if [[ $cleanup_count -eq 0 ]]; then
-		echo "No targets selected for cleanup."
-	else
-		echo "Clean complete. Performed cleanup for $cleanup_count target types."
-	fi
+	echo "Please don't say such things! The master is back, and things need to be kept tidy."
 
 	echo -e "\n=== Exit: ${BASH_SOURCE[0]:-$0} ===\n"
-
-	return "$exit_code"
 }
 
 # Execute main function if script is called directly
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
-	# Set default values
 	target_dir="."
 	dry_run="${DRY_RUN:-false}"
 	targets_string=""
+	all_flag="false"
 
 	# Parse command line arguments
 	while [[ $# -gt 0 ]]; do
@@ -337,7 +351,6 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
 			target_dir="$2"
 			shift 2
 			;;
-
 		-t | --targets)
 			if [[ -z "$2" ]] || [[ "$2" == -* ]]; then
 				echo "--targets requires a comma-separated list of targets" >&2
@@ -346,6 +359,10 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
 			fi
 			targets_string="$2"
 			shift 2
+			;;
+		-a | --all)
+			all_flag="true"
+			shift
 			;;
 		-r | --dry-run)
 			if [[ "${DRY_RUN:-}" != "false" ]]; then
@@ -370,10 +387,10 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
 		esac
 	done
 
-	if ! validate_targets "$targets_string"; then
+	# Validate targets
+	if ! validate_targets "$targets_string" "$all_flag"; then
 		exit 1
 	fi
 
 	main "$target_dir" "$dry_run"
-	exit $?
 fi
