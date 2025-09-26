@@ -282,7 +282,7 @@ validate_targets() {
 # - Shows progress messages for each cleanup operation
 # - Returns 0 on success, 1 on error
 main() {
-	echo -e "\n=== Entry: ${BASH_SOURCE[0]:-$0} ===\n"
+	echo "=== Entry: ${BASH_SOURCE[0]:-$0} ==="
 
 	echo "Apologies for the mess master, I shall tidy up immediately."
 
@@ -329,7 +329,7 @@ main() {
 
 	echo "Please don't say such things! The master is back, and things need to be kept tidy."
 
-	echo -e "\n=== Exit: ${BASH_SOURCE[0]:-$0} ===\n"
+	echo "=== Exit: ${BASH_SOURCE[0]:-$0} ==="
 }
 
 # Execute main function if script is called directly

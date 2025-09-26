@@ -73,57 +73,27 @@ Zangarmarsh loads configuration from:
 
 ## Features
 
-| Feature               | Bash | Zsh |
-| --------------------- | ---- | --- |
-| Git branch display    | Yes  | Yes |
-| Kubernetes context    | Yes  | Yes |
-| Platform detection    | Yes  | Yes |
-| Platform-specific PATH| Yes  | Yes |
-| SSH agent setup       | Yes  | Yes |
-| Python venv helpers   | Yes  | Yes |
-| Node.js management    | Yes  | Yes |
-| Oh My Zsh integration | No   | Yes |
-| Basic completion      | No   | Yes |
+| Feature                | Bash | Zsh |
+| ---------------------- | ---- | --- |
+| Git branch display     | Yes  | Yes |
+| Kubernetes context     | Yes  | Yes |
+| Platform detection     | Yes  | Yes |
+| Platform-specific PATH | Yes  | Yes |
+| SSH agent setup        | Yes  | Yes |
+| Python venv helpers    | Yes  | Yes |
+| Node.js management     | Yes  | Yes |
+| Oh My Zsh integration  | No   | Yes |
+| Basic completion       | No   | Yes |
 
 ## Tools
 
-### Dalaran Library
+Development utilities in `tools/`:
 
-The `tools/dalaran/` directory contains a ZSH command library script that:
+- Dalaran: ZSH command history analyzer that builds a curated library of your most-used commands
+- Quest Log: AI assistant rules generator for Cursor and Claude Code from YAML templates
+- Trilliax: Development environment cleanup tool that removes generated files and build artifacts
 
-- Analyzes your command history to find most-used commands
-- Creates an enhanced history file prioritizing valuable commands
-- Maintains a growing library that improves over time
-- Supports dry-run mode for safe testing
-
-```bash
-# Run dalaran library script
-./tools/dalaran/dalaran.sh
-
-# Preview changes without applying
-DRY_RUN=true ./tools/dalaran/dalaran.sh
-```
-
-### Quest Log
-
-The `tools/quest-log/` directory contains tools for generating AI assistant rules:
-
-```bash
-# Generate agent rules for current directory
-./tools/quest-log/quest-log.sh
-
-# Generate with backup of existing rules
-./tools/quest-log/quest-log.sh --backup
-```
-
-### Trilliax
-
-The `tools/trilliax/` directory contains cleanup and maintenance utilities:
-
-```bash
-# Run trilliax cleanup script
-./tools/trilliax/trilliax.sh
-```
+See `tools/README.md` for detailed documentation and usage examples.
 
 ## Development
 

@@ -314,7 +314,7 @@ EOF
 # - Creates and maintains the dalaran spellbook
 # - Exits with appropriate status code
 main() {
-	echo -e "\n=== Entry: ${BASH_SOURCE[0]:-$0} ==="
+	echo "=== Entry: ${BASH_SOURCE[0]:-$0} ==="
 
 	local show_top=0
 
@@ -428,7 +428,7 @@ EOF
 
 	display_summary "${dalaran_dir}" "${archives_dir}" "${spellbook_file}"
 
-	echo -e "\n=== Exit: ${BASH_SOURCE[0]:-$0} ==="
+	echo "=== Exit: ${BASH_SOURCE[0]:-$0} ==="
 
 	return 0
 }
