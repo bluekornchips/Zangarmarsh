@@ -67,17 +67,17 @@ Steps:
 [commands]
 ```
 
-````
-
 ## API Docs
+
 ```markdown
 # API Reference
 
 ## `GET /api/example`
+
 - Purpose: [What it does]
 - Params: [List]
 - Response: [Example]
-````
+```
 
 ## Technical Spec
 

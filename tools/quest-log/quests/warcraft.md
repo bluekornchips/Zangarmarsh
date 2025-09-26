@@ -123,13 +123,14 @@ MOCK_RESPONSE = {
 
 ```python
 # Don't use for function names
-def frostmourneExecutor():  # Do not use lack of descriptive names
+def frostmourneExecutor():  # Use descriptive names instead
+    pass
 
 # Don't use in documentation
 """
-Just like Thrall's hammer, this function smashes bugs...  # Do not use themed explanations
+Just like Thrall's hammer, this function smashes bugs...  # Avoid themed explanations
 """
 
 # Don't use for production values
-SECRET = "warchief_of_the_horde" 
+SECRET = "warchief_of_the_horde"  # Use proper secrets management
 ```

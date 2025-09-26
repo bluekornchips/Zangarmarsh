@@ -123,13 +123,14 @@ MOCK_RESPONSE = {
 
 ```python
 # Don't use for function names
-def gandalfProcessor():  # Do not use lack of descriptive names
+def gandalfProcessor():  # Use descriptive names instead
+    pass
 
 # Don't use in documentation
 """
-This function works like Gandalf's magic...  # Do not use themed explanations
+This function works like Gandalf's magic...  # Avoid themed explanations
 """
 
 # Don't use for production values
-API_KEY = "one_ring_to_rule_them_all"
+API_KEY = "one_ring_to_rule_them_all"  # Use proper secrets management
 ```

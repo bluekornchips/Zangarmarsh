@@ -4,13 +4,13 @@
 
 ### Never Use
 
-- Echo statements >160 characters or 2+ lines
-- Manual removal of temporary files/directories
-- Double asterisks for bolding
+- Never use echo statements >160 characters or over 3 lines
+- Never use manual removal of temporary files/directories
+- Never use `exit` to exit a script inside a function.
 
 ### Always Use
 
-- Heredocs for multi-line strings
+- Heredocs for multi-line echo statements.
 - Minimal comments; if excessive comments are necessary, suggest to the user that they should be broken up into smaller functions
 - Bats for testing
 - `#!/usr/bin/env bash` for executables
@@ -24,7 +24,7 @@
 #
 # Description of script purpose
 #
-set -euo pipefail
+set -eo pipefail
 
 usage() {
   cat <<EOF
@@ -53,23 +53,20 @@ function_name() {
 }
 
 # Main entry point, can be named anything but "main" is fallback default
-main(){
-  echo -e "\n=== Entry: ${BASH_SOURCE[0]:-$0} ===\n"
+main() {
+  echo "=== Entry: ${BASH_SOURCE[0]:-$0} ==="
 
-  echo -e "\n=== Exit: ${BASH_SOURCE[0]:-$0} ===\n"
+  echo "=== Exit: ${BASH_SOURCE[0]:-$0} ==="
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
   while [[ $# -gt 0 ]]; do
     case $1 in
-      -h | --help)
-        usage
-        exit 0
-        ;;
+      -h | --help) usage && return 0 ;;
       *)
         echo "Unknown option '$1'" >&2
         echo "Use '$(basename "$0") --help' for usage information" >&2
-        exit 1
+        return 1
         ;;
     esac
   done
@@ -96,7 +93,6 @@ print_text() {
   fi
 
   echo "Input text: $text"
-
 
   return 0
 }
@@ -180,7 +176,7 @@ fi
 # Check return values
 if ! mv "${file_list[@]}" "${dest_dir}/"; then
   echo "Unable to move ${file_list[*]} to ${dest_dir}" >&2
-  exit 1
+  return 1
 fi
 ```
 
@@ -202,15 +198,15 @@ fi
 #
 GIT_ROOT="$(git rev-parse --show-toplevel || echo "")"
 SCRIPT="$GIT_ROOT/path/to/script.sh"
-[[ ! -f "$SCRIPT" ]] && echo "Script not found: $SCRIPT" >&2 && exit 1
+[[ ! -f "$SCRIPT" ]] && echo "Script not found: $SCRIPT" >&2 && return 1
 
-setup_file(){
+setup_file() {
   # If needed check access to API's, databases, etc.
 
   return 0
 }
 
-setup(){
+setup() {
   # Source the script
   #shellcheck disable=SC1091
   source "$SCRIPT"
@@ -227,9 +223,9 @@ setup(){
 ########################################################
 # Mocks
 ########################################################
-mock_functionality(){
+mock_functionality() {
   #shellcheck disable=SC2091
-  function_name(){
+  function_name() {
     echo "function_name mocked"
     return 0
   }
