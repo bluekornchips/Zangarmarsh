@@ -130,7 +130,10 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Avoid
+# Use structured logging with context
+logger.info("User created", extra={"user_id": user.id, "action": "create"})
+
+# Avoid console output
 api_key = "sk-abc123def456"  # Never hardcode secrets
 ```
 
@@ -153,6 +156,21 @@ def test_user_creation():
     assert user.name == "Gandalf"
     assert user.email == "gandalf@middle-earth.test"
     assert user.role == "wizard"
+
+# Test patterns with mocks
+@mock.patch("validate_user")
+def test_user_validation_with_valid_data(mock_validate_user):
+    """Test user validation with valid data."""
+
+    user_data = {"name": "Frodo Baggins", "email": "frodo@shire.test"}
+    mock_validate_user.return_value = UserValidationResult(is_valid=True, name="Frodo Baggins")
+
+    result = validate_user(user_data)
+
+    assert result.is_valid
+    assert result.name == "Frodo Baggins"
+
+    mock_validate_user.assert_called_once_with(user_data)
 ```
 
 ## Code Review Checklist

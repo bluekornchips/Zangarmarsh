@@ -5,8 +5,9 @@
 alias awsume=". awsume"
 alias awsor="aws-sso-util login --force-refresh"
 
-# Bats
+# Shell
 alias bats="bats --verbose-run --timing"
+alias shfmt="shfmt --ln=bats -w"
 
 # Development
 alias drun='docker run -it --rm --entrypoint /usr/bin/env bash'

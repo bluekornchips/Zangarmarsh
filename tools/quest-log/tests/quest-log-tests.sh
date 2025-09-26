@@ -113,15 +113,88 @@ mock_jq_not_installed() {
 	return 0
 }
 
+# Mock git command to simulate being in a git repository
+mock_git_in_repo() {
+	# shellcheck disable=SC2329
+	git() {
+		case "$1" in
+		"rev-parse")
+			if [[ "$2" == "--show-toplevel" ]]; then
+				echo "$TEST_TEMP_DIR"
+				return 0
+			fi
+			;;
+		esac
+		command git "$@"
+	}
+	export -f git
+
+	return 0
+}
+
+# Mock git command to simulate NOT being in a git repository
+mock_git_not_in_repo() {
+	# shellcheck disable=SC2329
+	git() {
+		case "$1" in
+		"rev-parse")
+			if [[ "$2" == "--show-toplevel" ]]; then
+				echo "fatal: not a git repository" >&2
+				return 128
+			fi
+			;;
+		esac
+		command git "$@"
+	}
+	export -f git
+
+	return 0
+}
+
+########################################################
+# determine_target_directory Function Tests
+########################################################
+
+@test 'determine_target_directory:: uses git root when in git repo' {
+	mock_git_in_repo
+	export TARGET_DIR="/some/other/path"
+
+	determine_target_directory
+	[[ "$TARGET_DIR" == "$TEST_TEMP_DIR" ]]
+
+	run determine_target_directory
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Git repository detected"
+}
+
+@test 'determine_target_directory:: uses current directory when not in git repo' {
+	mock_git_not_in_repo
+	TARGET_DIR="$TEST_TEMP_DIR"
+
+	run determine_target_directory
+	[[ "$status" -eq 0 ]]
+	[[ "$TARGET_DIR" == "$TEST_TEMP_DIR" ]]
+	echo "$output" | grep -q "Not in a git repository"
+}
+
+@test 'determine_target_directory:: uses PWD when TARGET_DIR not set and not in git repo' {
+	mock_git_not_in_repo
+	unset TARGET_DIR
+
+	run determine_target_directory
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Not in a git repository"
+}
+
 ########################################################
 # Main Function Tests
 ########################################################
-@test 'main:: requires target directory' {
-	export TARGET_DIR="/tmp/does-not-exist"
+@test 'main:: fails when target directory does not exist' {
+	TARGET_DIR="/tmp/does-not-exist"
 
 	run main
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "Target directory is required"
+	echo "$output" | grep -q "Failed to change to target directory"
 }
 
 @test 'main:: requires readable schema file' {
@@ -144,6 +217,7 @@ mock_jq_not_installed() {
 	run main --help
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Generate agentic tool rules for Cursor and Claude Code"
+	echo "$output" | grep -q "git"
 	echo "$output" | grep -q "backup"
 }
 
@@ -394,4 +468,31 @@ EOF
 	run main --invalid-option
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "Unknown option"
+}
+
+@test 'main:: uses git root when in git repository' {
+	mock_git_in_repo
+
+	run main
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Git repository detected"
+	echo "$output" | grep -q "using git root: $TEST_TEMP_DIR"
+}
+
+@test 'main:: uses specified directory when not in git repository' {
+	mock_git_not_in_repo
+
+	run main
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Not in a git repository"
+}
+
+@test 'main:: creates files in git root directory when in git repo' {
+	mock_git_in_repo
+
+	run main
+	[[ "$status" -eq 0 ]]
+	[[ -f "$TEST_TEMP_DIR/.cursor/rules/rules-always.mdc" ]]
+	[[ -f "$TEST_TEMP_DIR/.cursor/rules/rules-author.mdc" ]]
+	[[ -f "$TEST_TEMP_DIR/CLAUDE.md" ]]
 }

@@ -9,15 +9,17 @@ usage() {
 	cat <<EOF
 Usage: $0 [OPTIONS] [DIRECTORY]
 
-Generate agentic tool rules for Cursor and Claude Code in the specified directory.
+Generate agentic tool rules for Cursor and Claude Code. If run from within a git
+repository, files are always written to the git root directory. Otherwise, files
+are written to the specified directory or current directory.
 
 OPTIONS:
     -b, --backup        Backup existing rules before overwriting
     -h, --help          Show this help message
 
 EXAMPLES:
-    $0                  # Generate rules in current directory
-    $0 /path/to/dir     # Generate rules in specified directory
+    $0                  # Generate rules in git root (if in git repo) or current directory
+    $0 /path/to/dir     # Generate rules in git root (if in git repo) or specified directory
     $0 --backup         # Backup existing rules before generating
 EOF
 
@@ -292,6 +294,25 @@ EOF
 	return 0
 }
 
+# Determine the target directory for rule generation
+#
+# Side Effects:
+# - Sets TARGET_DIR to git root if in git repo, otherwise uses provided/current directory
+# - Outputs status messages for testing
+determine_target_directory() {
+	local git_root
+	if git_root=$(git rev-parse --show-toplevel 2>/dev/null); then
+		TARGET_DIR="$git_root"
+		echo "Git repository detected"
+		echo "using git root: $git_root"
+	else
+		TARGET_DIR=${TARGET_DIR:-$PWD}
+		echo "Not in a git repository"
+	fi
+
+	return 0
+}
+
 # Main entry point for the quest log generator
 #
 # Inputs:
@@ -327,24 +348,12 @@ EOF
 
 	QUEST_LOG_MARKER=$(cat "$QUESTMARKER_FILE")
 
-	readonly CLAUDE_FILE="CLAUDE.md"
 	readonly QUEST_DIR="$SCRIPT_DIR/quests"
-	readonly CURSOR_RULES_DIR=".cursor/rules"
 
 	# Environment variables with defaults
 	SCHEMA_FILE=${SCHEMA_FILE:-"$SCRIPT_DIR/schema.yaml"}
 	BACKUP_ENABLED=${BACKUP_ENABLED:-false}
 	TARGET_DIR=${TARGET_DIR:-$PWD}
-
-	if [[ ! -d "$TARGET_DIR" ]]; then
-		echo "Target directory is required" >&2
-		exit 1
-	fi
-
-	if [[ ! -r "$SCHEMA_FILE" ]]; then
-		echo "Schema file not found: $SCHEMA_FILE" >&2
-		exit 1
-	fi
 
 	while [[ $# -gt 0 ]]; do
 		case $1 in
@@ -367,6 +376,27 @@ EOF
 			;;
 		esac
 	done
+
+	determine_target_directory
+
+	# Change to target directory for file operations
+	if ! cd "$TARGET_DIR"; then
+		echo "Failed to change to target directory: $TARGET_DIR" >&2
+		exit 1
+	fi
+
+	readonly CLAUDE_FILE="$TARGET_DIR/CLAUDE.md"
+	readonly CURSOR_RULES_DIR="$TARGET_DIR/.cursor/rules"
+
+	if [[ ! -d "$TARGET_DIR" ]]; then
+		echo "Target directory is required" >&2
+		exit 1
+	fi
+
+	if [[ ! -r "$SCHEMA_FILE" ]]; then
+		echo "Schema file not found: $SCHEMA_FILE" >&2
+		exit 1
+	fi
 
 	fill_quest_log "$TARGET_DIR"
 

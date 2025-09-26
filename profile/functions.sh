@@ -214,3 +214,79 @@ elif [[ "${ZANGARMARSH_ENABLE_NVM:-true}" == "true" ]]; then
 	# Load NVM immediately if lazy loading is disabled but NVM is enabled
 	_nvm_load
 fi
+
+# Smart shfmt wrapper that formats shell files recursively
+#
+# Inputs:
+# - Arguments parsed as flags: -v|--verbose, -d|--depth NUM
+#
+# Side Effects:
+# - Modifies .sh files in place with formatting
+shfmt_smart() {
+	local depth=4
+	local verbose=false
+
+	while [[ $# -gt 0 ]]; do
+		case $1 in
+		-v | --verbose)
+			verbose=true
+			shift
+			;;
+		-d | --depth)
+			depth="$2"
+			shift 2
+			;;
+		*)
+			if [[ "$1" =~ ^[0-9]+$ ]]; then
+				depth="$1"
+				shift
+			else
+				echo "Unknown option: $1" >&2
+				return 1
+			fi
+			;;
+		esac
+	done
+
+	if ! [[ "$depth" =~ ^[0-9]+$ ]] || ((depth < 1)); then
+		echo "depth must be a positive integer" >&2
+		return 1
+	fi
+
+	if ! command -v shfmt >/dev/null 2>&1; then
+		echo "shfmt not found. Please install shfmt first" >&2
+		echo "This version is preferred: https://github.com/mvdan/sh" >&2
+		return 1
+	fi
+
+	[[ "$verbose" == true ]] && echo "Searching for .sh files with max depth: $depth"
+
+	local -a files
+	# Mapfile is not available in all shells, so we use bash -c to execute the command
+	bash -c "mapfile -t files < <(find . -type f -name '*.sh' -maxdepth '$depth' 2>/dev/null)"
+
+	if [[ ${#files[@]} -eq 0 ]]; then
+		echo "No .sh files found within depth $depth"
+		return 0
+	fi
+
+	echo "Found ${#files[@]} shell files to format"
+
+	local file
+	local shfmt_args=(-w)
+
+	[[ "$verbose" == true ]] && shfmt_args+=(-d)
+
+	for file in "${files[@]}"; do
+		if [[ -f "$file" ]]; then
+			if [[ "$verbose" == true ]]; then
+				echo "Formatting: $file"
+			fi
+			if ! shfmt "${shfmt_args[@]}" "$file"; then
+				echo "Failed to format $file" >&2
+			fi
+		fi
+	done
+
+	return 0
+}
