@@ -35,4 +35,4 @@ alias dalaran="\$ZANGARMARSH_ROOT/tools/dalaran/dalaran.sh"
 alias trilliax="\$ZANGARMARSH_ROOT/tools/trilliax/trilliax.sh"
 
 # Copy the contents of the .vscode directory from the Zangarmarsh root to the current directory
-alias vscodeoverride="cp -r \$ZANGARMARSH_ROOT/.vscode .vscode"
+alias vscoderules="cp -r \$ZANGARMARSH_ROOT/.vscode .vscode"

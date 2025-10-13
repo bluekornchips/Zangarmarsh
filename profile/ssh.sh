@@ -62,7 +62,7 @@ fi
 if [[ -n "${SSH_AUTH_SOCK}" ]] && command -v ssh-add >/dev/null 2>&1; then
 	if ! ssh-add -l >/dev/null 2>&1; then
 		# Only add keys if we're not in a test environment and .ssh directory exists
-		if [[ "$ZANGARMARSH_VERBOSE" != "true" ]] && [[ -d "$HOME/.ssh" ]]; then
+		if [[ "${ZANGARMARSH_VERBOSE:-}" != "true" ]] && [[ -d "$HOME/.ssh" ]]; then
 			# Add keys with timeout to prevent hanging
 			if timeout 5s ssh-add >/dev/null 2>&1; then
 				ssh_keys=$(ssh-add -l 2>/dev/null || echo "No keys loaded")

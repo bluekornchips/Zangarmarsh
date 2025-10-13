@@ -35,9 +35,7 @@
   "editor.renderWhitespace": "all",
   "editor.lineNumbers": "on",
   "editor.fontSize": 14,
-  "window.zoomLevel": 1.6,
   "workbench.activityBar.orientation": "vertical",
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
   "[json]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
@@ -80,6 +78,5 @@
   "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
   "redhat.telemetry.enabled": false,
   "git.confirmSync": false,
-  "explorer.autoReveal": true,
-  "shellcheck.customArgs": ["${workspaceFolder}/.shellcheckrc"]
+  "explorer.autoReveal": true
 }

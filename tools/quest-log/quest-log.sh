@@ -298,12 +298,16 @@ EOF
 #
 # Side Effects:
 # - Sets TARGET_DIR to git root if in git repo, otherwise uses provided/current directory
-check_for_git() {
+# - Outputs status messages for testing
+determine_target_directory() {
 	local git_root
 	if git_root=$(git rev-parse --show-toplevel 2>/dev/null); then
 		TARGET_DIR="$git_root"
+		echo "Git repository detected"
+		echo "using git root: $git_root"
 	else
 		TARGET_DIR=${TARGET_DIR:-$PWD}
+		echo "Not in a git repository"
 	fi
 
 	return 0
@@ -373,7 +377,7 @@ EOF
 		esac
 	done
 
-	check_for_git
+	determine_target_directory
 
 	# Change to target directory for file operations
 	if ! cd "$TARGET_DIR"; then
