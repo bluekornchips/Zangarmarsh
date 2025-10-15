@@ -96,7 +96,7 @@ clean_cursor() {
 
 	local dirs_to_remove=""
 	for pattern in "${TARGET_DIRS[@]}"; do
-		dirs_to_remove="$dirs_to_remove $(find "$target_dir" -type d -name "$pattern" 2>/dev/null)"
+		dirs_to_remove="$dirs_to_remove $(find "$target_dir" -maxdepth 10 -type d -name "$pattern" 2>/dev/null)"
 	done
 
 	if [[ "$dry_run" == "true" ]]; then
@@ -134,7 +134,7 @@ clean_claude() {
 
 	local files_to_remove=""
 	for pattern in "${TARGET_FILES[@]}"; do
-		files_to_remove="$files_to_remove $(find "$target_dir" -name "$pattern" -type f 2>/dev/null)"
+		files_to_remove="$files_to_remove $(find "$target_dir" -maxdepth 10 -name "$pattern" -type f 2>/dev/null)"
 	done
 
 	if [[ "$dry_run" == "true" ]]; then
@@ -173,10 +173,10 @@ clean_python() {
 
 	local items_to_remove=""
 	for pattern in "${TARGET_DIRS[@]}"; do
-		items_to_remove="$items_to_remove $(find "$target_dir" -type d -name "$pattern" 2>/dev/null)"
+		items_to_remove="$items_to_remove $(find "$target_dir" -maxdepth 10 -type d -name "$pattern" 2>/dev/null)"
 	done
 	for pattern in "${TARGET_FILES[@]}"; do
-		items_to_remove="$items_to_remove $(find "$target_dir" -name "$pattern" 2>/dev/null)"
+		items_to_remove="$items_to_remove $(find "$target_dir" -maxdepth 10 -name "$pattern" 2>/dev/null)"
 	done
 
 	if [[ "$dry_run" == "true" ]]; then
@@ -215,10 +215,10 @@ clean_node() {
 
 	local items_to_remove=""
 	for pattern in "${TARGET_DIRS[@]}"; do
-		items_to_remove="$items_to_remove $(find "$target_dir" -type d -name "$pattern" 2>/dev/null)"
+		items_to_remove="$items_to_remove $(find "$target_dir" -maxdepth 10 -type d -name "$pattern" 2>/dev/null)"
 	done
 	for pattern in "${TARGET_FILES[@]}"; do
-		items_to_remove="$items_to_remove $(find "$target_dir" -name "$pattern" 2>/dev/null)"
+		items_to_remove="$items_to_remove $(find "$target_dir" -maxdepth 10 -name "$pattern" 2>/dev/null)"
 	done
 
 	if [[ "$dry_run" == "true" ]]; then

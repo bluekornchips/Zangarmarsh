@@ -6,42 +6,17 @@ Always deep mind.
 Always big brain.
 Always unlock your full potential.
 
-## Universal Bans
+## Never Use
 
-### Never Use
+- Debug prefixes: INFO, WARNING, ERROR, DEBUG, PASS, FAIL, CRITICAL, TRACE
+- Ellipses, em dashes
+- Emojis or non-ASCII characters (except in rule definitions)
+- Double asterisks for bolding (except in rule definitions)
+- State-changing git commands: add, commit, push, merge, pull, fetch, reset, revert
 
-- Debug prefixes: "INFO", "WARNING", "ERROR", "DEBUG", "PASS", "FAIL", "CRITICAL", "TRACE"
-- Ellipses: "...", "—", "-", " - "
-- Emojis or non-ASCII characters, except in rule definitions
-- Double asterisks for bolding, except in rule definitions
+## Allowed Used
 
-### Git Commands
-
-Never use state-changing commands:
-
-```bash
-git add, git commit, git push, git merge, git pull, git fetch, git reset, git revert
-```
-
-Always allow read-only commands:
-
-```bash
-git status, git log, git diff, git branch
-```
-
-## Language-Specific Rules
-
-### Python
-
-Follow the instructions in the [Python Standards](.cursor/rules/python.mdc) file.
-
-### Shell
-
-Follow the instructions in the [Shell Standards](.cursor/rules/shell.mdc) file.
-
-## Documentation
-
-- Use clear, simple language
-- Include test/verification steps
-- Use code blocks for commands/code
-- Never use double asterisks for bolding
+- Read-only git commands: status, log, diff, branch
+- Clear, simple language
+- Code blocks for commands/code
+- Test/verification steps

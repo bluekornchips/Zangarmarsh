@@ -14,6 +14,7 @@ repository, files are always written to the git root directory. Otherwise, files
 are written to the specified directory or current directory.
 
 OPTIONS:
+    -a, --all           Include all rules (including warcraft and lotr)
     -b, --backup        Backup existing rules before overwriting
     -h, --help          Show this help message
 
@@ -21,10 +22,14 @@ EXAMPLES:
     $0                  # Generate rules in git root (if in git repo) or current directory
     $0 /path/to/dir     # Generate rules in git root (if in git repo) or specified directory
     $0 --backup         # Backup existing rules before generating
+    $0 --all            # Generate all rules including warcraft and lotr
 EOF
 
 	return 1
 }
+
+DEFAULT_INCLUDE_ALL=false
+SKIPPED_RULES=("warcraft" "lotr")
 
 # Create a cursor rule file with the provided content
 #
@@ -210,7 +215,7 @@ EOF
 
 	# Read the 'SCHEMA_FILE', convert to JSON because I prefer to work with JSON in shell
 	SCHEMA_CONTENTS=""
-	if ! SCHEMA_CONTENTS=$(yq -o json '.' "$SCHEMA_FILE"); then
+	if ! SCHEMA_CONTENTS=$(yq -r '.' "$SCHEMA_FILE"); then
 		echo "Failed to read schema file with yq: $SCHEMA_FILE" >&2
 		return 1
 	fi
@@ -232,6 +237,12 @@ EOF
 		if ! name=$(jq -r '.name // ""' <<<"$quest"); then
 			echo "Failed to parse quest name from JSON" >&2
 			return 1
+		fi
+
+		# Skip warcraft and lotr rules unless INCLUDE_ALL is true
+		if [[ "$INCLUDE_ALL" != "true" ]] && [[ "${SKIPPED_RULES[*]}" =~ $name ]]; then
+			echo "Skipping $name (use --all to include)"
+			continue
 		fi
 
 		if ! file=$(jq -r '.file // ""' <<<"$quest"); then
@@ -353,10 +364,15 @@ EOF
 	# Environment variables with defaults
 	SCHEMA_FILE=${SCHEMA_FILE:-"$SCRIPT_DIR/schema.yaml"}
 	BACKUP_ENABLED=${BACKUP_ENABLED:-false}
+	INCLUDE_ALL=${INCLUDE_ALL:-"$DEFAULT_INCLUDE_ALL"}
 	TARGET_DIR=${TARGET_DIR:-$PWD}
 
 	while [[ $# -gt 0 ]]; do
 		case $1 in
+		-a | --all)
+			INCLUDE_ALL=true
+			shift
+			;;
 		-b | --backup)
 			BACKUP_ENABLED=true
 			shift

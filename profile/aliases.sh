@@ -27,12 +27,13 @@ alias tfa='terraform apply temp.plan'
 # Custom Functions and Tools
 ########################################################
 # Gandalf
-alias gdlf="\$HOME/bluekornchips/gandalf/gandalf"
+alias gdlf="\$HOME/bluekornchips/gandalf/gandalf.sh"
 
 # Zangarmarsh Tools
 alias questlog="\$ZANGARMARSH_ROOT/tools/quest-log/quest-log.sh"
 alias dalaran="\$ZANGARMARSH_ROOT/tools/dalaran/dalaran.sh"
 alias trilliax="\$ZANGARMARSH_ROOT/tools/trilliax/trilliax.sh"
+alias hearthstone="\$ZANGARMARSH_ROOT/tools/hearthstone/hearthstone.sh"
 
 # Copy the contents of the .vscode directory from the Zangarmarsh root to the current directory
-alias vscodeoverride="cp -r \$ZANGARMARSH_ROOT/.vscode .vscode"
+alias vscodeoverride="cp -rf \$ZANGARMARSH_ROOT/.vscode/* \$PWD/.vscode/"
