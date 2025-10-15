@@ -29,8 +29,11 @@ save_ssh_environment() {
 
 # Restore SSH environment to original state
 restore_ssh_environment() {
-	export SSH_AUTH_SOCK="$ORIGINAL_SSH_AUTH_SOCK"
-	[[ -n "${ORIGINAL_SSH_AUTH_SOCK:-}" ]] || unset SSH_AUTH_SOCK
+	if [[ -n "${ORIGINAL_SSH_AUTH_SOCK:-}" ]]; then
+		export SSH_AUTH_SOCK="$ORIGINAL_SSH_AUTH_SOCK"
+	else
+		unset SSH_AUTH_SOCK
+	fi
 
 	if [[ -n "${ORIGINAL_SSH_AGENT_PID:-}" ]]; then
 		export SSH_AGENT_PID="$ORIGINAL_SSH_AGENT_PID"
@@ -39,7 +42,7 @@ restore_ssh_environment() {
 	fi
 
 	# Restore .ssh directory
-	if [[ -d "$HOME_BACKUP_DIR" ]]; then
+	if [[ -d "${HOME_BACKUP_DIR:-}" ]]; then
 		mv "$HOME_BACKUP_DIR" "$HOME/.ssh"
 	fi
 }

@@ -219,6 +219,7 @@ mock_git_not_in_repo() {
 	echo "$output" | grep -q "Generate agentic tool rules for Cursor and Claude Code"
 	echo "$output" | grep -q "git"
 	echo "$output" | grep -q "backup"
+	echo "$output" | grep -q "all"
 }
 
 @test 'main:: handles unknown options' {
@@ -405,9 +406,29 @@ EOF
 ########################################################
 # fill_quest_log Function Tests
 ########################################################
-@test 'fill_quest_log:: generates all rule files' {
+@test 'fill_quest_log:: generates core rule files by default' {
 
 	run main
+	[[ "$status" -eq 0 ]]
+	[[ -f "./$CURSOR_RULES_DIR/rules-always.mdc" ]]
+	[[ -f "./$CURSOR_RULES_DIR/rules-author.mdc" ]]
+	[[ -f "./$CURSOR_RULES_DIR/rules-python.mdc" ]]
+	[[ -f "./$CURSOR_RULES_DIR/rules-shell.mdc" ]]
+}
+
+@test 'fill_quest_log:: skips warcraft and lotr by default' {
+
+	run main
+	[[ "$status" -eq 0 ]]
+	[[ ! -f "./$CURSOR_RULES_DIR/rules-lotr.mdc" ]]
+	[[ ! -f "./$CURSOR_RULES_DIR/rules-warcraft.mdc" ]]
+	echo "$output" | grep -q "Skipping warcraft"
+	echo "$output" | grep -q "Skipping lotr"
+}
+
+@test 'fill_quest_log:: generates all rule files with --all flag' {
+
+	run main --all
 	[[ "$status" -eq 0 ]]
 	[[ -f "./$CURSOR_RULES_DIR/rules-always.mdc" ]]
 	[[ -f "./$CURSOR_RULES_DIR/rules-author.mdc" ]]
@@ -495,4 +516,22 @@ EOF
 	[[ -f "$TEST_TEMP_DIR/.cursor/rules/rules-always.mdc" ]]
 	[[ -f "$TEST_TEMP_DIR/.cursor/rules/rules-author.mdc" ]]
 	[[ -f "$TEST_TEMP_DIR/CLAUDE.md" ]]
+}
+
+@test 'main:: handles --all flag' {
+
+	run main --all
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -v "Skipping warcraft"
+	echo "$output" | grep -v "Skipping lotr"
+	[[ -f "./$CURSOR_RULES_DIR/rules-warcraft.mdc" ]]
+	[[ -f "./$CURSOR_RULES_DIR/rules-lotr.mdc" ]]
+}
+
+@test 'main:: handles -a short flag' {
+
+	run main -a
+	[[ "$status" -eq 0 ]]
+	[[ -f "./$CURSOR_RULES_DIR/rules-warcraft.mdc" ]]
+	[[ -f "./$CURSOR_RULES_DIR/rules-lotr.mdc" ]]
 }
