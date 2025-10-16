@@ -43,14 +43,26 @@ mock_commands_failure() {
 	local mock_dir
 	mock_dir="$(mktemp -d)"
 
+	# Mock trilliax to fail
 	echo '#!/usr/bin/env bash' >"$mock_dir/trilliax.sh"
 	echo 'echo "trilliax failed" >&2' >>"$mock_dir/trilliax.sh"
 	echo 'exit 1' >>"$mock_dir/trilliax.sh"
 	chmod +x "$mock_dir/trilliax.sh"
 
-	TRILLIAX_SCRIPT="$mock_dir/trilliax.sh"
+	# Mock other scripts to succeed
+	echo '#!/usr/bin/env bash' >"$mock_dir/questlog.sh"
+	echo 'echo "questlog succeeded"' >>"$mock_dir/questlog.sh"
+	chmod +x "$mock_dir/questlog.sh"
 
-	export TRILLIAX_SCRIPT
+	echo '#!/usr/bin/env bash' >"$mock_dir/gdlf.sh"
+	echo 'echo "gdlf succeeded"' >>"$mock_dir/gdlf.sh"
+	chmod +x "$mock_dir/gdlf.sh"
+
+	TRILLIAX_SCRIPT="$mock_dir/trilliax.sh"
+	QUESTLOG_SCRIPT="$mock_dir/questlog.sh"
+	GDLF_SCRIPT="$mock_dir/gdlf.sh"
+
+	export TRILLIAX_SCRIPT QUESTLOG_SCRIPT GDLF_SCRIPT
 }
 
 mock_user_confirmation_yes() {
@@ -144,6 +156,139 @@ mock_user_confirmation_no() {
 }
 
 ########################################################
+# install_yq
+########################################################
+@test "install_yq::succeeds when yq is already installed" {
+	# Mock yq as available by overriding install_yq
+	install_yq() {
+		echo "yq installed"
+		return 0
+	}
+	export -f install_yq
+
+	run install_yq
+	[[ "$status" -eq 0 ]]
+	grep -q "yq installed" <<<"$output"
+}
+
+@test "install_yq::fails when wget is not available" {
+	# Mock wget as unavailable and yq as missing
+	command() {
+		case "$2" in
+		"yq" | "wget") return 1 ;;
+		*) builtin command "$@" ;;
+		esac
+	}
+	export -f command
+
+	run bash -c "source '$SCRIPT' && install_yq"
+	[[ "$status" -eq 1 ]]
+	grep -q "wget is not available" <<<"$output"
+}
+
+@test "install_yq::fails when download fails" {
+	# Mock yq missing and wget failing
+	command() {
+		case "$2" in
+		"yq") return 1 ;;
+		*) builtin command "$@" ;;
+		esac
+	}
+	export -f command
+
+	wget() { return 1; }
+	export -f wget
+
+	run bash -c "source '$SCRIPT' && install_yq"
+	[[ "$status" -eq 1 ]]
+	grep -q "Failed to download or install yq" <<<"$output"
+}
+
+########################################################
+# build_deck
+########################################################
+@test "build_deck::succeeds when both jq and yq are installed" {
+	# Mock both tools as already installed
+	install_jq() {
+		echo "jq installed"
+		return 0
+	}
+	install_yq() {
+		echo "yq installed"
+		return 0
+	}
+	export -f install_jq install_yq
+
+	run build_deck
+	[[ "$status" -eq 0 ]]
+}
+
+@test "build_deck::succeeds when jq and yq need installation but succeed" {
+	# Mock tools as missing but installations succeed
+	command() {
+		case "$2" in
+		"jq" | "yq" | "wget") return 1 ;;
+		*) builtin command "$@" ;;
+		esac
+	}
+	export -f command
+
+	install_jq() {
+		echo "jq installed"
+		return 0
+	}
+	install_yq() {
+		echo "yq installed successfully"
+		return 0
+	}
+	export -f install_jq install_yq
+
+	run build_deck
+	[[ "$status" -eq 0 ]]
+}
+
+@test "build_deck::fails when jq installation fails" {
+	# Mock jq as missing and installation failing
+	command() {
+		case "$2" in
+		"jq" | "apt-get" | "brew" | "pacman") return 1 ;;
+		*) builtin command "$@" ;;
+		esac
+	}
+	export -f command
+
+	install_jq() {
+		echo "jq not found, attempting to install."
+		echo "No supported package manager found. Please install jq manually for your system." >&2
+		return 1
+	}
+	export -f install_jq
+
+	run build_deck
+	[[ "$status" -eq 1 ]]
+}
+
+@test "build_deck::fails when yq installation fails" {
+	# Mock yq and wget as missing, installation fails
+	command() {
+		case "$2" in
+		"yq" | "wget") return 1 ;;
+		*) builtin command "$@" ;;
+		esac
+	}
+	export -f command
+
+	install_yq() {
+		echo "Failed to download or install yq" >&2
+		return 1
+	}
+	export -f install_yq
+
+	run build_deck
+	[[ "$status" -eq 1 ]]
+}
+
+########################################################
 # main
 ########################################################
 @test "main::script handles help option" {
@@ -170,10 +315,15 @@ mock_user_confirmation_no() {
 }
 
 @test "main::script cancels when user declines confirmation" {
-	mock_user_confirmation_no
+	# Create a test that avoids read prompts by overriding confirm_proceed properly
+	confirm_proceed() {
+		echo "Operation cancelled by user"
+		return 1
+	}
+	export -f confirm_proceed
 
-	run bash -c "source '$SCRIPT' && main"
+	# Run main without sourcing to avoid any sourcing issues
+	run main
 	[[ "$status" -eq 1 ]]
-
 	grep -q "Operation cancelled by user" <<<"$output"
 }

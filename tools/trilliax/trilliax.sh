@@ -6,6 +6,7 @@
 set -euo pipefail
 
 ENABLED_TARGETS=()
+DEFAULT_MAX_DEPTH=10
 
 # Display usage information
 usage() {
@@ -20,7 +21,7 @@ ARGUMENTS:
 
 OPTIONS:
   -d, --dir          Directory to clean (default: current directory)
-  -t, --targets      Comma-separated list of targets to clean (cursor,claude,python,node)
+  -t, --targets      Comma-separated list of targets to clean (cursor,claude,python,node,fs)
   -a, --all          Clean all targets (overrides --targets)
   -r, --dry-run      Show what would be cleaned without making changes
   -h, --help         Show this help message
@@ -33,6 +34,7 @@ CLEANUP OPERATIONS:
   - Claude files (CLAUDE.md and files starting with 'claude')
   - Python files (virtual environments, cache files, compiled files)
   - Node.js files (node_modules, package locks, npm cache)
+  - Empty directories (recursively removes all empty directories up to $DEFAULT_MAX_DEPTH levels deep)
 
 EXAMPLES:
   $(basename "$0")                    # Clean current directory
@@ -61,7 +63,7 @@ clean_fs() {
 	echo "Cleaning empty directories."
 
 	local dirs_to_remove
-	dirs_to_remove=$(find "$target_dir" -depth -type d -empty 2>/dev/null)
+	dirs_to_remove=$(find "$target_dir" -maxdepth "$DEFAULT_MAX_DEPTH" -depth -type d -empty 2>/dev/null)
 
 	if [[ "$dry_run" == "true" ]]; then
 		for dir in $dirs_to_remove; do
@@ -71,7 +73,7 @@ clean_fs() {
 		return 0
 	fi
 
-	find "$target_dir" -depth -type d -empty -delete 2>/dev/null || true
+	find "$target_dir" -maxdepth "$DEFAULT_MAX_DEPTH" -depth -type d -empty -delete 2>/dev/null || true
 
 	return 0
 }
@@ -242,7 +244,7 @@ validate_targets() {
 	local all_flag="${2:-false}"
 
 	if [[ "$all_flag" == "true" ]]; then
-		ENABLED_TARGETS=("cursor" "claude" "python" "node")
+		ENABLED_TARGETS=("cursor" "claude" "python" "node" "fs")
 		return 0
 	fi
 
@@ -257,11 +259,11 @@ validate_targets() {
 	for target in "${REQUESTED_TARGETS[@]}"; do
 		target=$(echo "$target" | xargs)
 		case "$target" in
-		cursor | claude | python | node)
+		cursor | claude | python | node | fs)
 			enabled_targets+=("$target")
 			;;
 		*)
-			echo "Invalid target '$target'. Available targets: cursor,claude,python,node" >&2
+			echo "Invalid target '$target'. Available targets: cursor,claude,python,node,fs" >&2
 			return 1
 			;;
 		esac
@@ -282,12 +284,12 @@ validate_targets() {
 # - Shows progress messages for each cleanup operation
 # - Returns 0 on success, 1 on error
 main() {
-	echo "=== Entry: ${BASH_SOURCE[0]:-$0} ==="
-
 	echo "Apologies for the mess master, I shall tidy up immediately."
 
 	local target_dir="${1:-.}"
 	local dry_run="${2:-false}"
+	# Set MAX_DEPTH globally so clean_fs can access it
+	MAX_DEPTH="${MAX_DEPTH:-$DEFAULT_MAX_DEPTH}"
 
 	if [[ ! -d "$target_dir" ]]; then
 		echo "Directory '$target_dir' does not exist" >&2
@@ -324,12 +326,14 @@ main() {
 			clean_node "$target_dir" "$dry_run"
 			cleanup_count=$((cleanup_count + 1))
 			;;
+		fs)
+			clean_fs "$target_dir" "$dry_run"
+			cleanup_count=$((cleanup_count + 1))
+			;;
 		esac
 	done
 
 	echo "Please don't say such things! The master is back, and things need to be kept tidy."
-
-	echo "=== Exit: ${BASH_SOURCE[0]:-$0} ==="
 }
 
 # Execute main function if script is called directly

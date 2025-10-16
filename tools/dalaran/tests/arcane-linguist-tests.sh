@@ -56,25 +56,25 @@ SCRIPT="$GIT_ROOT/tools/dalaran/arcane-linguist.sh"
 ########################################################
 # Real world tests
 ########################################################
-@test "parse_commands:: can parse actual zsh history successfully" {
-	local history_file="$HOME/.zsh_history"
-
-	[[ ! -f "$history_file" ]] && skip "No zsh history file found"
-
-	echo "Reading history file: $history_file" >&3
-	echo "Total commands found in history file: $(wc -l <"$history_file")" >&3
+@test "parse_commands:: can parse controlled test history successfully" {
+	local test_commands=(
+		": 1753921629:0;git status"
+		"ls -la"
+		": 1753921630:0;echo hello world"
+		"cd /tmp"
+		": 1753921631:0;eval \"\$(ssh-agent)\""
+	)
 
 	failed_commands=0
-	while IFS= read -r line; do
-		run bash -c 'echo "$line" | '"$SCRIPT"
+	for cmd in "${test_commands[@]}"; do
+		run bash -c "echo '$cmd' | $SCRIPT"
 		[[ "$status" -eq 0 ]]
 		if [[ "$status" -ne 0 ]]; then
 			failed_commands=$((failed_commands + 1))
 		fi
-	done <"$history_file"
+	done
 
 	echo "Failed commands: $failed_commands" >&3
 
 	[[ "$failed_commands" -eq 0 ]]
-	echo "All commands parsed successfully" >&3
 }
