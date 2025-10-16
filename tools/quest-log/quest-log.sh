@@ -215,7 +215,7 @@ EOF
 
 	# Read the 'SCHEMA_FILE', convert to JSON because I prefer to work with JSON in shell
 	SCHEMA_CONTENTS=""
-	if ! SCHEMA_CONTENTS=$(yq -r '.' "$SCHEMA_FILE"); then
+	if ! SCHEMA_CONTENTS=$(yq -o json '.' "$SCHEMA_FILE"); then
 		echo "Failed to read schema file with yq: $SCHEMA_FILE" >&2
 		return 1
 	fi
