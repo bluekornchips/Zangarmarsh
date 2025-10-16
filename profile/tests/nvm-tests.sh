@@ -89,8 +89,8 @@ teardown() {
 @test "nvm should handle unknown platform" {
 	PLATFORM="unknown"
 
-	mock_dir_exists "$NVM_DIR" true
-	mock_file_exists "$NVM_DIR/nvm.sh" true
+	mkdir -p "$NVM_DIR"
+	echo 'nvm() { echo "nvm version 0.39.0"; }' > "$NVM_DIR/nvm.sh"
 
 	run nvm --version 2>&1
 	[[ "$status" -eq 0 ]]

@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # Test fixtures and helper functions for shell tests
 # This file provides mock utilities and helper functions for testing shell scripts
@@ -9,11 +8,21 @@ GIT_ROOT=$(git rev-parse --show-toplevel)
 
 # Mocking framework for faster tests
 # Global variables to track mocked commands and their behaviors
-declare -A MOCK_COMMANDS
-declare -A MOCK_STDOUT
-declare -A MOCK_STDERR
-declare -A MOCK_EXIT_CODES
-declare -A MOCK_CALL_COUNTS
+# These need to be declared before use
+init_mock_arrays() {
+	if [[ ! -v MOCK_COMMANDS ]]; then
+		declare -gA MOCK_COMMANDS
+		declare -gA MOCK_STDOUT
+		declare -gA MOCK_STDERR
+		declare -gA MOCK_EXIT_CODES
+		declare -gA MOCK_CALL_COUNTS
+		declare -gA MOCK_FILE_EXISTS
+		declare -gA MOCK_DIR_EXISTS
+	fi
+}
+
+# Initialize on source
+init_mock_arrays
 
 # Mock a command with specific behavior
 # Usage: mock_command <command> <stdout> <stderr> <exit_code>

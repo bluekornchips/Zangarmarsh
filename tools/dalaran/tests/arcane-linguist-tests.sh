@@ -67,7 +67,7 @@ SCRIPT="$GIT_ROOT/tools/dalaran/arcane-linguist.sh"
 
 	failed_commands=0
 	for cmd in "${test_commands[@]}"; do
-		run bash -c 'echo "'"$cmd"'" | '"$SCRIPT"
+		run bash -c "echo '$cmd' | $SCRIPT"
 		[[ "$status" -eq 0 ]]
 		if [[ "$status" -ne 0 ]]; then
 			failed_commands=$((failed_commands + 1))
