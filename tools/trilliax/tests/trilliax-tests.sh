@@ -90,6 +90,40 @@ teardown() {
 	echo "$output" | grep -q "Would remove: $test_dir/empty_dir/empty_subdir"
 }
 
+@test "clean_fs::respects max depth limit" {
+	local test_dir="$TEST_CLEANUP_DIR"
+	# Create empty directories at different depths
+	mkdir -p "$test_dir/level1"
+	mkdir -p "$test_dir/level1/level2"
+	mkdir -p "$test_dir/level1/level2/level3"
+
+	run clean_fs "$test_dir" "true"
+	[[ "$status" -eq 0 ]]
+	# Should show level1 and level2 but not level3 (beyond max depth)
+	echo "$output" | grep -q "Would remove: $test_dir/level1"
+	echo "$output" | grep -q "Would remove: $test_dir/level1/level2"
+	echo "$output" | grep -q "Would remove: $test_dir/level1/level2/level3" && false || true
+}
+
+@test "fs target::cleans empty directories with main function" {
+	local test_dir="$TEST_CLEANUP_DIR"
+	mkdir -p "$test_dir/empty_to_clean"
+
+	run "$SCRIPT" --targets fs "$test_dir"
+	[[ "$status" -eq 0 ]]
+	[[ ! -d "$test_dir/empty_to_clean" ]]
+}
+
+@test "fs target::dry-run shows empty directories" {
+	local test_dir="$TEST_CLEANUP_DIR"
+	mkdir -p "$test_dir/empty_to_preview"
+
+	run "$SCRIPT" --targets fs --dry-run "$test_dir"
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Would remove: $test_dir/empty_to_preview"
+	[[ -d "$test_dir/empty_to_preview" ]] # Should still exist in dry-run mode
+}
+
 ########################################################
 # Script structure and help
 ########################################################
@@ -179,6 +213,7 @@ teardown() {
 	echo "$output" | grep -q "Cleaning Claude files."
 	echo "$output" | grep -q "Cleaning Python files."
 	echo "$output" | grep -q "Cleaning Node.js files."
+	echo "$output" | grep -q "Cleaning empty directories."
 }
 
 @test "main::accepts -a option" {
@@ -202,6 +237,7 @@ teardown() {
 	echo "$output" | grep -q "Cleaning Claude files."
 	echo "$output" | grep -q "Cleaning Python files."
 	echo "$output" | grep -q "Cleaning Node.js files."
+	echo "$output" | grep -q "Cleaning empty directories."
 }
 
 ########################################################

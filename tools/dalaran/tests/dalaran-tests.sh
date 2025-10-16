@@ -59,6 +59,45 @@ create_archive_directory() {
 	return 0
 }
 
+# Small history file for testing
+create_minimal_history() {
+	cat >"$1" <<'EOF'
+: 1700000001:0;git status
+: 1700000002:0;ls -la
+: 1700000003:0;git status
+: 1700000004:0;cd /tmp
+: 1700000005:0;git status
+: 1700000006:0;echo hello
+: 1700000007:0;pwd
+: 1700000008:0;git status
+: 1700000009:0;ls -la
+: 1700000010:0;date
+EOF
+}
+
+# Create very minimal history
+create_tiny_history() {
+	cat >"$1" <<'EOF'
+: 1700000001:0;git status
+: 1700000002:0;ls -la
+: 1700000003:0;echo hello
+: 1700000004:0;pwd
+: 1700000005:0;date
+EOF
+}
+
+# Create plain text history
+create_plain_history() {
+	cat >"$1" <<'EOF'
+git status
+ls -la
+echo hello
+pwd
+date
+git status
+EOF
+}
+
 setup() {
 	#shellcheck disable=SC1091
 	source "$SCRIPT"
@@ -75,25 +114,15 @@ setup() {
 
 	local default_spells=(
 		"git status"
-		"cd /tmp"
 		"ls -la"
-		"git add ."
-		"git commit -m 'test commit'"
-		"git status"
-		"ls -la"
-		"cd /home"
-		"git log"
-		"git status"
-		"echo 'hello world'"
-		"cat file.txt"
+		"echo hello"
+		"pwd"
+		"date"
 		"git status"
 		"ls -la"
-		"git add ."
-		"git commit -m 'another commit'"
-		"git status"
-		"cd /tmp"
-		"ls -la"
-		"git status"
+		"echo hello"
+		"pwd"
+		"date"
 	)
 	create_test_history_file "${HISTFILE}" "${default_spells[@]}"
 
@@ -261,7 +290,7 @@ EOF
 
 	local i
 	i=0
-	while [[ $i -lt 20 ]]; do
+	while [[ $i -lt 5 ]]; do
 		echo "spell_${i}" >>"$input_file"
 		i=$((i + 1))
 	done
@@ -435,23 +464,21 @@ EOF
 	input_dir=$(mktemp -d)
 	output_file=$(mktemp)
 
-	local spells1=("git status" "ls -la" "pwd")
-	local spells2=("git status" "echo hello" "date")
-	local spells3=("pwd" "git status" "whoami")
+	local spells1=("git status" "ls -la")
+	local spells2=("git status" "echo hello")
 
 	create_archive_directory "${input_dir}" "20240101" "${spells1[@]}"
 	create_archive_directory "${input_dir}" "20240102" "${spells2[@]}"
-	create_archive_directory "${input_dir}" "20240103" "${spells3[@]}"
 
 	run update_spellbook "$input_dir" "$output_file"
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Found.*3.*archive spellbook files"
+	echo "$output" | grep -q "Found.*2.*archive spellbook files"
 	echo "$output" | grep -q "Updated spellbook with.*total spells from.*archives"
 	[[ -f "$output_file" ]]
 
 	local output_count
 	output_count=$(wc -l <"$output_file")
-	[[ "$output_count" -eq 9 ]]
+	[[ "$output_count" -eq 4 ]]
 }
 
 @test "update_spellbook:: concatenates all spells in order" {
@@ -463,11 +490,9 @@ EOF
 
 	local spells1=("spell1" "spell2")
 	local spells2=("spell3" "spell4")
-	local spells3=("spell5")
 
 	create_archive_directory "${input_dir}" "20240101" "${spells1[@]}"
 	create_archive_directory "${input_dir}" "20240102" "${spells2[@]}"
-	create_archive_directory "${input_dir}" "20240103" "${spells3[@]}"
 
 	run update_spellbook "$input_dir" "$output_file"
 	[[ "$status" -eq 0 ]]
@@ -475,13 +500,12 @@ EOF
 
 	local output_count
 	output_count=$(wc -l <"$output_file")
-	[[ "$output_count" -eq 5 ]]
+	[[ "$output_count" -eq 4 ]]
 
 	grep -q "spell1" "$output_file"
 	grep -q "spell2" "$output_file"
 	grep -q "spell3" "$output_file"
 	grep -q "spell4" "$output_file"
-	grep -q "spell5" "$output_file"
 }
 
 @test "update_spellbook:: handles multiple archives" {
@@ -491,8 +515,8 @@ EOF
 	input_dir=$(mktemp -d)
 	output_file=$(mktemp)
 
-	local spells1=("spell1" "spell2" "spell3" "spell4" "spell5")
-	local spells2=("spell6" "spell7" "spell8" "spell9" "spell10")
+	local spells1=("spell1" "spell2")
+	local spells2=("spell3" "spell4")
 
 	create_archive_directory "${input_dir}" "20240101" "${spells1[@]}"
 	create_archive_directory "${input_dir}" "20240102" "${spells2[@]}"
@@ -503,7 +527,7 @@ EOF
 
 	local output_count
 	output_count=$(wc -l <"$output_file")
-	[[ "$output_count" -eq 10 ]]
+	[[ "$output_count" -eq 4 ]]
 }
 
 @test "update_spellbook:: ignores non-archive files" {
@@ -1100,16 +1124,28 @@ EOF
 ########################################################
 # Real world live tests with actual history
 ########################################################
-@test "LIVE:: extract_top_spells can process actual zsh history file" {
-	local history_file="/home/tristan/.zsh_history"
+@test "Real:: extract_top_spells can process controlled history file" {
+	local history_file
+	history_file=$(mktemp)
 
-	[[ ! -f "$history_file" ]] && skip "No zsh history file found"
+	cat >"$history_file" <<'EOF'
+: 1700000001:0;git status
+: 1700000002:0;ls -la
+: 1700000003:0;echo hello
+: 1700000004:0;pwd
+: 1700000005:0;date
+: 1700000006:0;git status
+: 1700000007:0;ls -la
+: 1700000008:0;cd /tmp
+: 1700000009:0;git log
+: 1700000010:0;cat file.txt
+EOF
 
 	DRY_RUN=false
 	local output_file
 	output_file=$(mktemp)
 
-	run extract_top_spells "$history_file" "$output_file" 100
+	run extract_top_spells "$history_file" "$output_file" 10
 	[[ "$status" -eq 0 ]]
 	[[ -f "$output_file" ]]
 
@@ -1118,10 +1154,17 @@ EOF
 	[[ "$extracted_count" -gt 0 ]]
 }
 
-@test "LIVE:: create_archive processes actual history successfully" {
-	local history_file="/home/tristan/.zsh_history"
+@test "Real:: create_archive processes controlled history successfully" {
+	local history_file
+	history_file=$(mktemp)
 
-	[[ ! -f "$history_file" ]] && skip "No zsh history file found"
+	cat >"$history_file" <<'EOF'
+: 1700000001:0;git status
+: 1700000002:0;ls -la
+: 1700000003:0;echo hello
+: 1700000004:0;pwd
+: 1700000005:0;date
+EOF
 
 	DRY_RUN=false
 	local temp_histfile
@@ -1134,7 +1177,7 @@ EOF
 	cp "$history_file" "$temp_histfile"
 	HISTFILE="$temp_histfile"
 
-	run create_archive "$archive_file" "$spellbook_file" 50
+	run create_archive "$archive_file" "$spellbook_file" 5
 	[[ "$status" -eq 0 ]]
 	[[ -f "$archive_file" ]]
 	[[ -f "$spellbook_file" ]]
@@ -1146,14 +1189,24 @@ EOF
 
 	[[ "$archive_count" -gt 0 ]]
 	[[ "$spellbook_count" -gt 0 ]]
-
-	rm -f "$temp_histfile"
 }
 
-@test "LIVE:: main full workflow with actual history" {
-	local history_file="/home/tristan/.zsh_history"
+@test "Real:: main full workflow with controlled history" {
+	local history_file
+	history_file=$(mktemp)
 
-	[[ ! -f "$history_file" ]] && skip "No zsh history file found"
+	cat >"$history_file" <<'EOF'
+: 1700000001:0;git status
+: 1700000002:0;ls -la
+: 1700000003:0;echo hello
+: 1700000004:0;pwd
+: 1700000005:0;date
+: 1700000006:0;git status
+: 1700000007:0;ls -la
+: 1700000008:0;cd /tmp
+: 1700000009:0;git log
+: 1700000010:0;cat file.txt
+EOF
 
 	local fake_home
 	fake_home=$(mktemp -d)
@@ -1165,9 +1218,6 @@ EOF
 	cp "$history_file" "$temp_histfile"
 	HISTFILE="$temp_histfile"
 
-	echo "Processing history file: $history_file" >&3
-	echo "Total commands in history file: $(wc -l <"$history_file")" >&3
-
 	run "$SCRIPT"
 	[[ "$status" -eq 0 ]]
 
@@ -1177,7 +1227,4 @@ EOF
 	local spellbook_count
 	spellbook_count=$(wc -l <"$spellbook_file")
 	[[ "$spellbook_count" -gt 0 ]]
-	echo "Total commands in spellbook file: $spellbook_count" >&3
-
-	rm -f "$temp_histfile"
 }

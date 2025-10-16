@@ -18,16 +18,6 @@ Usage: $(basename "$0") [OPTIONS]
 Hearthstone setup and sync tool. Runs a series of setup and sync commands
 to initialize and synchronize the Zangarmarsh development environment.
 
-WARNING: This script performs destructive operations. You will be prompted
-to confirm before proceeding unless the -y flag is provided.
-
-OPERATIONS:
-	build_deck           Build the deck, install packages, etc.
-	questlog             Generate agentic tool rules
-	vscodeoverride       Sync VSCode settings
-	trilliax --all       Clean generated files and directories
-	gdlf --install       Install Gandalf MCP server
-
 OPTIONS:
 	-y, --yes   Skip confirmation prompt
 	-h, --help  Show this help message
@@ -47,11 +37,16 @@ EOF
 confirm_proceed() {
 	cat <<EOF
 
-WARNING: This script will perform destructive operations:
-	- Clean generated files and directories (trilliax --all)
-	- Regenerate agentic tool rules (questlog)
-	- Sync VSCode settings (vscodeoverride)
-	- Install Gandalf MCP server (gdlf --install)
+
+WARNING: This script performs destructive operations. You will be prompted
+to confirm before proceeding unless the -y flag is provided.
+
+OPERATIONS:
+	build_deck           Build the deck, install packages, etc.
+	questlog             Generate agentic tool rules
+	vscodeoverride       Sync VSCode settings
+	trilliax --all       Clean generated files and directories
+	gdlf --install       Install Gandalf MCP server
 
 EOF
 
@@ -165,6 +160,44 @@ install_jq() {
 	fi
 }
 
+# Install yq by downloading the binary directly from GitHub releases
+#
+# Outputs:
+# - Status messages to stdout
+# - Error messages to stderr if installation fails
+#
+# Returns:
+# - 0 if yq is already installed or installation succeeds
+# - 1 if wget is not available or download/installation fails
+install_yq() {
+	if command -v yq &>/dev/null; then
+		echo "yq installed"
+		return 0
+	fi
+
+	echo "yq not found, attempting to install."
+
+	local download_url="https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64"
+	local install_path="/usr/local/bin/yq"
+
+	# Check if wget is available
+	if ! command -v wget &>/dev/null; then
+		echo "wget is not available. Please install wget first or install yq manually." >&2
+		return 1
+	fi
+
+	echo "Downloading yq binary from GitHub releases."
+	if wget "$download_url" -O "$install_path" &&
+		chmod +x "$install_path"; then
+		echo "yq installed successfully"
+		return 0
+	else
+		echo "Failed to download or install yq. Please install manually using:" >&2
+		echo "wget $download_url -O $install_path && chmod +x $install_path" >&2
+		return 1
+	fi
+}
+
 # Build the deck by ensuring required dependencies are installed
 #
 # Outputs:
@@ -173,9 +206,13 @@ install_jq() {
 #
 # Returns:
 # - 0 if all dependencies are successfully installed
-# - 1 if jq installation fails
+# - 1 if jq installation fails or yq download/installation fails
 build_deck() {
 	if ! install_jq; then
+		return 1
+	fi
+
+	if ! install_yq; then
 		return 1
 	fi
 
@@ -192,31 +229,31 @@ build_deck() {
 # - 0 if all operations complete successfully
 # - 1 if any operation fails
 execute_operations() {
-	echo "Running: build_deck"
+	echo -e "\nRunning: build_deck\n"
 	if ! build_deck; then
 		echo "Failed to execute: build_deck" >&2
 		return 1
 	fi
 
-	echo "Running: questlog"
-	if ! "$QUESTLOG_SCRIPT"; then
-		echo "Failed to execute: questlog" >&2
-		return 1
-	fi
-
-	echo "Running: vscodeoverride"
-	if ! vscodeoverride; then
-		echo "Failed to execute: vscodeoverride" >&2
-		return 1
-	fi
-
-	echo "Running: trilliax --all"
+	echo -e "\nRunning: trilliax --all\n"
 	if ! "$TRILLIAX_SCRIPT" --all; then
 		echo "Failed to execute: trilliax --all" >&2
 		return 1
 	fi
 
-	echo "Running: gdlf --install"
+	echo -e "\nRunning: questlog\n"
+	if ! "$QUESTLOG_SCRIPT"; then
+		echo "Failed to execute: questlog" >&2
+		return 1
+	fi
+
+	echo -e "\nRunning: vscodeoverride\n"
+	if ! vscodeoverride; then
+		echo "Failed to execute: vscodeoverride" >&2
+		return 1
+	fi
+
+	echo -e "\nRunning: gdlf --install\n"
 	if ! "$GDLF_SCRIPT" --install; then
 		echo "Failed to execute: gdlf --install" >&2
 		return 1

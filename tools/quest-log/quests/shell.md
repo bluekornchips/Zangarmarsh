@@ -54,9 +54,7 @@ function_name() {
 
 # Main entry point, can be named anything but "main" is fallback default
 main() {
-  echo "=== Entry: ${BASH_SOURCE[0]:-$0} ==="
-
-  echo "=== Exit: ${BASH_SOURCE[0]:-$0} ==="
+  return 0
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
@@ -185,7 +183,7 @@ fi
 - Functions inside test files do not need header comments unless explicitly requested to do so.
 - Always prefix the test with the function name for direct function testing.
 - Use proper spacing between any changes or inputs before the run command to show what is being tested, changed, or mocked.
-- Never execute actual changes with tests unless explicitly called for as defined with `@test 'LIVE:: test description' {`
+- Never execute actual changes with tests unless explicitly called for as defined with `@test 'Real:: test description' {`
 - Use `setup_file` to set up the test environment and source the script for external dependencies.
 - Use `setup` to set up the test environment and source the script for external dependencies.
 
