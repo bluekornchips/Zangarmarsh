@@ -2,14 +2,23 @@
 
 ## Overview
 
-Generate AI assistant rules for Cursor and Claude Code based on project-specific rule templates. Quest Log reads from a YAML schema configuration and creates standardized rule files that can be used by various AI coding assistants.
+Generate AI assistant rules for Cursor and Claude Code based on project-specific rule templates. Quest Log reads from a YAML schema configuration and creates standardized rule files using a hybrid approach: Cursor rules are installed locally in the project directory, while Claude rules are installed globally for system-wide availability.
 
-The Quest Log is a pretty intuitive name, I think. An NPC gives you a task, with instructions, hopefully lots of detail, and an expected result. Now go find me 6 Okra, 6 Goretusk Flank, and 6 Stringy Fleshripper Meat.
+## Install
+
+```bash
+# Source the main script
+source /path/to/zangarmarsh/zangarmarsh.sh
+
+# Quest-log will be available as an alias
+questlog
+```
 
 ## Features
 
+- Hybrid installation approach: Cursor rules local, Claude rules global
 - Generates rules from YAML schema configuration
-- Creates both Cursor (.cursor/rules/) and Claude Code compatible rules
+- Creates Cursor rules locally (.cursor/rules/) and Claude rules globally (~/.claude/rules.md)
 - Supports backup of existing rules before overwriting
 - Template-based rule generation system
 - Configurable rule categories and content
@@ -19,17 +28,29 @@ The Quest Log is a pretty intuitive name, I think. An NPC gives you a task, with
 
 ```bash
 # Generate rules in current directory
-./tools/quest-log/quest-log.sh
+questlog
 
 # Generate rules in specified directory
-./tools/quest-log/quest-log.sh /path/to/project
+questlog /path/to/project
 
 # Generate with backup of existing rules
-./tools/quest-log/quest-log.sh --backup
+questlog --backup
+
+# Generate all rules including warcraft and lotr
+questlog --all
 
 # Show help
-./tools/quest-log/quest-log.sh --help
+questlog --help
 ```
+
+### Hybrid Installation
+
+Quest-log uses a hybrid approach for optimal compatibility:
+
+- Cursor: Rules are installed locally to `.cursor/rules/` in the project directory
+- Claude Code: Rules are installed globally to `~/.claude/rules.md` for system-wide availability
+
+This approach ensures Cursor rules are available in the project context window while Claude rules are accessible globally.
 
 ## Configuration
 
@@ -44,8 +65,14 @@ The tool reads from `tools/quest-log/schema.yaml` and quest templates in `tools/
 
 ## Files Created
 
-- `.cursor/rules/`: Directory containing Cursor-compatible rule files
+### Local Installation (Cursor)
+
+- `.cursor/rules/`: Local Cursor rules directory in project
 - Rule files are named based on the quest template names (e.g., `rules-python.mdc`)
+
+### Global Installation (Claude)
+
+- `~/.claude/rules.md`: Global Claude Code rules file
 
 ## Schema Format
 
@@ -61,3 +88,11 @@ The `schema.yaml` file defines:
 # Run quest-log tests
 bats tools/quest-log/tests/quest-log-tests.sh
 ```
+
+## Verification Steps
+
+- [ ] Rules are generated in `.cursor/rules/` directory
+- [ ] Claude rules are updated in `~/.claude/rules.md`
+- [ ] All quest templates are processed correctly
+- [ ] Backup functionality works when `--backup` flag is used
+- [ ] `--all` flag includes warcraft and lotr rules

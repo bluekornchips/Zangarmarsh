@@ -284,7 +284,7 @@ EOF
 	run show_diff "$test_file" "$new_content"
 	[[ "$status" -eq 0 ]]
 
-	grep -qF "No such file or directory" <<<"$output"
+	grep -qF "File does not exist" <<<"$output"
 }
 
 @test 'show_diff:: shows diff for existing file with changes' {
@@ -324,7 +324,7 @@ Line 3"
 	[[ "$status" -eq 0 ]]
 
 	# Check for diff error message for non-existent file
-	grep -qF "No such file or directory" <<<"$output"
+	grep -qF "File does not exist" <<<"$output"
 }
 
 @test 'show_diff:: cleans up temporary files' {
@@ -515,7 +515,7 @@ EOF
 	[[ "$status" -eq 0 ]]
 	[[ -f "$TEST_TEMP_DIR/.cursor/rules/rules-always.mdc" ]]
 	[[ -f "$TEST_TEMP_DIR/.cursor/rules/rules-author.mdc" ]]
-	[[ -f "$TEST_TEMP_DIR/CLAUDE.md" ]]
+	[[ -f "$HOME/.claude/rules.md" ]]
 }
 
 @test 'main:: handles --all flag' {

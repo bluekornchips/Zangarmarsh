@@ -102,7 +102,7 @@ teardown() {
 	# Mock python3 to succeed
 	mock_command "python3" "Python 3.9.7"
 	mock_command "python3 -m venv .venv" "Virtual environment created successfully"
-	
+
 	run penv
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Using Python: python3"
@@ -133,7 +133,7 @@ teardown() {
 
 @test "penv should activate existing virtual environment" {
 	setup_common_mocks
-	
+
 	mkdir -p .venv/bin
 	touch .venv/bin/activate
 
@@ -145,7 +145,7 @@ teardown() {
 
 @test "penv -d should force recreate virtual environment" {
 	setup_common_mocks
-	
+
 	mkdir -p .venv
 	touch .venv/test_file
 
@@ -157,7 +157,7 @@ teardown() {
 
 @test "penv --delete should force recreate virtual environment" {
 	setup_common_mocks
-	
+
 	mkdir -p .venv
 	touch .venv/test_file
 
@@ -209,9 +209,9 @@ teardown() {
 }
 
 @test "penv should handle failed virtual environment activation" {
-	
+
 	mkdir -p .venv/bin
-	
+
 	run penv
 	[ "$status" -eq 0 ]
 	echo "$output" | grep -q "Virtual environment exists, activating"
@@ -220,12 +220,12 @@ teardown() {
 
 @test "penv should preserve existing environment when no force flag" {
 	setup_common_mocks
-	
+
 	# Create actual test directory ad files
 	mkdir -p .venv/bin
 	touch .venv/bin/activate
 	touch .venv/original_file
-	
+
 	run penv
 	[[ $status -eq 0 ]]
 	[[ -f ".venv/original_file" ]]
@@ -233,10 +233,10 @@ teardown() {
 
 @test "penv should handle multiple flags correctly" {
 	setup_common_mocks
-	
+
 	mkdir -p .venv
 	touch .venv/test_file
-	
+
 	run penv -d --delete
 	[ "$status" -eq 0 ]
 	echo "$output" | grep -q "Removing existing virtual environment"

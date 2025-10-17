@@ -16,10 +16,11 @@ Hearthstone setup and sync tool. Runs a series of setup and sync commands to ini
 
 Hearthstone executes the following operations in order:
 
-1. `trilliax --all` - Clean generated files and directories
-2. `questlog` - Generate agentic tool rules
-3. `vscodeoverride` - Sync VSCode settings
-4. `gdlf --install -f` - Force install Gandalf MCP server
+1. `build_deck` - Install required dependencies (jq, yq)
+2. `trilliax --all` - Clean generated files and directories (with --force)
+3. `questlog` - Generate agentic tool rules (hybrid: Cursor local, Claude global)
+4. `vscodeoverride` - Sync VSCode settings
+5. `gdlf --install -f` - Force install Gandalf MCP server (with --force)
 
 ## Usage
 
@@ -35,9 +36,16 @@ Skip confirmation prompt:
 hearthstone --yes
 ```
 
+Combine options:
+
+```bash
+hearthstone --yes --force
+```
+
 ## Options
 
 - `-y, --yes` - Skip confirmation prompt and proceed immediately
+- `-f, --force` - Force operations (replace existing VSCode settings, run trilliax, pass force to gdlf)
 - `-h, --help` - Show help message
 
 ## Confirmation

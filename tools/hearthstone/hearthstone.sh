@@ -11,6 +11,9 @@ DEFAULT_TRILLIAX_SCRIPT="$GIT_ROOT/tools/trilliax/trilliax.sh"
 DEFAULT_QUESTLOG_SCRIPT="$GIT_ROOT/tools/quest-log/quest-log.sh"
 DEFAULT_GDLF_SCRIPT="$HOME/bluekornchips/gandalf/gandalf.sh"
 
+# Default values
+DEFAULT_FORCE=false
+
 usage() {
 	cat <<EOF
 Usage: $(basename "$0") [OPTIONS]
@@ -19,8 +22,9 @@ Hearthstone setup and sync tool. Runs a series of setup and sync commands
 to initialize and synchronize the Zangarmarsh development environment.
 
 OPTIONS:
-	-y, --yes   Skip confirmation prompt
-	-h, --help  Show this help message
+	-y, --yes     Skip confirmation prompt
+	-f, --force   Force operations (replace existing VSCode settings, run trilliax, pass force to gdlf)
+	-h, --help    Show this help message
 
 EOF
 }
@@ -35,31 +39,36 @@ EOF
 # - 0 if user confirms with y/yes/Y
 # - 1 if user declines or provides invalid input
 confirm_proceed() {
+	local vscode_msg
+	local gdlf_msg
+	local trilliax_msg
+
+	build_deck_msg="build_deck: Build the deck, install packages, etc."
+	questlog_msg="questlog: Generate agentic tool rules"
+	trilliax_msg="trilliax --all: Clean generated files and directories"
+	vscodeoverride_msg="vscodeoverride: Sync VSCode settings"
+	gdlf_msg="gdlf --install: Install Gandalf MCP server"
+
+	[[ "$FORCE" = "true" ]] && gdlf_msg="$gdlf_msg (with --force)"
+
 	cat <<EOF
-
-
 WARNING: This script performs destructive operations. You will be prompted
 to confirm before proceeding unless the -y flag is provided.
 
 OPERATIONS:
-	build_deck           Build the deck, install packages, etc.
-	questlog             Generate agentic tool rules
-	vscodeoverride       Sync VSCode settings
-	trilliax --all       Clean generated files and directories
-	gdlf --install       Install Gandalf MCP server
-
 EOF
 
+	for msg in "$build_deck_msg" "$questlog_msg" "$vscodeoverride_msg" "$gdlf_msg" "$trilliax_msg"; do
+		echo "  $msg"
+	done
+
 	read -r -p "Do you want to proceed? [y/N] " response
-	case "$response" in
-	[yY][eE][sS] | [yY])
-		return 0
-		;;
-	*)
+	if [[ "$response" != [yY][eE][sS] && "$response" != [yY] ]]; then
 		echo "Operation cancelled by user"
 		return 1
-		;;
-	esac
+	fi
+
+	return 0
 }
 
 # Verify that the Zangarmarsh directory structure is valid
@@ -98,13 +107,16 @@ vscodeoverride() {
 	# Ensure VSCode settings directory exists in current working directory
 	mkdir -p "$PWD/.vscode"
 
-	# Copy VSCode settings from Zangarmarsh root to current directory, if they
-	# don't already exist in the current directory.
-	if [[ ! -d "$PWD/.vscode" ]]; then
-		if ! cp -rf "$GIT_ROOT/.vscode/"* "$PWD/.vscode/"; then
-			echo "Failed to sync VSCode settings" >&2
-			return 1
-		fi
+	# Copy VSCode settings from Zangarmarsh root to current directory
+	# If FORCE is true, replace existing files. Otherwise, skip if files exist.
+	if [[ "$FORCE" = "true" ]]; then
+		cp -rf "$GIT_ROOT/.vscode/"* "$PWD/.vscode/" 2>/dev/null || true
+		echo "VSCode settings synced (replaced existing)"
+	elif [[ ! "$(ls -A "$PWD/.vscode" 2>/dev/null)" ]]; then
+		cp -rf "$GIT_ROOT/.vscode/"* "$PWD/.vscode/" 2>/dev/null || true
+		echo "VSCode settings synced"
+	else
+		echo "VSCode settings already exist (use --force to replace)"
 	fi
 
 	return 0
@@ -235,10 +247,12 @@ execute_operations() {
 		return 1
 	fi
 
-	echo -e "\nRunning: trilliax --all\n"
-	if ! "$TRILLIAX_SCRIPT" --all; then
-		echo "Failed to execute: trilliax --all" >&2
-		return 1
+	if [[ "$FORCE" = "true" ]]; then
+		echo -e "\nRunning: trilliax --all\n"
+		if ! "$TRILLIAX_SCRIPT" --all; then
+			echo "Failed to execute: trilliax --all" >&2
+			return 1
+		fi
 	fi
 
 	echo -e "\nRunning: questlog\n"
@@ -254,8 +268,12 @@ execute_operations() {
 	fi
 
 	echo -e "\nRunning: gdlf --install\n"
-	if ! "$GDLF_SCRIPT" --install; then
-		echo "Failed to execute: gdlf --install" >&2
+	local gdlf_args="-i"
+	if [[ "$FORCE" = "true" ]]; then
+		gdlf_args="$gdlf_args -f"
+	fi
+	if ! "$GDLF_SCRIPT" $gdlf_args; then
+		echo "Failed to execute: gdlf $gdlf_args" >&2
 		return 1
 	fi
 
@@ -266,6 +284,7 @@ main() {
 	TRILLIAX_SCRIPT="${TRILLIAX_SCRIPT:-$DEFAULT_TRILLIAX_SCRIPT}"
 	QUESTLOG_SCRIPT="${QUESTLOG_SCRIPT:-$DEFAULT_QUESTLOG_SCRIPT}"
 	GDLF_SCRIPT="${GDLF_SCRIPT:-$DEFAULT_GDLF_SCRIPT}"
+	FORCE="${FORCE:-$DEFAULT_FORCE}"
 
 	local skip_confirmation=false
 
@@ -273,6 +292,10 @@ main() {
 		case "$1" in
 		-y | --yes)
 			skip_confirmation=true
+			shift
+			;;
+		-f | --force)
+			FORCE=true
 			shift
 			;;
 		-h | --help)
@@ -286,6 +309,8 @@ main() {
 			;;
 		esac
 	done
+
+	export FORCE
 
 	if ! verify_git_repository; then
 		return 1

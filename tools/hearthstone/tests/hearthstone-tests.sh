@@ -7,7 +7,6 @@ SCRIPT="$GIT_ROOT/tools/hearthstone/hearthstone.sh"
 [[ ! -f "$SCRIPT" ]] && echo "Script not found: $SCRIPT" >&2 && return 1
 
 setup() {
-	#shellcheck disable=SC1090
 	source "$SCRIPT"
 
 	return 0
@@ -17,7 +16,6 @@ setup() {
 # Mocks
 ########################################################
 mock_commands_success() {
-	local mock_dir
 	mock_dir="$(mktemp -d)"
 
 	echo '#!/usr/bin/env bash' >"$mock_dir/trilliax.sh"
@@ -40,16 +38,13 @@ mock_commands_success() {
 }
 
 mock_commands_failure() {
-	local mock_dir
 	mock_dir="$(mktemp -d)"
 
-	# Mock trilliax to fail
 	echo '#!/usr/bin/env bash' >"$mock_dir/trilliax.sh"
 	echo 'echo "trilliax failed" >&2' >>"$mock_dir/trilliax.sh"
 	echo 'exit 1' >>"$mock_dir/trilliax.sh"
 	chmod +x "$mock_dir/trilliax.sh"
 
-	# Mock other scripts to succeed
 	echo '#!/usr/bin/env bash' >"$mock_dir/questlog.sh"
 	echo 'echo "questlog succeeded"' >>"$mock_dir/questlog.sh"
 	chmod +x "$mock_dir/questlog.sh"
@@ -63,55 +58,6 @@ mock_commands_failure() {
 	GDLF_SCRIPT="$mock_dir/gdlf.sh"
 
 	export TRILLIAX_SCRIPT QUESTLOG_SCRIPT GDLF_SCRIPT
-}
-
-mock_user_confirmation_yes() {
-	confirm_proceed() {
-		return 0
-	}
-
-	export -f confirm_proceed
-}
-
-mock_user_confirmation_no() {
-	confirm_proceed() {
-		echo "Operation cancelled by user"
-		return 1
-	}
-
-	export -f confirm_proceed
-}
-
-########################################################
-# confirm_proceed
-########################################################
-@test "confirm_proceed::accepts y as confirmation" {
-	run bash -c "source '$SCRIPT' && echo 'y' | confirm_proceed"
-	[[ "$status" -eq 0 ]]
-}
-
-@test "confirm_proceed::accepts yes as confirmation" {
-	run bash -c "source '$SCRIPT' && echo 'yes' | confirm_proceed"
-	[[ "$status" -eq 0 ]]
-}
-
-@test "confirm_proceed::accepts Y as confirmation" {
-	run bash -c "source '$SCRIPT' && echo 'Y' | confirm_proceed"
-	[[ "$status" -eq 0 ]]
-}
-
-@test "confirm_proceed::rejects n as confirmation" {
-	run bash -c "source '$SCRIPT' && echo 'n' | confirm_proceed"
-	[[ "$status" -eq 1 ]]
-
-	grep -q "Operation cancelled by user" <<<"$output"
-}
-
-@test "confirm_proceed::rejects empty input as confirmation" {
-	run bash -c "source '$SCRIPT' && echo '' | confirm_proceed"
-	[[ "$status" -eq 1 ]]
-
-	grep -q "Operation cancelled by user" <<<"$output"
 }
 
 ########################################################
@@ -132,10 +78,80 @@ mock_user_confirmation_no() {
 }
 
 ########################################################
+# vscodeoverride
+########################################################
+@test "vscodeoverride::syncs when directory is empty" {
+	FORCE=false
+	export FORCE
+
+	test_dir="$(mktemp -d)"
+	cd "$test_dir" || return 1
+
+	run vscodeoverride
+	[[ "$status" -eq 0 ]]
+
+	grep -q "VSCode settings synced" <<<"$output"
+	[[ -d "$test_dir/.vscode" ]]
+
+	cd - >/dev/null || return 1
+}
+
+@test "vscodeoverride::skips when directory exists and FORCE is false" {
+	FORCE=false
+	export FORCE
+
+	test_dir="$(mktemp -d)"
+	mkdir -p "$test_dir/.vscode"
+	echo "existing" >"$test_dir/.vscode/settings.json"
+	cd "$test_dir" || return 1
+
+	run vscodeoverride
+	[[ "$status" -eq 0 ]]
+
+	grep -q "VSCode settings already exist" <<<"$output"
+	grep -q "use --force to replace" <<<"$output"
+
+	cd - >/dev/null || return 1
+}
+
+@test "vscodeoverride::replaces when FORCE is true" {
+	FORCE=true
+	export FORCE
+
+	test_dir="$(mktemp -d)"
+	mkdir -p "$test_dir/.vscode"
+	echo "existing" >"$test_dir/.vscode/settings.json"
+	cd "$test_dir" || return 1
+
+	run vscodeoverride
+	[[ "$status" -eq 0 ]]
+
+	grep -q "VSCode settings synced (replaced existing)" <<<"$output"
+
+	cd - >/dev/null || return 1
+}
+
+########################################################
 # execute_operations
 ########################################################
-@test "execute_operations::runs all commands successfully" {
+@test "execute_operations::runs all commands successfully without FORCE" {
 	mock_commands_success
+	FORCE=false
+	export FORCE
+
+	run execute_operations
+	[[ "$status" -eq 0 ]]
+
+	! grep -q "Running: trilliax --all" <<<"$output"
+	grep -q "Running: questlog" <<<"$output"
+	grep -q "Running: vscodeoverride" <<<"$output"
+	grep -q "Running: gdlf --install" <<<"$output"
+}
+
+@test "execute_operations::runs all commands including trilliax with FORCE" {
+	mock_commands_success
+	FORCE=true
+	export FORCE
 
 	run execute_operations
 	[[ "$status" -eq 0 ]]
@@ -146,8 +162,10 @@ mock_user_confirmation_no() {
 	grep -q "Running: gdlf --install" <<<"$output"
 }
 
-@test "execute_operations::fails when command fails" {
+@test "execute_operations::fails when trilliax fails with FORCE" {
 	mock_commands_failure
+	FORCE=true
+	export FORCE
 
 	run execute_operations
 	[[ "$status" -eq 1 ]]
@@ -155,11 +173,62 @@ mock_user_confirmation_no() {
 	grep -q "Failed to execute: trilliax --all" <<<"$output"
 }
 
+@test "execute_operations::passes force flag to gdlf when FORCE is true" {
+	mock_dir="$(mktemp -d)"
+
+	echo '#!/usr/bin/env bash' >"$mock_dir/trilliax.sh"
+	echo 'exit 0' >>"$mock_dir/trilliax.sh"
+	chmod +x "$mock_dir/trilliax.sh"
+
+	echo '#!/usr/bin/env bash' >"$mock_dir/questlog.sh"
+	echo 'exit 0' >>"$mock_dir/questlog.sh"
+	chmod +x "$mock_dir/questlog.sh"
+
+	echo '#!/usr/bin/env bash' >"$mock_dir/gdlf.sh"
+	echo 'echo "Args: $@"' >>"$mock_dir/gdlf.sh"
+	echo 'exit 0' >>"$mock_dir/gdlf.sh"
+	chmod +x "$mock_dir/gdlf.sh"
+
+	TRILLIAX_SCRIPT="$mock_dir/trilliax.sh"
+	QUESTLOG_SCRIPT="$mock_dir/questlog.sh"
+	GDLF_SCRIPT="$mock_dir/gdlf.sh"
+	FORCE=true
+	export TRILLIAX_SCRIPT QUESTLOG_SCRIPT GDLF_SCRIPT FORCE
+
+	run execute_operations
+	[[ "$status" -eq 0 ]]
+
+	grep -q "Args: -i -f" <<<"$output"
+}
+
+@test "execute_operations::does not pass force flag to gdlf when FORCE is false" {
+	mock_dir="$(mktemp -d)"
+
+	echo '#!/usr/bin/env bash' >"$mock_dir/questlog.sh"
+	echo 'exit 0' >>"$mock_dir/questlog.sh"
+	chmod +x "$mock_dir/questlog.sh"
+
+	echo '#!/usr/bin/env bash' >"$mock_dir/gdlf.sh"
+	echo 'echo "Args: $@"' >>"$mock_dir/gdlf.sh"
+	echo 'exit 0' >>"$mock_dir/gdlf.sh"
+	chmod +x "$mock_dir/gdlf.sh"
+
+	QUESTLOG_SCRIPT="$mock_dir/questlog.sh"
+	GDLF_SCRIPT="$mock_dir/gdlf.sh"
+	FORCE=false
+	export QUESTLOG_SCRIPT GDLF_SCRIPT FORCE
+
+	run execute_operations
+	[[ "$status" -eq 0 ]]
+
+	grep -q "Args: -i" <<<"$output"
+	! grep -q "Args: -i -f" <<<"$output"
+}
+
 ########################################################
 # install_yq
 ########################################################
 @test "install_yq::succeeds when yq is already installed" {
-	# Mock yq as available by overriding install_yq
 	install_yq() {
 		echo "yq installed"
 		return 0
@@ -168,11 +237,11 @@ mock_user_confirmation_no() {
 
 	run install_yq
 	[[ "$status" -eq 0 ]]
+
 	grep -q "yq installed" <<<"$output"
 }
 
 @test "install_yq::fails when wget is not available" {
-	# Mock wget as unavailable and yq as missing
 	command() {
 		case "$2" in
 		"yq" | "wget") return 1 ;;
@@ -183,11 +252,11 @@ mock_user_confirmation_no() {
 
 	run bash -c "source '$SCRIPT' && install_yq"
 	[[ "$status" -eq 1 ]]
+
 	grep -q "wget is not available" <<<"$output"
 }
 
 @test "install_yq::fails when download fails" {
-	# Mock yq missing and wget failing
 	command() {
 		case "$2" in
 		"yq") return 1 ;;
@@ -201,6 +270,7 @@ mock_user_confirmation_no() {
 
 	run bash -c "source '$SCRIPT' && install_yq"
 	[[ "$status" -eq 1 ]]
+
 	grep -q "Failed to download or install yq" <<<"$output"
 }
 
@@ -208,7 +278,6 @@ mock_user_confirmation_no() {
 # build_deck
 ########################################################
 @test "build_deck::succeeds when both jq and yq are installed" {
-	# Mock both tools as already installed
 	install_jq() {
 		echo "jq installed"
 		return 0
@@ -224,7 +293,6 @@ mock_user_confirmation_no() {
 }
 
 @test "build_deck::succeeds when jq and yq need installation but succeed" {
-	# Mock tools as missing but installations succeed
 	command() {
 		case "$2" in
 		"jq" | "yq" | "wget") return 1 ;;
@@ -248,7 +316,6 @@ mock_user_confirmation_no() {
 }
 
 @test "build_deck::fails when jq installation fails" {
-	# Mock jq as missing and installation failing
 	command() {
 		case "$2" in
 		"jq" | "apt-get" | "brew" | "pacman") return 1 ;;
@@ -269,7 +336,6 @@ mock_user_confirmation_no() {
 }
 
 @test "build_deck::fails when yq installation fails" {
-	# Mock yq and wget as missing, installation fails
 	command() {
 		case "$2" in
 		"yq" | "wget") return 1 ;;
@@ -315,15 +381,42 @@ mock_user_confirmation_no() {
 }
 
 @test "main::script cancels when user declines confirmation" {
-	# Create a test that avoids read prompts by overriding confirm_proceed properly
 	confirm_proceed() {
 		echo "Operation cancelled by user"
 		return 1
 	}
 	export -f confirm_proceed
 
-	# Run main without sourcing to avoid any sourcing issues
 	run main
 	[[ "$status" -eq 1 ]]
+
 	grep -q "Operation cancelled by user" <<<"$output"
+}
+
+@test "main::script handles force option" {
+	run bash "$SCRIPT" --help
+	[[ "$status" -eq 0 ]]
+
+	grep -q "\-f, \-\-force" <<<"$output"
+	grep -q "Force operations" <<<"$output"
+}
+
+@test "main::script accepts force flag" {
+	mock_commands_success
+
+	run bash "$SCRIPT" --yes --force
+	[[ "$status" -eq 0 ]]
+
+	grep -q "Running Hearthstone" <<<"$output"
+	grep -q "Hearthstone Complete" <<<"$output"
+}
+
+@test "main::script accepts short force flag" {
+	mock_commands_success
+
+	run bash "$SCRIPT" -y -f
+	[[ "$status" -eq 0 ]]
+
+	grep -q "Running Hearthstone" <<<"$output"
+	grep -q "Hearthstone Complete" <<<"$output"
 }

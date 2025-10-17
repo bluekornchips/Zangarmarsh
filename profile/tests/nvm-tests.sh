@@ -90,7 +90,7 @@ teardown() {
 	PLATFORM="unknown"
 
 	mkdir -p "$NVM_DIR"
-	echo 'nvm() { echo "nvm version 0.39.0"; }' > "$NVM_DIR/nvm.sh"
+	echo 'nvm() { echo "nvm version 0.39.0"; }' >"$NVM_DIR/nvm.sh"
 
 	run nvm --version 2>&1
 	[[ "$status" -eq 0 ]]

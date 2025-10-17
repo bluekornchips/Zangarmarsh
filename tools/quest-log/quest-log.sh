@@ -9,9 +9,8 @@ usage() {
 	cat <<EOF
 Usage: $0 [OPTIONS] [DIRECTORY]
 
-Generate agentic tool rules for Cursor and Claude Code. If run from within a git
-repository, files are always written to the git root directory. Otherwise, files
-are written to the specified directory or current directory.
+Generate agentic tool rules for Cursor and Claude Code. Cursor rules are installed
+locally in the project directory, while Claude rules are installed globally.
 
 OPTIONS:
     -a, --all           Include all rules (including warcraft and lotr)
@@ -73,7 +72,7 @@ create_cursor_rule_file() {
 
 	local cursor_rule_file="$CURSOR_RULES_DIR/rules-$name.mdc"
 	local cursor_rule_file_abs
-	cursor_rule_file_abs=$(realpath "$cursor_rule_file" 2>/dev/null || echo "$(pwd)/$cursor_rule_file")
+	cursor_rule_file_abs=$(realpath "$cursor_rule_file" 2>/dev/null || echo "$cursor_rule_file")
 
 	# Check if file exists and read existing content
 	local existing_content=""
@@ -126,10 +125,15 @@ show_diff() {
 
 	echo "$new_content" >"$temp_file"
 
-	if ! diff -u --color=always "$file_path" "$temp_file"; then
-		echo "Differences found between $file_path and $temp_file"
+	if [[ -f "$file_path" ]]; then
+		if ! diff -u --color=always "$file_path" "$temp_file"; then
+			echo "Differences found between $file_path and $temp_file"
+		fi
+	else
+		echo "File does not exist: $file_path"
 	fi
 
+	rm -f "$temp_file"
 	return $?
 }
 
@@ -305,6 +309,57 @@ EOF
 	return 0
 }
 
+# Install quest-log rules with hybrid approach
+#
+# Side Effects:
+# - Creates local Cursor rules directory at TARGET_DIR/.cursor/rules/
+# - Creates global Claude rules file at ~/.claude/rules.md
+# - Installs rules from quest-log schema
+install_rules() {
+	cat <<EOF
+
+Installing quest-log rules (hybrid approach).
+
+EOF
+
+	# Define directories
+	local local_cursor_dir="$TARGET_DIR/.cursor/rules"
+	local global_claude_dir="$HOME/.claude"
+	local global_claude_file="$global_claude_dir/rules.md"
+
+	# Create local Cursor rules directory
+	if ! mkdir -p "$local_cursor_dir"; then
+		echo "Failed to create local Cursor rules directory: $local_cursor_dir" >&2
+		return 1
+	fi
+
+	# Create global Claude rules directory
+	if ! mkdir -p "$global_claude_dir"; then
+		echo "Failed to create global Claude rules directory: $global_claude_dir" >&2
+		return 1
+	fi
+
+	# Set target directories
+	readonly CLAUDE_FILE="$global_claude_file"
+	readonly CURSOR_RULES_DIR="$local_cursor_dir"
+
+	echo "Local Cursor rules directory: $local_cursor_dir"
+	echo "Global Claude rules file: $global_claude_file"
+
+	# Generate rules with hybrid approach
+	fill_quest_log "$TARGET_DIR"
+
+	cat <<EOF
+
+Hybrid installation complete.
+Cursor rules are available locally in this project.
+Claude rules are available globally system-wide.
+
+EOF
+
+	return 0
+}
+
 # Determine the target directory for rule generation
 #
 # Side Effects:
@@ -401,9 +456,6 @@ EOF
 		exit 1
 	fi
 
-	readonly CLAUDE_FILE="$TARGET_DIR/CLAUDE.md"
-	readonly CURSOR_RULES_DIR="$TARGET_DIR/.cursor/rules"
-
 	if [[ ! -d "$TARGET_DIR" ]]; then
 		echo "Target directory is required" >&2
 		exit 1
@@ -414,7 +466,8 @@ EOF
 		exit 1
 	fi
 
-	fill_quest_log "$TARGET_DIR"
+	# Install rules with hybrid approach
+	install_rules
 
 	cat <<EOF
 =====

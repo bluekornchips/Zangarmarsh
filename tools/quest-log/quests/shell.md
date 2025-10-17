@@ -1,21 +1,31 @@
 # Shell Standards
 
-## Core Rules
+## Critical Violations, Scripts Will Be Rejected
 
-### Never Use
+### Never Use, Immediate Rejection
 
 - Never use echo statements >160 characters or over 3 lines
 - Never use manual removal of temporary files/directories
-- Never use `exit` to exit a script inside a function.
+- Never use `exit` to exit a script inside a function
+- Never use `set -e` without `set -o pipefail`
+- Never use unquoted variables: `echo $var` instead of `echo "$var"`
+- Never use `rm -rf /` or similar dangerous commands
+- Never use `eval` or `exec` with user input
+- Never use `sudo` without explicit justification
 
-### Always Use
+## Mandatory Requirements, All Scripts Must Have
 
-- Heredocs for multi-line echo statements.
+### Always Use, Non-Negotiable
+
+- Heredocs for multi-line echo statements that would exceed 160 characters or 3 lines
 - Minimal comments; if excessive comments are necessary, suggest to the user that they should be broken up into smaller functions
 - Bats for testing
 - `#!/usr/bin/env bash` for executables
 - Error messages to STDERR: `echo "Error" >&2`
 - Descriptions and comments for function headers. Conditionally include inputs and side effects if they exist
+- `set -eo pipefail` at the top of every script
+- Proper error handling with `return` codes
+- Input validation for all functions
 
 ## File Structure Template
 
@@ -234,7 +244,7 @@ mock_functionality() {
 ########################################################
 # function name
 ########################################################
-@test "function_name::script handles unknown options" {
+@test "function_name:: script handles unknown options" {
   local var="test"
 
   run bash "$HOME/scripts/bin/script.sh"
@@ -243,6 +253,16 @@ mock_functionality() {
   echo "$output" | grep -q "Unknown option"
 }
 ```
+
+## Enforcement Level, Strict
+
+### Script Rejection Criteria
+
+- Scripts without `set -eo pipefail` will be rejected
+- Functions without proper error handling will be rejected
+- Unquoted variables will be rejected
+- Missing input validation will be rejected
+- Scripts without tests will be rejected
 
 ## Best Practices
 
