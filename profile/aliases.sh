@@ -7,6 +7,8 @@ alias awsor="aws-sso-util login --force-refresh"
 
 # Shell
 alias bats="bats --verbose-run --timing"
+alias cbats="clear && bats"
+alias cbatso="clear && bats --show-output-of-passing-tests"
 alias shfmt="shfmt --ln=bats -w"
 
 # Development
