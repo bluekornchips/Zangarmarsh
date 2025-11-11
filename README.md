@@ -89,7 +89,6 @@ Zangarmarsh loads configuration from:
 
 Development utilities in `tools/`:
 
-- Dalaran: ZSH command history analyzer that builds a curated library of your most-used commands
 - Quest Log: AI assistant rules generator for Cursor and Claude Code from YAML templates
 - Trilliax: Development environment cleanup tool that removes generated files and build artifacts
 
@@ -112,7 +111,6 @@ make check
 
 # Run specific test suites
 bats profile/tests/
-bats tools/dalaran/tests/dalaran-tests.sh
 bats tools/trilliax/tests/trilliax-tests.sh
 ```
 
