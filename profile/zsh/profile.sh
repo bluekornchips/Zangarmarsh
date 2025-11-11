@@ -16,7 +16,7 @@ To install Oh My Zsh, run:
 Or visit: https://ohmyz.sh/#install
 EOF
 else
-	# shellcheck disable=SC1091
+
 	source "$ZSH/oh-my-zsh.sh"
 fi
 
@@ -32,7 +32,7 @@ fi
 
 # Load zsh-autosuggestions plugin
 if [[ -z "$ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE" ]] && [[ -f "${ZSH}/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh" ]]; then
-	# shellcheck disable=SC1091
+
 	source "${ZSH}/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh"
 	ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#00ffff,bg=#2d2f40,bold"
 fi
@@ -54,7 +54,7 @@ ZSH_FILES=(
 for file in "${ZSH_FILES[@]}"; do
 	file_path="$ZANGARMARSH_ROOT/profile/zsh/$file"
 	if [[ -f "$file_path" ]]; then
-		# shellcheck disable=SC1090
+
 		source "$file_path" 2>/dev/null || {
 			[[ "$ZANGARMARSH_VERBOSE" == "true" ]] && echo "Failed to source $file_path" >&2
 		}

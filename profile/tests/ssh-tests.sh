@@ -10,7 +10,6 @@ SCRIPT="$GIT_ROOT/profile/ssh.sh"
 	exit 1
 }
 
-#shellcheck disable=SC1091
 source "$GIT_ROOT/profile/tests/fixtures.sh"
 
 # Save and restore SSH environment for testing

@@ -7,6 +7,7 @@ SCRIPT="$GIT_ROOT/tools/hearthstone/hearthstone.sh"
 [[ ! -f "$SCRIPT" ]] && echo "Script not found: $SCRIPT" >&2 && return 1
 
 setup() {
+
 	source "$SCRIPT"
 
 	return 0
@@ -16,6 +17,7 @@ setup() {
 # Mocks
 ########################################################
 mock_commands_success() {
+	local mock_dir
 	mock_dir="$(mktemp -d)"
 
 	echo '#!/usr/bin/env bash' >"$mock_dir/trilliax.sh"
@@ -38,6 +40,7 @@ mock_commands_success() {
 }
 
 mock_commands_failure() {
+	local mock_dir
 	mock_dir="$(mktemp -d)"
 
 	echo '#!/usr/bin/env bash' >"$mock_dir/trilliax.sh"
@@ -90,7 +93,7 @@ mock_commands_failure() {
 	run vscodeoverride
 	[[ "$status" -eq 0 ]]
 
-	grep -q "VSCode settings synced" <<<"$output"
+	grep -q "vscodeoverride:: VSCode settings synced" <<<"$output"
 	[[ -d "$test_dir/.vscode" ]]
 
 	cd - >/dev/null || return 1
@@ -108,7 +111,7 @@ mock_commands_failure() {
 	run vscodeoverride
 	[[ "$status" -eq 0 ]]
 
-	grep -q "VSCode settings already exist" <<<"$output"
+	grep -q "vscodeoverride:: VSCode settings already exist" <<<"$output"
 	grep -q "use --force to replace" <<<"$output"
 
 	cd - >/dev/null || return 1
@@ -126,7 +129,7 @@ mock_commands_failure() {
 	run vscodeoverride
 	[[ "$status" -eq 0 ]]
 
-	grep -q "VSCode settings synced (replaced existing)" <<<"$output"
+	grep -q "vscodeoverride:: VSCode settings synced (replaced existing)" <<<"$output"
 
 	cd - >/dev/null || return 1
 }
@@ -142,10 +145,10 @@ mock_commands_failure() {
 	run execute_operations
 	[[ "$status" -eq 0 ]]
 
-	! grep -q "Running: trilliax --all" <<<"$output"
-	grep -q "Running: questlog" <<<"$output"
-	grep -q "Running: vscodeoverride" <<<"$output"
-	grep -q "Running: gdlf --install" <<<"$output"
+	! grep -q "execute_operations:: Running: trilliax --all" <<<"$output"
+	grep -q "execute_operations:: Running: questlog" <<<"$output"
+	grep -q "execute_operations:: Running: vscodeoverride" <<<"$output"
+	grep -q "execute_operations:: Running: gdlf --install" <<<"$output"
 }
 
 @test "execute_operations::runs all commands including trilliax with FORCE" {
@@ -156,10 +159,10 @@ mock_commands_failure() {
 	run execute_operations
 	[[ "$status" -eq 0 ]]
 
-	grep -q "Running: trilliax --all" <<<"$output"
-	grep -q "Running: questlog" <<<"$output"
-	grep -q "Running: vscodeoverride" <<<"$output"
-	grep -q "Running: gdlf --install" <<<"$output"
+	grep -q "execute_operations:: Running: trilliax --all" <<<"$output"
+	grep -q "execute_operations:: Running: questlog" <<<"$output"
+	grep -q "execute_operations:: Running: vscodeoverride" <<<"$output"
+	grep -q "execute_operations:: Running: gdlf --install" <<<"$output"
 }
 
 @test "execute_operations::fails when trilliax fails with FORCE" {
@@ -170,10 +173,11 @@ mock_commands_failure() {
 	run execute_operations
 	[[ "$status" -eq 1 ]]
 
-	grep -q "Failed to execute: trilliax --all" <<<"$output"
+	grep -q "execute_operations:: Failed to execute: trilliax --all" <<<"$output"
 }
 
 @test "execute_operations::passes force flag to gdlf when FORCE is true" {
+	local mock_dir
 	mock_dir="$(mktemp -d)"
 
 	echo '#!/usr/bin/env bash' >"$mock_dir/trilliax.sh"
@@ -202,7 +206,12 @@ mock_commands_failure() {
 }
 
 @test "execute_operations::does not pass force flag to gdlf when FORCE is false" {
+	local mock_dir
 	mock_dir="$(mktemp -d)"
+
+	echo '#!/usr/bin/env bash' >"$mock_dir/trilliax.sh"
+	echo 'exit 0' >>"$mock_dir/trilliax.sh"
+	chmod +x "$mock_dir/trilliax.sh"
 
 	echo '#!/usr/bin/env bash' >"$mock_dir/questlog.sh"
 	echo 'exit 0' >>"$mock_dir/questlog.sh"
@@ -213,10 +222,11 @@ mock_commands_failure() {
 	echo 'exit 0' >>"$mock_dir/gdlf.sh"
 	chmod +x "$mock_dir/gdlf.sh"
 
+	TRILLIAX_SCRIPT="$mock_dir/trilliax.sh"
 	QUESTLOG_SCRIPT="$mock_dir/questlog.sh"
 	GDLF_SCRIPT="$mock_dir/gdlf.sh"
 	FORCE=false
-	export QUESTLOG_SCRIPT GDLF_SCRIPT FORCE
+	export TRILLIAX_SCRIPT QUESTLOG_SCRIPT GDLF_SCRIPT FORCE
 
 	run execute_operations
 	[[ "$status" -eq 0 ]]
@@ -230,7 +240,7 @@ mock_commands_failure() {
 ########################################################
 @test "install_yq::succeeds when yq is already installed" {
 	install_yq() {
-		echo "yq installed"
+		echo "install_yq:: yq installed"
 		return 0
 	}
 	export -f install_yq
@@ -238,7 +248,7 @@ mock_commands_failure() {
 	run install_yq
 	[[ "$status" -eq 0 ]]
 
-	grep -q "yq installed" <<<"$output"
+	grep -q "install_yq:: yq installed" <<<"$output"
 }
 
 @test "install_yq::fails when wget is not available" {
@@ -253,7 +263,7 @@ mock_commands_failure() {
 	run bash -c "source '$SCRIPT' && install_yq"
 	[[ "$status" -eq 1 ]]
 
-	grep -q "wget is not available" <<<"$output"
+	grep -q "install_yq:: wget is not available" <<<"$output"
 }
 
 @test "install_yq::fails when download fails" {
@@ -271,7 +281,7 @@ mock_commands_failure() {
 	run bash -c "source '$SCRIPT' && install_yq"
 	[[ "$status" -eq 1 ]]
 
-	grep -q "Failed to download or install yq" <<<"$output"
+	grep -q "install_yq:: Failed to download or install yq" <<<"$output"
 }
 
 ########################################################
@@ -279,11 +289,11 @@ mock_commands_failure() {
 ########################################################
 @test "build_deck::succeeds when both jq and yq are installed" {
 	install_jq() {
-		echo "jq installed"
+		echo "install_jq:: jq installed"
 		return 0
 	}
 	install_yq() {
-		echo "yq installed"
+		echo "install_yq:: yq installed"
 		return 0
 	}
 	export -f install_jq install_yq
@@ -302,11 +312,11 @@ mock_commands_failure() {
 	export -f command
 
 	install_jq() {
-		echo "jq installed"
+		echo "install_jq:: jq installed"
 		return 0
 	}
 	install_yq() {
-		echo "yq installed successfully"
+		echo "install_yq:: yq installed successfully"
 		return 0
 	}
 	export -f install_jq install_yq
@@ -325,8 +335,8 @@ mock_commands_failure() {
 	export -f command
 
 	install_jq() {
-		echo "jq not found, attempting to install."
-		echo "No supported package manager found. Please install jq manually for your system." >&2
+		echo "install_jq:: jq not found, attempting to install."
+		echo "install_jq:: No supported package manager found. Please install jq manually for your system." >&2
 		return 1
 	}
 	export -f install_jq
@@ -345,7 +355,7 @@ mock_commands_failure() {
 	export -f command
 
 	install_yq() {
-		echo "Failed to download or install yq" >&2
+		echo "install_yq:: Failed to download or install yq" >&2
 		return 1
 	}
 	export -f install_yq
@@ -368,7 +378,7 @@ mock_commands_failure() {
 	run bash "$SCRIPT" --unknown
 	[[ "$status" -eq 1 ]]
 
-	grep -q "Unknown option '--unknown'" <<<"$output"
+	grep -q "main:: Unknown option '--unknown'" <<<"$output"
 }
 
 @test "main::script handles yes flag to skip confirmation" {
@@ -382,7 +392,7 @@ mock_commands_failure() {
 
 @test "main::script cancels when user declines confirmation" {
 	confirm_proceed() {
-		echo "Operation cancelled by user"
+		echo "confirm_proceed:: Operation cancelled by user"
 		return 1
 	}
 	export -f confirm_proceed
@@ -390,7 +400,7 @@ mock_commands_failure() {
 	run main
 	[[ "$status" -eq 1 ]]
 
-	grep -q "Operation cancelled by user" <<<"$output"
+	grep -q "confirm_proceed:: Operation cancelled by user" <<<"$output"
 }
 
 @test "main::script handles force option" {

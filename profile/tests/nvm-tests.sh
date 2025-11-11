@@ -5,7 +5,6 @@
 GIT_ROOT="$(git rev-parse --show-toplevel)"
 SCRIPT="$GIT_ROOT/profile/functions.sh"
 
-#shellcheck disable=SC1091
 source "$GIT_ROOT/profile/tests/fixtures.sh"
 
 # Setup test environment with NVM configuration
@@ -14,7 +13,6 @@ setup() {
 	test_dir=$(mktemp -d)
 	cd "$test_dir" || exit 1
 
-	# shellcheck disable=SC1090
 	source "$SCRIPT"
 
 	setup_common_mocks

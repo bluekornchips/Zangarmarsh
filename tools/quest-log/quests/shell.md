@@ -9,6 +9,7 @@
 - Never use `rm -rf /` or similar dangerous commands
 - Never use `eval` or `exec`.
 - Never use `sudo`.
+- Never use `declare` for variable assignment.
 
 ## Mandatory Requirements, All Scripts Must Have
 
@@ -179,7 +180,7 @@ setup_file() {
 
 setup() {
   # {Source the script}
-  # shellcheck disable=SC1091
+
   source "$SCRIPT"
 
   # {Define global variables}

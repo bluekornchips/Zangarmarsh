@@ -9,7 +9,6 @@ SCRIPT="$GIT_ROOT/profile/functions.sh"
 	exit 1
 }
 
-#shellcheck disable=SC1091
 source "$GIT_ROOT/profile/tests/fixtures.sh"
 
 # Python virtual environment helper functions for testing
@@ -54,7 +53,7 @@ setup() {
 	local test_dir
 	test_dir=$(mktemp -d)
 	cd "$test_dir" || exit 1
-	# shellcheck disable=SC1090
+
 	source "$SCRIPT"
 
 	setup_common_mocks

@@ -10,7 +10,6 @@ SCRIPT="$GIT_ROOT/zangarmarsh.sh"
 	exit 1
 }
 
-#shellcheck disable=SC1091
 source "$GIT_ROOT/profile/tests/fixtures.sh"
 
 # Setup test environment with mock git repository

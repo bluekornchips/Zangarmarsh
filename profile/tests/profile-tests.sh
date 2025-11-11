@@ -14,7 +14,6 @@ SCRIPT="$GIT_ROOT/profile/zsh/profile.sh"
 	exit 1
 }
 
-#shellcheck disable=SC1091
 source "$GIT_ROOT/profile/tests/fixtures.sh"
 
 # Setup test environment for zsh profile testing

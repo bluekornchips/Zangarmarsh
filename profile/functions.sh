@@ -51,7 +51,7 @@ _nvm_load() {
 	fi
 
 	# Source NVM
-	# shellcheck disable=SC1090
+
 	if ! source "$nvm_script" 2>/dev/null; then
 		echo "Failed to source NVM script" >&2
 		return 0
@@ -59,7 +59,7 @@ _nvm_load() {
 
 	# Source bash completion if available
 	if [[ -s "$NVM_DIR/bash_completion" ]]; then
-		# shellcheck disable=SC1091
+
 		\. "$NVM_DIR/bash_completion" 2>/dev/null || true
 	fi
 
@@ -119,7 +119,7 @@ EOF
 	# If venv exists and no force recreate, just activate it
 	if [[ -d "$env_name" && "$force_recreate" != true ]]; then
 		echo "Virtual environment exists, activating: $env_name"
-		# shellcheck disable=SC1091
+
 		if source "$env_name/bin/activate" >/dev/null 2>&1; then
 			echo "Activated existing environment: $env_name"
 			return 0
@@ -157,7 +157,7 @@ EOF
 	fi
 
 	# Activate virtual environment
-	# shellcheck disable=SC1091
+
 	if ! source "$env_name/bin/activate" >/dev/null 2>&1; then
 		echo "Failed to activate virtual environment" >&2
 		return 1

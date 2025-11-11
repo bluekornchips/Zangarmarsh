@@ -32,6 +32,3 @@ temp_*
 *.bak
 *.backup
 .agent-rules-backup/
-
-# Dalaran library files (user-specific)
-.zsh_dalaran_library/

@@ -79,7 +79,6 @@ setup() {
 
 	export TEST_TEMP_DIR
 
-	# shellcheck disable=SC1090
 	source "$SCRIPT"
 
 	return 0
@@ -194,7 +193,7 @@ mock_git_not_in_repo() {
 
 	run main
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "Failed to change to target directory"
+	echo "$output" | grep -q "main:: Failed to change to target directory"
 }
 
 @test 'main:: requires readable schema file' {
@@ -202,7 +201,7 @@ mock_git_not_in_repo() {
 
 	run main
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "Schema file not found"
+	echo "$output" | grep -q "main:: Schema file not found"
 }
 
 @test 'main:: validates schema file exists and is readable' {
@@ -226,7 +225,7 @@ mock_git_not_in_repo() {
 
 	run main --unknown-option
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "Unknown option"
+	echo "$output" | grep -q "main:: Unknown option"
 }
 
 @test 'create_cursor_rule_file:: creates rule file with correct content' {
@@ -422,8 +421,8 @@ EOF
 	[[ "$status" -eq 0 ]]
 	[[ ! -f "./$CURSOR_RULES_DIR/rules-lotr.mdc" ]]
 	[[ ! -f "./$CURSOR_RULES_DIR/rules-warcraft.mdc" ]]
-	echo "$output" | grep -q "Skipping warcraft"
-	echo "$output" | grep -q "Skipping lotr"
+	echo "$output" | grep -q "fill_quest_log:: Skipping warcraft"
+	echo "$output" | grep -q "fill_quest_log:: Skipping lotr"
 }
 
 @test 'fill_quest_log:: generates all rule files with --all flag' {
@@ -488,7 +487,7 @@ EOF
 
 	run main --invalid-option
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "Unknown option"
+	echo "$output" | grep -q "main:: Unknown option"
 }
 
 @test 'main:: uses git root when in git repository' {
@@ -522,8 +521,8 @@ EOF
 
 	run main --all
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -v "Skipping warcraft"
-	echo "$output" | grep -v "Skipping lotr"
+	echo "$output" | grep -v "fill_quest_log:: Skipping warcraft"
+	echo "$output" | grep -v "fill_quest_log:: Skipping lotr"
 	[[ -f "./$CURSOR_RULES_DIR/rules-warcraft.mdc" ]]
 	[[ -f "./$CURSOR_RULES_DIR/rules-lotr.mdc" ]]
 }

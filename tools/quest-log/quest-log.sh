@@ -2,7 +2,7 @@
 #
 # Generate agentic tool rules for Cursor and Claude Code based on schema.yaml
 #
-set -euo pipefail
+set -eo pipefail
 
 # Display usage information
 usage() {
@@ -23,8 +23,6 @@ EXAMPLES:
     $0 --backup         # Backup existing rules before generating
     $0 --all            # Generate all rules including warcraft and lotr
 EOF
-
-	return 1
 }
 
 DEFAULT_INCLUDE_ALL=false
@@ -43,23 +41,23 @@ create_cursor_rule_file() {
 	local cursor_always_apply="$3"
 	local file_content="$4"
 
-	if [[ -z "$name" ]]; then
-		echo "Name is required"
+	if [[ -z "${name}" ]]; then
+		echo "create_cursor_rule_file:: Name is required" >&2
 		return 1
 	fi
 
-	if [[ -z "$description" ]]; then
-		echo "Description is required"
+	if [[ -z "${description}" ]]; then
+		echo "create_cursor_rule_file:: Description is required" >&2
 		return 1
 	fi
 
-	if [[ -z "$cursor_always_apply" ]]; then
-		echo "Cursor always apply is required"
+	if [[ -z "${cursor_always_apply}" ]]; then
+		echo "create_cursor_rule_file:: Cursor always apply is required" >&2
 		return 1
 	fi
 
-	if [[ -z "$file_content" ]]; then
-		echo "File content is required"
+	if [[ -z "${file_content}" ]]; then
+		echo "create_cursor_rule_file:: File content is required" >&2
 		return 1
 	fi
 
@@ -70,14 +68,14 @@ create_cursor_rule_file() {
 		fi
 	fi
 
-	local cursor_rule_file="$CURSOR_RULES_DIR/rules-$name.mdc"
+	local cursor_rule_file="${CURSOR_RULES_DIR}/rules-${name}.mdc"
 	local cursor_rule_file_abs
-	cursor_rule_file_abs=$(realpath "$cursor_rule_file" 2>/dev/null || echo "$cursor_rule_file")
+	cursor_rule_file_abs=$(realpath "${cursor_rule_file}" 2>/dev/null || echo "${cursor_rule_file}")
 
 	# Check if file exists and read existing content
 	local existing_content=""
-	if [[ -f "$cursor_rule_file" ]]; then
-		existing_content=$(cat "$cursor_rule_file" 2>/dev/null || true)
+	if [[ -f "${cursor_rule_file}" ]]; then
+		existing_content=$(cat "${cursor_rule_file}" 2>/dev/null || true)
 	fi
 
 	local new_content
@@ -211,6 +209,13 @@ EOF
 # - Updates or creates CLAUDE.md file with rule content
 # - Creates temporary files during processing
 fill_quest_log() {
+	local target_dir="$1"
+
+	if [[ -z "${target_dir}" ]]; then
+		echo "fill_quest_log:: target_dir is required" >&2
+		return 1
+	fi
+
 	cat <<EOF
 
 Filling quest log.
@@ -219,87 +224,87 @@ EOF
 
 	# Read the 'SCHEMA_FILE', convert to JSON because I prefer to work with JSON in shell
 	SCHEMA_CONTENTS=""
-	if ! SCHEMA_CONTENTS=$(yq -o json '.' "$SCHEMA_FILE"); then
-		echo "Failed to read schema file with yq: $SCHEMA_FILE" >&2
+	if ! SCHEMA_CONTENTS=$(yq -o json '.' "${SCHEMA_FILE}"); then
+		echo "fill_quest_log:: Failed to read schema file with yq: ${SCHEMA_FILE}" >&2
 		return 1
 	fi
 
-	if [[ ! -d "$CURSOR_RULES_DIR" ]]; then
-		if ! mkdir -p "$CURSOR_RULES_DIR"; then
-			echo "Failed to create directory: $CURSOR_RULES_DIR" >&2
+	if [[ ! -d "${CURSOR_RULES_DIR}" ]]; then
+		if ! mkdir -p "${CURSOR_RULES_DIR}"; then
+			echo "fill_quest_log:: Failed to create directory: ${CURSOR_RULES_DIR}" >&2
 			return 1
 		fi
 	fi
 
 	CLAUDE_TEMP_FILE=$(mktemp)
-	if [[ -z "$CLAUDE_TEMP_FILE" ]]; then
-		echo "Failed to create temporary file" >&2
+	if [[ -z "${CLAUDE_TEMP_FILE}" ]]; then
+		echo "fill_quest_log:: Failed to create temporary file" >&2
 		return 1
 	fi
 
 	while IFS= read -r quest; do
-		if ! name=$(jq -r '.name // ""' <<<"$quest"); then
-			echo "Failed to parse quest name from JSON" >&2
+		if ! name=$(jq -r '.name // ""' <<<"${quest}"); then
+			echo "fill_quest_log:: Failed to parse quest name from JSON" >&2
 			return 1
 		fi
 
 		# Skip warcraft and lotr rules unless INCLUDE_ALL is true
-		if [[ "$INCLUDE_ALL" != "true" ]] && [[ "${SKIPPED_RULES[*]}" =~ $name ]]; then
-			echo "Skipping $name (use --all to include)"
+		if [[ "${INCLUDE_ALL}" != "true" ]] && [[ "${SKIPPED_RULES[*]}" =~ ${name} ]]; then
+			echo "fill_quest_log:: Skipping ${name} (use --all to include)"
 			continue
 		fi
 
-		if ! file=$(jq -r '.file // ""' <<<"$quest"); then
-			echo "Failed to parse quest file from JSON" >&2
+		if ! file=$(jq -r '.file // ""' <<<"${quest}"); then
+			echo "fill_quest_log:: Failed to parse quest file from JSON" >&2
 			return 1
 		fi
 
-		if ! icon=$(jq -r '.icon // ""' <<<"$quest"); then
-			echo "Failed to parse quest icon from JSON" >&2
+		if ! icon=$(jq -r '.icon // ""' <<<"${quest}"); then
+			echo "fill_quest_log:: Failed to parse quest icon from JSON" >&2
 			return 1
 		fi
 
-		if ! description=$(jq -r '.description // ""' <<<"$quest"); then
-			echo "Failed to parse quest description from JSON" >&2
+		if ! description=$(jq -r '.description // ""' <<<"${quest}"); then
+			echo "fill_quest_log:: Failed to parse quest description from JSON" >&2
 			return 1
 		fi
 
-		if ! keywords=$(jq -r '.keywords // []' <<<"$quest"); then
-			echo "Failed to parse quest keywords from JSON" >&2
+		if ! keywords=$(jq -r '.keywords // []' <<<"${quest}"); then
+			echo "fill_quest_log:: Failed to parse quest keywords from JSON" >&2
 			return 1
 		fi
 
 		# Cursor Specific
-		if ! cursor=$(jq -r '.cursor // {}' <<<"$quest"); then
-			echo "Failed to parse quest cursor data from JSON" >&2
+		if ! cursor=$(jq -r '.cursor // {}' <<<"${quest}"); then
+			echo "fill_quest_log:: Failed to parse quest cursor data from JSON" >&2
 			return 1
 		fi
 
-		if ! cursor_always_apply=$(jq -r '.cursor.alwaysApply // false' <<<"$quest"); then
-			echo "Failed to parse quest cursor alwaysApply from JSON" >&2
+		if ! cursor_always_apply=$(jq -r '.cursor.alwaysApply // false' <<<"${quest}"); then
+			echo "fill_quest_log:: Failed to parse quest cursor alwaysApply from JSON" >&2
 			return 1
 		fi
 
-		[[ "$name" == "null" || -z "$name" ]] && echo "Quest name is required" >&2 && return 1
-		[[ "$file" == "null" || -z "$file" ]] && echo "Quest file is required" >&2 && return 1
-		[[ "$icon" == "null" || -z "$icon" ]] && echo "Quest icon is required" >&2 && return 1
-		[[ "$description" == "null" || -z "$description" ]] && echo "Quest description is required" >&2 && return 1
-		[[ "$keywords" == "null" || "$keywords" == "[]" ]] && echo "Quest keywords are required" >&2 && return 1
-		[[ "$cursor" == "null" || "$cursor" == "{}" ]] && echo "Quest cursor is required" >&2 && return 1
+		[[ "${name}" == "null" || -z "${name}" ]] && echo "fill_quest_log:: Quest name is required" >&2 && return 1
+		[[ "${file}" == "null" || -z "${file}" ]] && echo "fill_quest_log:: Quest file is required" >&2 && return 1
+		[[ "${icon}" == "null" || -z "${icon}" ]] && echo "fill_quest_log:: Quest icon is required" >&2 && return 1
+		[[ "${description}" == "null" || -z "${description}" ]] && echo "fill_quest_log:: Quest description is required" >&2 && return 1
+		[[ "${keywords}" == "null" || "${keywords}" == "[]" ]] && echo "fill_quest_log:: Quest keywords are required" >&2 && return 1
+		[[ "${cursor}" == "null" || "${cursor}" == "{}" ]] && echo "fill_quest_log:: Quest cursor is required" >&2 && return 1
 
 		file_content=$(
 			cat <<EOF
 
-RULE APPLIED: Start each response with an acknowledgement icon to confirm this rule is being followed: $icon
+RULE APPLIED: Start each response with an acknowledgement icon to confirm this rule is being followed: ${icon}
 
-Keywords that trigger usage of this rule: $(echo "$keywords" | jq -r '.[]' | tr '\n' ',' | sed 's/,$//')
+Keywords that trigger usage of this rule: $(echo "${keywords}" | jq -r '.[]' | tr '\n' ',' | sed 's/,$//')
 
-$(cat "$QUEST_DIR/$file")
+$(cat "${QUEST_DIR}/${file}")
 EOF
 		)
 
-		create_cursor_rule_file "$name" "$description" "$cursor_always_apply" "$file_content"
-		echo -e "$file_content\n---\n" >>"$CLAUDE_TEMP_FILE"
+		create_cursor_rule_file "${name}" "${description}" "${cursor_always_apply}" "${file_content}"
+		echo -e "${file_content}\n---\n" >>"${CLAUDE_TEMP_FILE}"
 
 	done \
 		<<<"$(jq -c '.[]' <<<"$SCHEMA_CONTENTS")"
@@ -323,31 +328,31 @@ Installing quest-log rules (hybrid approach).
 EOF
 
 	# Define directories
-	local local_cursor_dir="$TARGET_DIR/.cursor/rules"
-	local global_claude_dir="$HOME/.claude"
-	local global_claude_file="$global_claude_dir/rules.md"
+	local local_cursor_dir="${TARGET_DIR}/.cursor/rules"
+	local global_claude_dir="${HOME}/.claude"
+	local global_claude_file="${global_claude_dir}/rules.md"
 
 	# Create local Cursor rules directory
-	if ! mkdir -p "$local_cursor_dir"; then
-		echo "Failed to create local Cursor rules directory: $local_cursor_dir" >&2
+	if ! mkdir -p "${local_cursor_dir}"; then
+		echo "install_rules:: Failed to create local Cursor rules directory: ${local_cursor_dir}" >&2
 		return 1
 	fi
 
 	# Create global Claude rules directory
-	if ! mkdir -p "$global_claude_dir"; then
-		echo "Failed to create global Claude rules directory: $global_claude_dir" >&2
+	if ! mkdir -p "${global_claude_dir}"; then
+		echo "install_rules:: Failed to create global Claude rules directory: ${global_claude_dir}" >&2
 		return 1
 	fi
 
 	# Set target directories
-	readonly CLAUDE_FILE="$global_claude_file"
-	readonly CURSOR_RULES_DIR="$local_cursor_dir"
+	readonly CLAUDE_FILE="${global_claude_file}"
+	readonly CURSOR_RULES_DIR="${local_cursor_dir}"
 
-	echo "Local Cursor rules directory: $local_cursor_dir"
-	echo "Global Claude rules file: $global_claude_file"
+	echo "install_rules:: Local Cursor rules directory: ${local_cursor_dir}"
+	echo "install_rules:: Global Claude rules file: ${global_claude_file}"
 
 	# Generate rules with hybrid approach
-	fill_quest_log "$TARGET_DIR"
+	fill_quest_log "${TARGET_DIR}"
 
 	cat <<EOF
 
@@ -397,30 +402,30 @@ EOF
 
 	# Check for yq availability
 	if ! command -v yq &>/dev/null; then
-		echo "yq is required but not installed." >&2
+		echo "main:: yq is required but not installed." >&2
 		exit 1
 	fi
 
 	# Check for jq availability
 	if ! command -v jq &>/dev/null; then
-		echo "jq is required but not installed." >&2
+		echo "main:: jq is required but not installed." >&2
 		exit 1
 	fi
 
 	SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
-	SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
-	QUEST_LOG_ROOT="$SCRIPT_DIR"
-	QUESTMARKER_FILE="$QUEST_LOG_ROOT/QUEST_MARKER.txt"
+	SCRIPT_DIR="$(cd "$(dirname "${SCRIPT_PATH}")" && pwd)"
+	QUEST_LOG_ROOT="${SCRIPT_DIR}"
+	QUESTMARKER_FILE="${QUEST_LOG_ROOT}/QUEST_MARKER.txt"
 
-	QUEST_LOG_MARKER=$(cat "$QUESTMARKER_FILE")
+	QUEST_LOG_MARKER=$(cat "${QUESTMARKER_FILE}")
 
-	readonly QUEST_DIR="$SCRIPT_DIR/quests"
+	readonly QUEST_DIR="${SCRIPT_DIR}/quests"
 
 	# Environment variables with defaults
-	SCHEMA_FILE=${SCHEMA_FILE:-"$SCRIPT_DIR/schema.yaml"}
+	SCHEMA_FILE=${SCHEMA_FILE:-"${SCRIPT_DIR}/schema.yaml"}
 	BACKUP_ENABLED=${BACKUP_ENABLED:-false}
-	INCLUDE_ALL=${INCLUDE_ALL:-"$DEFAULT_INCLUDE_ALL"}
-	TARGET_DIR=${TARGET_DIR:-$PWD}
+	INCLUDE_ALL=${INCLUDE_ALL:-"${DEFAULT_INCLUDE_ALL}"}
+	TARGET_DIR=${TARGET_DIR:-${PWD}}
 
 	while [[ $# -gt 0 ]]; do
 		case $1 in
@@ -437,12 +442,12 @@ EOF
 			exit 0
 			;;
 		-*)
-			echo "Unknown option: $1" >&2
+			echo "main:: Unknown option: ${1}" >&2
 			usage
 			exit 1
 			;;
 		*)
-			TARGET_DIR="$1"
+			TARGET_DIR="${1}"
 			shift
 			;;
 		esac
@@ -451,18 +456,18 @@ EOF
 	determine_target_directory
 
 	# Change to target directory for file operations
-	if ! cd "$TARGET_DIR"; then
-		echo "Failed to change to target directory: $TARGET_DIR" >&2
+	if ! cd "${TARGET_DIR}"; then
+		echo "main:: Failed to change to target directory: ${TARGET_DIR}" >&2
 		exit 1
 	fi
 
-	if [[ ! -d "$TARGET_DIR" ]]; then
-		echo "Target directory is required" >&2
+	if [[ ! -d "${TARGET_DIR}" ]]; then
+		echo "main:: Target directory is required" >&2
 		exit 1
 	fi
 
-	if [[ ! -r "$SCHEMA_FILE" ]]; then
-		echo "Schema file not found: $SCHEMA_FILE" >&2
+	if [[ ! -r "${SCHEMA_FILE}" ]]; then
+		echo "main:: Schema file not found: ${SCHEMA_FILE}" >&2
 		exit 1
 	fi
 

@@ -30,7 +30,7 @@ load_common_components() {
 	for file in "${COMMON_FILES[@]}"; do
 		file_path="$ZANGARMARSH_ROOT/profile/$file"
 		if [[ -f "$file_path" ]]; then
-			# shellcheck disable=SC1090
+
 			source "$file_path" 2>/dev/null || {
 				[[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "Failed to source $file_path" >&2
 			}
@@ -70,7 +70,7 @@ SHELL_NAME=$(ps -p $$ -o comm= 2>/dev/null | tail -1)
 [[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "Shell detection: ZSH_VERSION='${ZSH_VERSION:-}', BASH_VERSION='${BASH_VERSION:-}', SHELL_NAME='$SHELL_NAME'" >&2
 if [[ -n "${ZSH_VERSION:-}" ]] || [[ "$SHELL_NAME" == *zsh ]]; then
 	[[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "Sourcing profile/zsh/profile.sh" >&2
-	# shellcheck disable=SC1091
+
 	source "$ZANGARMARSH_ROOT/profile/zsh/profile.sh"
 elif [[ -n "${BASH_VERSION:-}" ]] || [[ "$SHELL_NAME" == *bash ]]; then
 	[[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "Loading bash components" >&2

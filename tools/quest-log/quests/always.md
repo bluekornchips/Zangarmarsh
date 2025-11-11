@@ -7,6 +7,7 @@
 - Every response must start with the acknowledgment icon
 - Missing acknowledgment = automatic rule violation
 - Multiple violations = escalation to user
+- User expresses frustration, harsh language, or anger = extreme rule violation, reconsider operations
 
 ### Universal Bans, Never Use These
 

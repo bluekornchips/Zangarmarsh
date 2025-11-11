@@ -4,15 +4,6 @@ Development workflow utilities for shell environments.
 
 ## Tools
 
-### Dalaran
-
-ZSH command history analyzer that builds a library of your most-used commands.
-
-```bash
-./tools/dalaran/dalaran.sh
-./tools/dalaran/dalaran.sh --dry-run
-```
-
 ### Quest Log
 
 AI assistant rules generator for Cursor and Claude Code from YAML templates.
