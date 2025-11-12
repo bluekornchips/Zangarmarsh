@@ -92,6 +92,19 @@
   cursor:
     alwaysApply: false
 
+# Review and Quality Assurance
+- name: bash-review
+  file: bash-review.md
+  icon: '🔍'
+  description: Review criteria for bash script repositories. Focus on security, error handling, portability, and maintainability.
+  keywords:
+    - 'bash-review'
+    - 'review'
+    - 'bash review'
+    - 'shell review'
+  cursor:
+    alwaysApply: false
+
 # Reference Data and Mock Generation
 - name: lotr
   file: lotr.md
