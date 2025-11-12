@@ -5,8 +5,83 @@
 #
 set -eo pipefail
 
+# Global cleanup trap handler
+cleanup() {
+	local exit_code=$?
+	if [[ $exit_code -ne 0 ]]; then
+		echo "Error in $0 at line $LINENO" >&2
+	fi
+}
+trap cleanup EXIT ERR
+
 ENABLED_TARGETS=""
 DEFAULT_MAX_DEPTH=10
+
+# Execute cleanup operation with find pattern
+#
+# Inputs:
+# - $1, function_name, name of calling function (for logging)
+# - $2, target_dir, directory to clean
+# - $3+, find_args, find command arguments (passed as array elements)
+#
+# Side Effects:
+# - Removes items matching find expression using "rm -rf" (works for both files and directories)
+# - Always uses iteration (never find -delete)
+# - Uses maxdepth 10 by default
+# - In dry-run mode, shows what would be removed
+# - Returns 0 on success, 1 on error
+execute_clean() {
+	local function_name="$1"
+	local target_dir="$2"
+	shift 2
+	local find_args=("$@")
+	local max_depth=10
+
+	# Input validation
+	if [[ -z "${function_name}" ]]; then
+		echo "execute_clean:: function_name is required" >&2
+		return 1
+	fi
+
+	if [[ -z "${target_dir}" ]]; then
+		echo "${function_name}:: target_dir is required" >&2
+		return 1
+	fi
+
+	if [[ ${#find_args[@]} -eq 0 ]]; then
+		echo "${function_name}:: find_args are required" >&2
+		return 1
+	fi
+
+	# Path validation: ensure target_dir is absolute and exists
+	local target_dir_abs
+	target_dir_abs="$(cd "${target_dir}" && pwd 2>/dev/null)"
+	if [[ -z "${target_dir_abs}" ]] || [[ ! -d "${target_dir_abs}" ]]; then
+		echo "${function_name}:: Invalid target_dir: ${target_dir}" >&2
+		return 1
+	fi
+
+	# Dry-run mode: show what would be removed
+	if [[ "${DRY_RUN}" == "true" ]]; then
+		while IFS= read -r -d '' item || [[ -n "${item}" ]]; do
+			# Explicit path validation: ensure item is within target_dir_abs
+			if [[ -n "${item}" ]] && [[ "${item}" == "${target_dir_abs}"* ]]; then
+				echo "${function_name}:: Would remove: ${item}"
+			fi
+		done < <(find "${target_dir_abs}" -maxdepth "${max_depth}" "${find_args[@]}" -print0 2>/dev/null)
+		return 0
+	fi
+
+	# Actual removal using rm -rf (works for both files and directories)
+	while IFS= read -r -d '' item || [[ -n "${item}" ]]; do
+		# Explicit path validation: ensure item is within target_dir_abs
+		if [[ -n "${item}" ]] && [[ "${item}" == "${target_dir_abs}"* ]]; then
+			rm -rf "${item}" 2>/dev/null || true
+		fi
+	done < <(find "${target_dir_abs}" -maxdepth "${max_depth}" "${find_args[@]}" -print0 2>/dev/null)
+
+	return 0
+}
 
 # Display usage information
 usage() {
@@ -58,28 +133,9 @@ EOF
 clean_fs() {
 	local target_dir="$1"
 
-	if [[ -z "${target_dir}" ]]; then
-		echo "clean_fs:: target_dir is required" >&2
-		return 1
-	fi
-
 	echo "clean_fs:: Cleaning empty directories."
 
-	local dirs_to_remove
-	dirs_to_remove=$(find "${target_dir}" -maxdepth "${DEFAULT_MAX_DEPTH}" -depth -type d -empty 2>/dev/null)
-
-	if [[ "${DRY_RUN}" == "true" ]]; then
-		local dir
-		for dir in ${dirs_to_remove}; do
-			[[ -n "${dir}" ]] && echo "clean_fs:: Would remove: ${dir}"
-		done
-
-		return 0
-	fi
-
-	find "${target_dir}" -maxdepth "${DEFAULT_MAX_DEPTH}" -depth -type d -empty -delete 2>/dev/null || true
-
-	return 0
+	execute_clean "clean_fs" "${target_dir}" -depth -type d -empty
 }
 
 # Clean .cursor directories recursively
@@ -94,31 +150,9 @@ clean_fs() {
 clean_cursor() {
 	local target_dir="$1"
 
-	if [[ -z "${target_dir}" ]]; then
-		echo "clean_cursor:: target_dir is required" >&2
-		return 1
-	fi
-
 	echo "clean_cursor:: Cleaning .cursor directories."
 
-	local dirs_to_remove=""
-	dirs_to_remove="$(find "${target_dir}" -maxdepth 10 -type d -name ".cursor" 2>/dev/null)"
-
-	if [[ "${DRY_RUN}" == "true" ]]; then
-		local dir
-		for dir in ${dirs_to_remove}; do
-			[[ -n "${dir}" ]] && echo "clean_cursor:: Would remove: ${dir}"
-		done
-
-		return 0
-	fi
-
-	local dir
-	for dir in ${dirs_to_remove}; do
-		[[ -n "${dir}" ]] && rm -rf "${dir}" 2>/dev/null || true
-	done
-
-	return 0
+	execute_clean "clean_cursor" "${target_dir}" -type d -name ".cursor"
 }
 
 # Clean Claude-related files
@@ -133,31 +167,9 @@ clean_cursor() {
 clean_claude() {
 	local target_dir="$1"
 
-	if [[ -z "${target_dir}" ]]; then
-		echo "clean_claude:: target_dir is required" >&2
-		return 1
-	fi
-
 	echo "clean_claude:: Cleaning Claude files."
 
-	local files_to_remove=""
-	files_to_remove="$(find "${target_dir}" -maxdepth 10 -name "CLAUDE.md" -type f 2>/dev/null)"
-
-	if [[ "${DRY_RUN}" == "true" ]]; then
-		local file
-		for file in ${files_to_remove}; do
-			[[ -n "${file}" ]] && echo "clean_claude:: Would remove: ${file}"
-		done
-
-		return 0
-	fi
-
-	local file
-	for file in ${files_to_remove}; do
-		[[ -n "${file}" ]] && rm -f "${file}" 2>/dev/null || true
-	done
-
-	return 0
+	execute_clean "clean_claude" "${target_dir}" -name "CLAUDE.md" -type f
 }
 
 # Clean Python files and directories
@@ -172,36 +184,17 @@ clean_claude() {
 clean_python() {
 	local target_dir="$1"
 
-	if [[ -z "${target_dir}" ]]; then
-		echo "clean_python:: target_dir is required" >&2
-		return 1
-	fi
-
 	echo "clean_python:: Cleaning Python files."
 
-	local items_to_remove=""
-	items_to_remove="${items_to_remove} $(find "${target_dir}" -maxdepth 10 -type d -name "venv" 2>/dev/null)"
-	items_to_remove="${items_to_remove} $(find "${target_dir}" -maxdepth 10 -type d -name ".venv" 2>/dev/null)"
-	items_to_remove="${items_to_remove} $(find "${target_dir}" -maxdepth 10 -type d -name "env" 2>/dev/null)"
-	items_to_remove="${items_to_remove} $(find "${target_dir}" -maxdepth 10 -type d -name "__pycache__" 2>/dev/null)"
-	items_to_remove="${items_to_remove} $(find "${target_dir}" -maxdepth 10 -name "*.pyc" 2>/dev/null)"
-	items_to_remove="${items_to_remove} $(find "${target_dir}" -maxdepth 10 -name "*.pyo" 2>/dev/null)"
-
-	if [[ "${DRY_RUN}" == "true" ]]; then
-		local item
-		for item in ${items_to_remove}; do
-			[[ -n "${item}" ]] && echo "clean_python:: Would remove: ${item}"
-		done
-
-		return 0
-	fi
-
-	local item
-	for item in ${items_to_remove}; do
-		[[ -n "${item}" ]] && rm -rf "${item}" 2>/dev/null || true
-	done
-
-	return 0
+	execute_clean "clean_python" "${target_dir}" \
+		\( \
+		-type d -name "venv" \
+		-o -type d -name ".venv" \
+		-o -type d -name "env" \
+		-o -type d -name "__pycache__" \
+		-o -name "*.pyc" \
+		-o -name "*.pyo" \
+		\)
 }
 
 # Clean Node.js files and directories
@@ -216,39 +209,20 @@ clean_python() {
 clean_node() {
 	local target_dir="$1"
 
-	if [[ -z "${target_dir}" ]]; then
-		echo "clean_node:: target_dir is required" >&2
-		return 1
-	fi
-
 	echo "clean_node:: Cleaning Node.js files."
 
-	local items_to_remove=""
-	items_to_remove="${items_to_remove} $(find "${target_dir}" -maxdepth 10 -type d -name "node_modules" 2>/dev/null)"
-	items_to_remove="${items_to_remove} $(find "${target_dir}" -maxdepth 10 -type d -name ".npm" 2>/dev/null)"
-	items_to_remove="${items_to_remove} $(find "${target_dir}" -maxdepth 10 -type d -name ".yarn" 2>/dev/null)"
-	items_to_remove="${items_to_remove} $(find "${target_dir}" -maxdepth 10 -name "package-lock.json" 2>/dev/null)"
-	items_to_remove="${items_to_remove} $(find "${target_dir}" -maxdepth 10 -name "yarn.lock" 2>/dev/null)"
-	items_to_remove="${items_to_remove} $(find "${target_dir}" -maxdepth 10 -name ".yarnrc.yml" 2>/dev/null)"
-	items_to_remove="${items_to_remove} $(find "${target_dir}" -maxdepth 10 -name "npm-debug.log*" 2>/dev/null)"
-	items_to_remove="${items_to_remove} $(find "${target_dir}" -maxdepth 10 -name "yarn-debug.log*" 2>/dev/null)"
-	items_to_remove="${items_to_remove} $(find "${target_dir}" -maxdepth 10 -name "yarn-error.log*" 2>/dev/null)"
-
-	if [[ "${DRY_RUN}" == "true" ]]; then
-		local item
-		for item in ${items_to_remove}; do
-			[[ -n "${item}" ]] && echo "clean_node:: Would remove: ${item}"
-		done
-
-		return 0
-	fi
-
-	local item
-	for item in ${items_to_remove}; do
-		[[ -n "${item}" ]] && rm -rf "${item}" 2>/dev/null || true
-	done
-
-	return 0
+	execute_clean "clean_node" "${target_dir}" \
+		\( \
+		-type d -name "node_modules" \
+		-o -type d -name ".npm" \
+		-o -type d -name ".yarn" \
+		-o -name "package-lock.json" \
+		-o -name "yarn.lock" \
+		-o -name ".yarnrc.yml" \
+		-o -name "npm-debug.log*" \
+		-o -name "yarn-debug.log*" \
+		-o -name "yarn-error.log*" \
+		\)
 }
 
 # Validate and parse target selection
@@ -331,8 +305,11 @@ main() {
 
 	echo "main:: Filthy, filthy, FILTHY!"
 	local cleanup_count=0
+	# Convert space-separated string to array for safe iteration
+	local -a targets_array
+	IFS=' ' read -ra targets_array <<<"${ENABLED_TARGETS}"
 	local target
-	for target in ${ENABLED_TARGETS}; do
+	for target in "${targets_array[@]}"; do
 		case "${target}" in
 		cursor)
 			clean_cursor "${target_dir}"

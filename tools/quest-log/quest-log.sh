@@ -4,6 +4,15 @@
 #
 set -eo pipefail
 
+# Global cleanup trap handler
+cleanup() {
+	local exit_code=$?
+	if [[ $exit_code -ne 0 ]]; then
+		echo "Error in $0 at line $LINENO" >&2
+	fi
+}
+trap cleanup EXIT ERR
+
 # Display usage information
 usage() {
 	cat <<EOF
@@ -120,6 +129,10 @@ show_diff() {
 	local new_content="$2"
 	local temp_file
 	temp_file=$(mktemp)
+	chmod 0600 "$temp_file"
+
+	# Cleanup trap handler
+	trap 'rm -f "$temp_file"' EXIT
 
 	echo "$new_content" >"$temp_file"
 
@@ -131,6 +144,8 @@ show_diff() {
 		echo "File does not exist: $file_path"
 	fi
 
+	# Remove trap and cleanup
+	trap - EXIT
 	rm -f "$temp_file"
 	return $?
 }
@@ -187,7 +202,13 @@ EOF
 	fi
 
 	echo "Updating $CLAUDE_FILE."
+	local tmp_file
 	tmp_file=$(mktemp)
+	chmod 0600 "$tmp_file"
+
+	# Cleanup trap handler
+	trap 'rm -f "$tmp_file"' EXIT
+
 	sed "${first_marker_index},${last_marker_index}d" "$CLAUDE_FILE" >"$tmp_file"
 	{
 		echo "$QUEST_LOG_MARKER"
@@ -195,6 +216,10 @@ EOF
 		echo "$QUEST_LOG_MARKER"
 	} >>"$tmp_file"
 	mv "$tmp_file" "$CLAUDE_FILE"
+
+	# Remove trap and cleanup
+	trap - EXIT
+	rm -f "$tmp_file"
 
 	return 0
 }
@@ -237,10 +262,14 @@ EOF
 	fi
 
 	CLAUDE_TEMP_FILE=$(mktemp)
+	chmod 0600 "$CLAUDE_TEMP_FILE"
 	if [[ -z "${CLAUDE_TEMP_FILE}" ]]; then
 		echo "fill_quest_log:: Failed to create temporary file" >&2
 		return 1
 	fi
+
+	# Cleanup trap handler for CLAUDE_TEMP_FILE
+	trap 'rm -f "$CLAUDE_TEMP_FILE"' EXIT
 
 	while IFS= read -r quest; do
 		if ! name=$(jq -r '.name // ""' <<<"${quest}"); then
@@ -310,6 +339,10 @@ EOF
 		<<<"$(jq -c '.[]' <<<"$SCHEMA_CONTENTS")"
 
 	update_claude_file "$CLAUDE_TEMP_FILE"
+
+	# Remove trap and cleanup
+	trap - EXIT
+	rm -f "$CLAUDE_TEMP_FILE"
 
 	return 0
 }

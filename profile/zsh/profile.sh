@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #
 # Zsh profile configuration with Oh My Zsh integration.
+set +e
 
 export ZSH="${ZSH:-$HOME/.oh-my-zsh}"
 ZSH_THEME="robbyrussell"

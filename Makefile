@@ -1,7 +1,7 @@
 all: test-all
 
 test-all:
-	bats --timing --verbose-run ./profile/tests/zangarmarsh-tests.sh \
+	clear && bats --timing --verbose-run ./profile/tests/zangarmarsh-tests.sh \
 	./profile/tests/prompt-tests.sh \
 	./profile/tests/profile-tests.sh \
 	./profile/tests/penv-tests.sh \

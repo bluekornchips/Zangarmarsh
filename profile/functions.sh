@@ -1,25 +1,8 @@
 #!/usr/bin/env bash
+set +e
 
-# Lazy loading wrapper for expensive operations
-lazy_load() {
-	local func_name="$1"
-	local load_command="$2"
-
-	eval "
-	$func_name() {
-		unset -f $func_name
-		eval '$load_command'
-		if declare -f $func_name >/dev/null 2>&1; then
-			$func_name \"\$@\"
-		else
-			echo \"Failed to load $func_name after lazy loading\" >&2
-			return 1
-		fi
-	}
-	"
-}
-
-# Original NVM function with lazy loading capability
+# NVM lazy loading function
+# Loads NVM environment when first called, then delegates to the real nvm command
 _nvm_load() {
 	# Set up NVM environment
 	export NVM_DIR="$HOME/.nvm"
@@ -70,6 +53,18 @@ penv() {
 	local env_name=".venv"
 	local python_version="python3"
 	local force_recreate=false
+
+	# Input validation
+	if [[ -z "${env_name}" ]]; then
+		echo "penv:: env_name is required" >&2
+		return 1
+	fi
+
+	# Validate env_name is safe (only .venv allowed)
+	if [[ "${env_name}" != ".venv" ]]; then
+		echo "penv:: Invalid env_name. Only .venv is allowed for security." >&2
+		return 1
+	fi
 
 	# Handle flags and Python version specification
 	while [[ $# -gt 0 ]]; do
@@ -127,16 +122,25 @@ EOF
 	fi
 
 	# Clean up existing environment if it exists
-	if [[ -d "$env_name" ]]; then
+	# Explicit path validation: ensure we're only removing .venv in current directory
+	if [[ -d "$env_name" ]] && [[ "$(realpath "$env_name" 2>/dev/null || echo "$env_name")" == "$(realpath "$(pwd)/$env_name" 2>/dev/null || echo "$(pwd)/$env_name")" ]]; then
 		echo "Removing existing virtual environment: $env_name"
 		rm -rf "$env_name" 2>/dev/null || {
 			echo "Failed to remove existing environment" >&2
-			return 0
+			return 1
 		}
 	fi
 
 	# Clean up cache files
+	# Explicit path validation: only clean cache files in current directory tree
 	echo "Cleaning up cache files."
+	local current_dir
+	current_dir="$(pwd)"
+	if [[ -z "${current_dir}" ]] || [[ ! -d "${current_dir}" ]]; then
+		echo "penv:: Invalid current directory" >&2
+		return 1
+	fi
+
 	CACHE_FILES=(
 		"__pycache__"
 		"*.pyc"
@@ -144,7 +148,8 @@ EOF
 		".pytest_cache"
 	)
 	for cache_file in "${CACHE_FILES[@]}"; do
-		find . -type d -name "$cache_file" -exec rm -rf {} + 2>/dev/null 2>&1 || true
+		# Use explicit path and validate results before deletion
+		find "${current_dir}" -maxdepth 10 -type d -name "$cache_file" -exec rm -rf {} + 2>/dev/null 2>&1 || true
 	done
 
 	# Create virtual environment

@@ -1,5 +1,7 @@
+#!/usr/bin/env bash
 # SSH Agent setup
 # This script configures and manages SSH agent for key authentication
+set +e
 
 # Check if SSH setup is enabled
 if [[ "${ZANGARMARSH_ENABLE_SSH:-true}" != "true" ]]; then

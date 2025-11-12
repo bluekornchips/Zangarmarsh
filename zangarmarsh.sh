@@ -2,6 +2,7 @@
 
 # Zangarmarsh shell configuration loader
 # This script should be sourced, not executed
+set +e
 
 # Set the project root to the directory containing this script
 if [[ -n "${BASH_SOURCE[0]}" ]]; then

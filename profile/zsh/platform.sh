@@ -2,6 +2,7 @@
 #
 # Platform detection and configuration for Zsh
 # Detects macOS, Linux, and WSL environments
+set +e
 
 # Detect platform with architecture
 detect_platform() {
