@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Generate agentic tool rules for Cursor and Claude Code based on schema.yaml
+# Generate agentic tool rules for Cursor based on schema.json
 #
 set -eo pipefail
 
@@ -18,18 +18,16 @@ usage() {
 	cat <<EOF
 Usage: $0 [OPTIONS] [DIRECTORY]
 
-Generate agentic tool rules for Cursor and Claude Code. Cursor rules are installed
-locally in the project directory, while Claude rules are installed globally.
+Generate agentic tool rules and daily-quests for Cursor based on schema.json. Rules
+and daily-quests are installed locally in the project directory.
 
 OPTIONS:
     -a, --all           Include all rules (including warcraft and lotr)
-    -b, --backup        Backup existing rules before overwriting
     -h, --help          Show this help message
 
 EXAMPLES:
-    $0                  # Generate rules in git root (if in git repo) or current directory
-    $0 /path/to/dir     # Generate rules in git root (if in git repo) or specified directory
-    $0 --backup         # Backup existing rules before generating
+    $0                  # Generate rules and daily-quests in git root (if in git repo) or current directory
+    $0 /path/to/dir     # Generate rules and daily-quests in git root (if in git repo) or specified directory
     $0 --all            # Generate all rules including warcraft and lotr
 EOF
 }
@@ -44,11 +42,13 @@ SKIPPED_RULES=("warcraft" "lotr")
 # - $2, description, the description of the rule
 # - $3, cursor_always_apply, whether the rule should always apply
 # - $4, file_content, the content of the rule file
+# - $5, globs, optional array of glob patterns for file matching
 create_cursor_rule_file() {
 	local name="$1"
 	local description="$2"
 	local cursor_always_apply="$3"
 	local file_content="$4"
+	local globs="$5"
 
 	if [[ -z "${name}" ]]; then
 		echo "create_cursor_rule_file:: Name is required" >&2
@@ -87,12 +87,17 @@ create_cursor_rule_file() {
 		existing_content=$(cat "${cursor_rule_file}" 2>/dev/null || true)
 	fi
 
+	# Format globs for MDC frontmatter
+	local globs_formatted
+	globs_formatted=$(jq -r '.[]' <<<"${globs}" 2>/dev/null | sed 's/^/  - "/' | sed 's/$/"/' || echo "")
+
 	local new_content
 	new_content=$(
 		cat <<EOF
 ---
 description: $description
 globs:
+${globs_formatted}
 alwaysApply: $cursor_always_apply
 ---
 
@@ -150,80 +155,6 @@ show_diff() {
 	return $?
 }
 
-# Update the CLAUDE.md file with new rule content
-#
-# Inputs:
-# - $1, claude_temp_file, path to temporary file containing new rule content
-#
-# Side Effects:
-# - Updates or creates the CLAUDE.md file with new rule content
-update_claude_file() {
-	local claude_temp_file="$1"
-
-	# If the file does not exist, create it with initial markers and content
-	if [[ ! -f "$CLAUDE_FILE" ]]; then
-		echo "Creating $CLAUDE_FILE"
-		cat <<EOF >"$CLAUDE_FILE"
-$QUEST_LOG_MARKER
-$(cat "$claude_temp_file")
-$QUEST_LOG_MARKER
-EOF
-		return 0
-	fi
-
-	# Find the first index of the $QUEST_LOG_MARKER
-	local first_marker_index
-	first_marker_index=$(grep -n "$QUEST_LOG_MARKER" "$CLAUDE_FILE" | cut -d: -f1 | head -n1 || true)
-
-	# If the file does not contain the $QUEST_LOG_MARKER, append it to the end of the file
-	if ! grep -q "$QUEST_LOG_MARKER" "$CLAUDE_FILE"; then
-		echo "Updating $CLAUDE_FILE."
-		cat <<EOF >>"$CLAUDE_FILE"
-$QUEST_LOG_MARKER
-$(cat "$claude_temp_file")
-$QUEST_LOG_MARKER
-EOF
-		return 0
-	fi
-
-	# Find the last index of the $QUEST_LOG_MARKER
-	local last_marker_index
-	last_marker_index=$(grep -n "$QUEST_LOG_MARKER" "$CLAUDE_FILE" | cut -d: -f1 | tail -n1 || true)
-
-	local existing_content
-	existing_content=$(sed -n "${first_marker_index},${last_marker_index}p" "$CLAUDE_FILE" | sed '1d;$d')
-
-	local new_content
-	new_content=$(cat "$claude_temp_file")
-
-	if [[ "$existing_content" == "$new_content" ]]; then
-		echo "No changes: $CLAUDE_FILE"
-		return 0
-	fi
-
-	echo "Updating $CLAUDE_FILE."
-	local tmp_file
-	tmp_file=$(mktemp)
-	chmod 0600 "$tmp_file"
-
-	# Cleanup trap handler
-	trap 'rm -f "$tmp_file"' EXIT
-
-	sed "${first_marker_index},${last_marker_index}d" "$CLAUDE_FILE" >"$tmp_file"
-	{
-		echo "$QUEST_LOG_MARKER"
-		cat "$claude_temp_file"
-		echo "$QUEST_LOG_MARKER"
-	} >>"$tmp_file"
-	mv "$tmp_file" "$CLAUDE_FILE"
-
-	# Remove trap and cleanup
-	trap - EXIT
-	rm -f "$tmp_file"
-
-	return 0
-}
-
 # Create all rule files from the quest schema
 #
 # Inputs:
@@ -231,8 +162,6 @@ EOF
 #
 # Side Effects:
 # - Creates cursor rule files in .cursor/rules directory
-# - Updates or creates CLAUDE.md file with rule content
-# - Creates temporary files during processing
 fill_quest_log() {
 	local target_dir="$1"
 
@@ -247,10 +176,9 @@ Filling quest log.
 
 EOF
 
-	# Read the 'SCHEMA_FILE', convert to JSON because I prefer to work with JSON in shell
-	SCHEMA_CONTENTS=""
-	if ! SCHEMA_CONTENTS=$(yq -o json '.' "${SCHEMA_FILE}"); then
-		echo "fill_quest_log:: Failed to read schema file with yq: ${SCHEMA_FILE}" >&2
+	local schema_contents
+	if ! schema_contents=$(cat "${SCHEMA_FILE}"); then
+		echo "fill_quest_log:: Failed to read schema file: ${SCHEMA_FILE}" >&2
 		return 1
 	fi
 
@@ -260,16 +188,6 @@ EOF
 			return 1
 		fi
 	fi
-
-	CLAUDE_TEMP_FILE=$(mktemp)
-	chmod 0600 "$CLAUDE_TEMP_FILE"
-	if [[ -z "${CLAUDE_TEMP_FILE}" ]]; then
-		echo "fill_quest_log:: Failed to create temporary file" >&2
-		return 1
-	fi
-
-	# Cleanup trap handler for CLAUDE_TEMP_FILE
-	trap 'rm -f "$CLAUDE_TEMP_FILE"' EXIT
 
 	while IFS= read -r quest; do
 		if ! name=$(jq -r '.name // ""' <<<"${quest}"); then
@@ -314,6 +232,11 @@ EOF
 			return 1
 		fi
 
+		if ! cursor_globs=$(jq -r '.cursor.globs // []' <<<"${quest}"); then
+			echo "fill_quest_log:: Failed to parse quest cursor globs from JSON" >&2
+			return 1
+		fi
+
 		[[ "${name}" == "null" || -z "${name}" ]] && echo "fill_quest_log:: Quest name is required" >&2 && return 1
 		[[ "${file}" == "null" || -z "${file}" ]] && echo "fill_quest_log:: Quest file is required" >&2 && return 1
 		[[ "${icon}" == "null" || -z "${icon}" ]] && echo "fill_quest_log:: Quest icon is required" >&2 && return 1
@@ -332,66 +255,114 @@ $(cat "${QUEST_DIR}/${file}")
 EOF
 		)
 
-		create_cursor_rule_file "${name}" "${description}" "${cursor_always_apply}" "${file_content}"
-		echo -e "${file_content}\n---\n" >>"${CLAUDE_TEMP_FILE}"
+		create_cursor_rule_file "${name}" "${description}" "${cursor_always_apply}" "${file_content}" "${cursor_globs}"
 
 	done \
-		<<<"$(jq -c '.[]' <<<"$SCHEMA_CONTENTS")"
-
-	update_claude_file "$CLAUDE_TEMP_FILE"
-
-	# Remove trap and cleanup
-	trap - EXIT
-	rm -f "$CLAUDE_TEMP_FILE"
+		<<<"$(jq -c '.[]' <<<"${schema_contents}")"
 
 	return 0
 }
 
-# Install quest-log rules with hybrid approach
+# Generate Cursor daily-quests (commands) from markdown files
+#
+# Inputs:
+# - $1, target_dir, the directory where daily-quests should be generated
+#
+# Side Effects:
+# - Creates daily-quest files in .cursor/commands directory
+generate_commands() {
+	local target_dir="$1"
+
+	if [[ -z "${target_dir}" ]]; then
+		echo "generate_commands:: target_dir is required" >&2
+		return 1
+	fi
+
+	local commands_dir="${QUEST_LOG_ROOT}/commands"
+	local cursor_commands_dir="${target_dir}/.cursor/commands"
+
+	if [[ ! -d "${commands_dir}" ]]; then
+		return 0
+	fi
+
+	cat <<EOF
+
+Generating daily-quests (Cursor commands).
+
+EOF
+
+		if [[ ! -d "${cursor_commands_dir}" ]]; then
+		if ! mkdir -p "${cursor_commands_dir}"; then
+			echo "generate_commands:: Failed to create daily-quests directory: ${cursor_commands_dir}" >&2
+			return 1
+		fi
+	fi
+
+	local command_file
+	while IFS= read -r -d '' command_file; do
+		local command_name
+		command_name=$(basename "${command_file}" .md)
+
+		local command_content
+		command_content=$(cat "${command_file}")
+
+		local cursor_command_file="${cursor_commands_dir}/${command_name}.md"
+
+		# Check if content changed
+		local existing_content=""
+		if [[ -f "${cursor_command_file}" ]]; then
+			existing_content=$(cat "${cursor_command_file}" 2>/dev/null || true)
+		fi
+
+		if [[ "$existing_content" == "$command_content" ]]; then
+			echo "No changes: ${cursor_command_file}"
+		else
+			show_diff "${cursor_command_file}" "${command_content}"
+			echo "${command_content}" >"${cursor_command_file}"
+			if [[ -f "${cursor_command_file}" ]]; then
+				echo "Updated: ${cursor_command_file}"
+			else
+				echo "Created: ${cursor_command_file}"
+			fi
+		fi
+	done < <(find "${commands_dir}" -maxdepth 1 -name "*.md" -type f -print0 2>/dev/null || true)
+
+	return 0
+}
+
+# Install quest-log rules for Cursor
 #
 # Side Effects:
 # - Creates local Cursor rules directory at TARGET_DIR/.cursor/rules/
-# - Creates global Claude rules file at ~/.claude/rules.md
 # - Installs rules from quest-log schema
 install_rules() {
 	cat <<EOF
 
-Installing quest-log rules (hybrid approach).
+Installing quest-log rules for Cursor.
 
 EOF
 
 	# Define directories
-	local local_cursor_dir="${TARGET_DIR}/.cursor/rules"
-	local global_claude_dir="${HOME}/.claude"
-	local global_claude_file="${global_claude_dir}/rules.md"
+	local cursor_rules_dir="${TARGET_DIR}/.cursor/rules"
 
 	# Create local Cursor rules directory
-	if ! mkdir -p "${local_cursor_dir}"; then
-		echo "install_rules:: Failed to create local Cursor rules directory: ${local_cursor_dir}" >&2
+	if ! mkdir -p "${cursor_rules_dir}"; then
+		echo "install_rules:: Failed to create Cursor rules directory: ${cursor_rules_dir}" >&2
 		return 1
 	fi
 
-	# Create global Claude rules directory
-	if ! mkdir -p "${global_claude_dir}"; then
-		echo "install_rules:: Failed to create global Claude rules directory: ${global_claude_dir}" >&2
-		return 1
-	fi
+	# Set target directory
+	readonly CURSOR_RULES_DIR="${cursor_rules_dir}"
 
-	# Set target directories
-	readonly CLAUDE_FILE="${global_claude_file}"
-	readonly CURSOR_RULES_DIR="${local_cursor_dir}"
+	echo "install_rules:: Cursor rules directory: ${cursor_rules_dir}"
 
-	echo "install_rules:: Local Cursor rules directory: ${local_cursor_dir}"
-	echo "install_rules:: Global Claude rules file: ${global_claude_file}"
-
-	# Generate rules with hybrid approach
+	# Generate rules
 	fill_quest_log "${TARGET_DIR}"
 
 	cat <<EOF
 
-Hybrid installation complete.
+Installation complete.
 Cursor rules are available locally in this project.
-Claude rules are available globally system-wide.
 
 EOF
 
@@ -433,12 +404,6 @@ Running ${BASH_SOURCE[0]:-$0}
 =====
 EOF
 
-	# Check for yq availability
-	if ! command -v yq &>/dev/null; then
-		echo "main:: yq is required but not installed." >&2
-		exit 1
-	fi
-
 	# Check for jq availability
 	if ! command -v jq &>/dev/null; then
 		echo "main:: jq is required but not installed." >&2
@@ -448,15 +413,11 @@ EOF
 	SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
 	SCRIPT_DIR="$(cd "$(dirname "${SCRIPT_PATH}")" && pwd)"
 	QUEST_LOG_ROOT="${SCRIPT_DIR}"
-	QUESTMARKER_FILE="${QUEST_LOG_ROOT}/QUEST_MARKER.txt"
-
-	QUEST_LOG_MARKER=$(cat "${QUESTMARKER_FILE}")
 
 	readonly QUEST_DIR="${SCRIPT_DIR}/quests"
 
 	# Environment variables with defaults
-	SCHEMA_FILE=${SCHEMA_FILE:-"${SCRIPT_DIR}/schema.yaml"}
-	BACKUP_ENABLED=${BACKUP_ENABLED:-false}
+	SCHEMA_FILE=${SCHEMA_FILE:-"${SCRIPT_DIR}/schema.json"}
 	INCLUDE_ALL=${INCLUDE_ALL:-"${DEFAULT_INCLUDE_ALL}"}
 	TARGET_DIR=${TARGET_DIR:-${PWD}}
 
@@ -464,10 +425,6 @@ EOF
 		case $1 in
 		-a | --all)
 			INCLUDE_ALL=true
-			shift
-			;;
-		-b | --backup)
-			BACKUP_ENABLED=true
 			shift
 			;;
 		-h | --help)
@@ -504,8 +461,13 @@ EOF
 		exit 1
 	fi
 
-	# Install rules with hybrid approach
+	# Install rules
 	install_rules
+
+	# Generate daily-quests if commands directory exists
+	if [[ -d "${QUEST_LOG_ROOT}/commands" ]]; then
+		generate_commands "${TARGET_DIR}"
+	fi
 
 	cat <<EOF
 =====

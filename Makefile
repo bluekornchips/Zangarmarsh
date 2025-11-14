@@ -1,7 +1,6 @@
-all: test-all
-
-test-all:
-	clear && bats --timing --verbose-run ./profile/tests/zangarmarsh-tests.sh \
+test:
+	clear && bats --timing --verbose-run \
+	./profile/tests/zangarmarsh-tests.sh \
 	./profile/tests/prompt-tests.sh \
 	./profile/tests/profile-tests.sh \
 	./profile/tests/penv-tests.sh \
@@ -9,6 +8,3 @@ test-all:
 	./tools/quest-log/tests/quest-log-tests.sh \
 	./tools/trilliax/tests/trilliax-tests.sh \
 	./tools/hearthstone/tests/hearthstone-tests.sh
-
-format:
-	find . -name "*.sh" -exec shfmt --ln=bats -w {} \;

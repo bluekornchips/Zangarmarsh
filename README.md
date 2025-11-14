@@ -89,7 +89,7 @@ Zangarmarsh loads configuration from:
 
 Development utilities in `tools/`:
 
-- Quest Log: AI assistant rules generator for Cursor and Claude Code from YAML templates
+- Quest Log: AI assistant rules generator for Cursor from JSON schema
 - Trilliax: Development environment cleanup tool that removes generated files and build artifacts
 
 See `tools/README.md` for detailed documentation and usage examples.

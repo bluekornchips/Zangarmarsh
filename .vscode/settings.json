@@ -35,7 +35,6 @@
   "editor.renderWhitespace": "all",
   "editor.lineNumbers": "on",
   "editor.fontSize": 14,
-  "window.zoomLevel": 1.6,
   "workbench.activityBar.orientation": "vertical",
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "[json]": {

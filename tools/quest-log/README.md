@@ -2,7 +2,7 @@
 
 ## Overview
 
-Generate AI assistant rules for Cursor and Claude Code based on project-specific rule templates. Quest Log reads from a YAML schema configuration and creates standardized rule files using a hybrid approach: Cursor rules are installed locally in the project directory, while Claude rules are installed globally for system-wide availability.
+Generate AI assistant rules for Cursor based on project-specific rule templates. Quest Log reads from a JSON schema configuration and creates standardized rule files. Rules are installed locally in the project directory.
 
 ## Install
 
@@ -16,10 +16,9 @@ questlog
 
 ## Features
 
-- Hybrid installation approach: Cursor rules local, Claude rules global
-- Generates rules from YAML schema configuration
-- Creates Cursor rules locally (.cursor/rules/) and Claude rules globally (~/.claude/rules.md)
-- Supports backup of existing rules before overwriting
+- Generates rules from JSON schema configuration
+- Creates Cursor rules locally (.cursor/rules/)
+- Generates daily-quests (Cursor commands) from markdown files (.cursor/commands/)
 - Template-based rule generation system
 - Configurable rule categories and content
 - Automatic file organization and naming
@@ -33,9 +32,6 @@ questlog
 # Generate rules in specified directory
 questlog /path/to/project
 
-# Generate with backup of existing rules
-questlog --backup
-
 # Generate all rules including warcraft and lotr
 questlog --all
 
@@ -43,40 +39,41 @@ questlog --all
 questlog --help
 ```
 
-### Hybrid Installation
-
-Quest-log uses a hybrid approach for optimal compatibility:
-
-- Cursor: Rules are installed locally to `.cursor/rules/` in the project directory
-- Claude Code: Rules are installed globally to `~/.claude/rules.md` for system-wide availability
-
-This approach ensures Cursor rules are available in the project context window while Claude rules are accessible globally.
-
 ## Configuration
 
-The tool reads from `tools/quest-log/schema.yaml` and quest templates in `tools/quest-log/quests/`:
+The tool reads from `tools/quest-log/schema.json` and quest templates in `tools/quest-log/quests/`:
 
 - `always.md`: Core development rules applied to every request
-- `author.md`: Documentation standards for PRs, tickets, and technical specs
 - `lotr.md`: Lord of the Rings themed test data
 - `python.md`: Python coding standards and best practices
 - `shell.md`: Shell scripting standards and conventions
 - `warcraft.md`: World of Warcraft themed test data
 
+## Daily Quests
+
+Quest Log generates daily-quests (Cursor commands) from markdown files in `tools/quest-log/commands/`. Daily-quests are reusable workflows that can be triggered with a `/` prefix in the Cursor chat input.
+
+For more information about Cursor commands, see the [Cursor Commands documentation](https://cursor.com/docs/agent/chat/commands).
+
+### Available Daily Quests
+
+- `bash-review.md`: Comprehensive bash repository review checklist
+- `author.md`: Documentation templates for PRs, Jira tickets, README files, and technical specs
+
+Daily-quests are automatically copied to `.cursor/commands/` when you run `questlog`. You can then use them in Cursor by typing `/` followed by the command name (e.g., `/bash-review` or `/author`).
+
 ## Files Created
 
-### Local Installation (Cursor)
-
 - `.cursor/rules/`: Local Cursor rules directory in project
-- Rule files are named based on the quest template names (e.g., `rules-python.mdc`)
-
-### Global Installation (Claude)
-
-- `~/.claude/rules.md`: Global Claude Code rules file
+  - Rule files are named based on the quest template names (e.g., `rules-python.mdc`)
+- `.cursor/commands/`: Local Cursor daily-quests directory in project
+  - Daily-quest files are generated from `tools/quest-log/commands/*.md`
+  - Daily-quests can be invoked in Cursor chat with `/command-name`
+  - See [Cursor Commands documentation](https://cursor.com/docs/agent/chat/commands) for details
 
 ## Schema Format
 
-The `schema.yaml` file defines:
+The `schema.json` file defines:
 
 - Rule metadata (name, description, keywords)
 - Cursor-specific settings (always_apply flag)
@@ -92,7 +89,6 @@ bats tools/quest-log/tests/quest-log-tests.sh
 ## Verification Steps
 
 - [ ] Rules are generated in `.cursor/rules/` directory
-- [ ] Claude rules are updated in `~/.claude/rules.md`
+- [ ] Daily-quests are generated in `.cursor/commands/` directory (if commands directory exists)
 - [ ] All quest templates are processed correctly
-- [ ] Backup functionality works when `--backup` flag is used
 - [ ] `--all` flag includes warcraft and lotr rules

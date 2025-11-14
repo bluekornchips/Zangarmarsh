@@ -1,0 +1,110 @@
+[
+  {
+    "name": "always",
+    "file": "always.md",
+    "icon": "💡",
+    "description": "Universal development standards applied to every request. Core rules that establish baseline expectations for code quality, security, and best practices.",
+    "keywords": ["💡", "rule", "core", "standards", "always", "development", "coding", "practice"],
+    "cursor": {
+      "alwaysApply": true,
+      "globs": []
+    }
+  },
+  {
+    "name": "python",
+    "file": "python.md",
+    "icon": "🐍",
+    "description": "Comprehensive Python coding standards including imports, functions, classes, error handling, logging, testing, security, and performance guidelines.",
+    "keywords": ["python", "python3", "py", "pytest", "pycharm", "venv", "virtualenv"],
+    "cursor": {
+      "alwaysApply": false,
+      "globs": []
+    }
+  },
+  {
+    "name": "shell",
+    "file": "shell.md",
+    "icon": "🐚",
+    "description": "Shell scripting standards for bash/zsh including file structure, error handling, variable management, control flow, testing with Bats, and security practices.",
+    "keywords": [
+      "shell",
+      "bash",
+      "zsh",
+      "sh",
+      "script",
+      "bats",
+      "command",
+      "terminal",
+      "cli",
+      "pipefail",
+      "trap",
+      "exit",
+      "return",
+      "redirection",
+      "pipeline",
+      "process"
+    ],
+    "cursor": {
+      "alwaysApply": false,
+      "globs": ["**/*.sh", "**/*.bash"]
+    }
+  },
+  {
+    "name": "lotr",
+    "file": "lotr.md",
+    "icon": "📚",
+    "description": "Lord of the Rings themed test data for characters, locations, artifacts, API responses, database records, and configuration files. Includes data generators for comprehensive testing scenarios.",
+    "keywords": ["lotr", "lord of the rings", "middle earth", "test data", "mock"],
+    "cursor": {
+      "alwaysApply": false,
+      "globs": []
+    }
+  },
+  {
+    "name": "warcraft",
+    "file": "warcraft.md",
+    "icon": "📚",
+    "description": "World of Warcraft themed test data for players, guilds, raids, zones, items, achievements, and game mechanics. Includes comprehensive data generators for gaming applications.",
+    "keywords": [
+      "warcraft",
+      "world of warcraft",
+      "wow",
+      "test data",
+      "mock",
+      "game",
+      "character",
+      "player",
+      "guild",
+      "raid",
+      "zone",
+      "location",
+      "quest",
+      "achievement",
+      "item",
+      "weapon",
+      "armor",
+      "inventory",
+      "level",
+      "class",
+      "race",
+      "faction",
+      "alliance",
+      "horde",
+      "gear",
+      "score",
+      "instance",
+      "boss",
+      "difficulty",
+      "mythic",
+      "heroic",
+      "normal",
+      "dungeon",
+      "battleground",
+      "arena"
+    ],
+    "cursor": {
+      "alwaysApply": false,
+      "globs": []
+    }
+  }
+]

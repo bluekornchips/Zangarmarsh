@@ -236,76 +236,23 @@ mock_commands_failure() {
 }
 
 ########################################################
-# install_yq
-########################################################
-@test "install_yq::succeeds when yq is already installed" {
-	install_yq() {
-		echo "install_yq:: yq installed"
-		return 0
-	}
-	export -f install_yq
-
-	run install_yq
-	[[ "$status" -eq 0 ]]
-
-	grep -q "install_yq:: yq installed" <<<"$output"
-}
-
-@test "install_yq::fails when wget is not available" {
-	command() {
-		case "$2" in
-		"yq" | "wget") return 1 ;;
-		*) builtin command "$@" ;;
-		esac
-	}
-	export -f command
-
-	run bash -c "source '$SCRIPT' && install_yq"
-	[[ "$status" -eq 1 ]]
-
-	grep -q "install_yq:: wget is not available" <<<"$output"
-}
-
-@test "install_yq::fails when download fails" {
-	command() {
-		case "$2" in
-		"yq") return 1 ;;
-		*) builtin command "$@" ;;
-		esac
-	}
-	export -f command
-
-	wget() { return 1; }
-	export -f wget
-
-	run bash -c "source '$SCRIPT' && install_yq"
-	[[ "$status" -eq 1 ]]
-
-	grep -q "install_yq:: Failed to download or install yq" <<<"$output"
-}
-
-########################################################
 # build_deck
 ########################################################
-@test "build_deck::succeeds when both jq and yq are installed" {
+@test "build_deck::succeeds when jq is installed" {
 	install_jq() {
 		echo "install_jq:: jq installed"
 		return 0
 	}
-	install_yq() {
-		echo "install_yq:: yq installed"
-		return 0
-	}
-	export -f install_jq install_yq
+	export -f install_jq
 
 	run build_deck
 	[[ "$status" -eq 0 ]]
 }
 
-@test "build_deck::succeeds when jq and yq need installation but succeed" {
+@test "build_deck::succeeds when jq needs installation but succeeds" {
 	command() {
 		case "$2" in
-		"jq" | "yq" | "wget") return 1 ;;
+		"jq") return 1 ;;
 		*) builtin command "$@" ;;
 		esac
 	}
@@ -315,11 +262,7 @@ mock_commands_failure() {
 		echo "install_jq:: jq installed"
 		return 0
 	}
-	install_yq() {
-		echo "install_yq:: yq installed successfully"
-		return 0
-	}
-	export -f install_jq install_yq
+	export -f install_jq
 
 	run build_deck
 	[[ "$status" -eq 0 ]]
@@ -340,25 +283,6 @@ mock_commands_failure() {
 		return 1
 	}
 	export -f install_jq
-
-	run build_deck
-	[[ "$status" -eq 1 ]]
-}
-
-@test "build_deck::fails when yq installation fails" {
-	command() {
-		case "$2" in
-		"yq" | "wget") return 1 ;;
-		*) builtin command "$@" ;;
-		esac
-	}
-	export -f command
-
-	install_yq() {
-		echo "install_yq:: Failed to download or install yq" >&2
-		return 1
-	}
-	export -f install_yq
 
 	run build_deck
 	[[ "$status" -eq 1 ]]

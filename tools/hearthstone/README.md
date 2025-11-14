@@ -16,9 +16,9 @@ Hearthstone setup and sync tool. Runs a series of setup and sync commands to ini
 
 Hearthstone executes the following operations in order:
 
-1. `build_deck` - Install required dependencies (jq, yq)
+1. `build_deck` - Install required dependencies (jq)
 2. `trilliax --all` - Clean generated files and directories (with --force)
-3. `questlog` - Generate agentic tool rules (hybrid: Cursor local, Claude global)
+3. `questlog` - Generate agentic tool rules for Cursor
 4. `vscodeoverride` - Sync VSCode settings
 5. `gdlf --install -f` - Force install Gandalf MCP server (with --force)
 

@@ -30,8 +30,6 @@ setup() {
 	echo "keep this" >"$TEST_CLEANUP_DIR/.env"
 	echo "keep this" >"$TEST_CLEANUP_DIR/.nvmrc"
 
-	echo "test content" >"$TEST_CLEANUP_DIR/CLAUDE.md"
-	echo "test content" >"$TEST_CLEANUP_DIR/claude-test.txt"
 	echo "test content" >"$TEST_CLEANUP_DIR/test.pyc"
 	echo "test content" >"$TEST_CLEANUP_DIR/test.pyo"
 
@@ -210,7 +208,6 @@ teardown() {
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "main:: Cleaning directory: $TEST_CLEANUP_DIR"
 	echo "$output" | grep -q "clean_cursor:: Cleaning .cursor directories."
-	echo "$output" | grep -q "clean_claude:: Cleaning Claude files."
 	echo "$output" | grep -q "clean_python:: Cleaning Python files."
 	echo "$output" | grep -q "clean_node:: Cleaning Node.js files."
 	echo "$output" | grep -q "clean_fs:: Cleaning empty directories."
@@ -234,7 +231,6 @@ teardown() {
 	run "$SCRIPT" --all --targets cursor "$TEST_CLEANUP_DIR"
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "clean_cursor:: Cleaning .cursor directories."
-	echo "$output" | grep -q "clean_claude:: Cleaning Claude files."
 	echo "$output" | grep -q "clean_python:: Cleaning Python files."
 	echo "$output" | grep -q "clean_node:: Cleaning Node.js files."
 	echo "$output" | grep -q "clean_fs:: Cleaning empty directories."
@@ -248,7 +244,6 @@ teardown() {
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "clean_cursor:: Cleaning .cursor directories."
 	echo "$output" | grep -q "Would remove:"
-	echo "$output" | grep -q "clean_claude:: Cleaning Claude files." && false || true
 	echo "$output" | grep -q "clean_python:: Cleaning Python files." && false || true
 	echo "$output" | grep -q "clean_node:: Cleaning Node.js files." && false || true
 }
@@ -258,24 +253,21 @@ teardown() {
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "clean_cursor:: Cleaning .cursor directories."
 	echo "$output" | grep -q "clean_python:: Cleaning Python files."
-	echo "$output" | grep -q "clean_claude:: Cleaning Claude files." && false || true
 	echo "$output" | grep -q "clean_node:: Cleaning Node.js files." && false || true
 }
 
 @test "validate_targets::accepts -t option shorthand" {
-	run "$SCRIPT" -t claude "$TEST_CLEANUP_DIR"
+	run "$SCRIPT" -t python "$TEST_CLEANUP_DIR"
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "clean_claude:: Cleaning Claude files."
+	echo "$output" | grep -q "clean_python:: Cleaning Python files."
 	echo "$output" | grep -q "clean_cursor:: Cleaning .cursor directories." && false || true
-	echo "$output" | grep -q "clean_python:: Cleaning Python files." && false || true
 	echo "$output" | grep -q "clean_node:: Cleaning Node.js files." && false || true
 }
 
 @test "validate_targets::handles --targets with all targets" {
-	run "$SCRIPT" --targets cursor,claude,python,node --dry-run "$TEST_CLEANUP_DIR"
+	run "$SCRIPT" --targets cursor,python,node --dry-run "$TEST_CLEANUP_DIR"
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "clean_cursor:: Cleaning .cursor directories."
-	echo "$output" | grep -q "clean_claude:: Cleaning Claude files."
 	echo "$output" | grep -q "clean_python:: Cleaning Python files."
 	echo "$output" | grep -q "clean_node:: Cleaning Node.js files."
 }
@@ -307,10 +299,10 @@ teardown() {
 }
 
 @test "validate_targets::handles --targets combined with directory" {
-	run "$SCRIPT" --targets claude "$TEST_CLEANUP_DIR"
+	run "$SCRIPT" --targets python "$TEST_CLEANUP_DIR"
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "main:: Cleaning directory: $TEST_CLEANUP_DIR"
-	echo "$output" | grep -q "clean_claude:: Cleaning Claude files."
+	echo "$output" | grep -q "clean_python:: Cleaning Python files."
 }
 
 ########################################################
@@ -365,27 +357,6 @@ teardown() {
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "clean_cursor:: Would remove:"
 	[[ -d "$test_dir/.cursor" ]]
-}
-
-@test "clean_claude::removes CLAUDE.md files" {
-	local test_dir="$TEST_CLEANUP_DIR"
-	echo "test" >"$test_dir/CLAUDE.md"
-	echo "test" >"$test_dir/claude-test.txt"
-
-	run clean_claude "$test_dir" "false"
-	[[ "$status" -eq 0 ]]
-	[[ ! -f "$test_dir/CLAUDE.md" ]]
-	[[ -f "$test_dir/claude-test.txt" ]]
-}
-
-@test "clean_claude::dry-run shows what would be removed" {
-	local test_dir="$TEST_CLEANUP_DIR"
-	echo "test" >"$test_dir/CLAUDE.md"
-
-	DRY_RUN=true run clean_claude "$test_dir"
-	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "clean_claude:: Would remove:"
-	[[ -f "$test_dir/CLAUDE.md" ]]
 }
 
 @test "clean_python::removes Python files and directories" {
@@ -537,7 +508,6 @@ teardown() {
 	mkdir -p "$spaced_dir"
 
 	mkdir -p "$spaced_dir/.cursor"
-	echo "test" >"$spaced_dir/CLAUDE.md"
 
 	run main "$spaced_dir"
 	[[ "$status" -eq 1 ]]

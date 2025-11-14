@@ -96,7 +96,7 @@ ARGUMENTS:
 
 OPTIONS:
   -d, --dir          Directory to clean (default: current directory)
-  -t, --targets      Comma-separated list of targets to clean (cursor,claude,python,node,fs)
+  -t, --targets      Comma-separated list of targets to clean (cursor,python,node,fs)
   -a, --all          Clean all targets (overrides --targets)
   -r, --dry-run      Show what would be cleaned without making changes
   -h, --help         Show this help message
@@ -106,7 +106,6 @@ ENVIRONMENT VARIABLES:
 
 CLEANUP OPERATIONS:
   - .cursor directories (recursively)
-  - Claude files (CLAUDE.md)
   - Python files (virtual environments, cache files, compiled files)
   - Node.js files (node_modules, npm/yarn cache directories, log files)
   - Empty directories (recursively removes all empty directories up to $DEFAULT_MAX_DEPTH levels deep)
@@ -153,23 +152,6 @@ clean_cursor() {
 	echo "clean_cursor:: Cleaning .cursor directories."
 
 	execute_clean "clean_cursor" "${target_dir}" -type d -name ".cursor"
-}
-
-# Clean Claude-related files
-#
-# Inputs:
-# - $1, target_dir, directory to clean Claude files from
-#
-# Side Effects:
-# - Removes CLAUDE.md files
-# - In dry-run mode (DRY_RUN=true), shows what would be removed without removing
-# - Returns 0 on success
-clean_claude() {
-	local target_dir="$1"
-
-	echo "clean_claude:: Cleaning Claude files."
-
-	execute_clean "clean_claude" "${target_dir}" -name "CLAUDE.md" -type f
 }
 
 # Clean Python files and directories
@@ -231,7 +213,7 @@ validate_targets() {
 	local all_flag="${2:-false}"
 
 	if [[ "${all_flag}" == "true" ]]; then
-		ENABLED_TARGETS="cursor claude python node fs"
+		ENABLED_TARGETS="cursor python node fs"
 		return 0
 	fi
 
@@ -247,7 +229,7 @@ validate_targets() {
 	for target in "${REQUESTED_TARGETS[@]}"; do
 		target=$(echo "${target}" | xargs)
 		case "${target}" in
-		cursor | claude | python | node | fs)
+		cursor | python | node | fs)
 			if [[ -n "${enabled_targets}" ]]; then
 				enabled_targets="${enabled_targets} ${target}"
 			else
@@ -255,7 +237,7 @@ validate_targets() {
 			fi
 			;;
 		*)
-			echo "validate_targets:: Invalid target '${target}'. Available targets: cursor,claude,python,node,fs" >&2
+			echo "validate_targets:: Invalid target '${target}'. Available targets: cursor,python,node,fs" >&2
 			return 1
 			;;
 		esac
@@ -313,10 +295,6 @@ main() {
 		case "${target}" in
 		cursor)
 			clean_cursor "${target_dir}"
-			cleanup_count=$((cleanup_count + 1))
-			;;
-		claude)
-			clean_claude "${target_dir}"
 			cleanup_count=$((cleanup_count + 1))
 			;;
 		python)

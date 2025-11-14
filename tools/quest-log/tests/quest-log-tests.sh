@@ -3,14 +3,9 @@
 GIT_ROOT=$(git rev-parse --show-toplevel)
 QUEST_LOG_ROOT="$GIT_ROOT/tools/quest-log"
 SCRIPT="$QUEST_LOG_ROOT/quest-log.sh"
-SCHEMA_FILE="$QUEST_LOG_ROOT/schema.yaml"
+SCHEMA_FILE="$QUEST_LOG_ROOT/schema.json"
 
-CLAUDE_DIR=".claude"
-CLAUDE_FILE="CLAUDE.md"
 CURSOR_RULES_DIR=".cursor/rules"
-
-QUESTMARKER_FILE="$QUEST_LOG_ROOT/QUEST_MARKER.txt"
-QUEST_LOG_MARKER=$(cat "$QUESTMARKER_FILE")
 
 # Create a test quest file
 # Writes json to the given quest file path. Allows for input of custom info.
@@ -63,7 +58,6 @@ setup() {
 	cd "$TEST_TEMP_DIR"
 
 	mkdir -p "./$CURSOR_RULES_DIR"
-	mkdir -p "./$CLAUDE_DIR"
 
 	quest_name="test-quest"
 	icon="🧪"
@@ -87,18 +81,6 @@ setup() {
 ########################################################
 # Mock Functions
 ########################################################
-
-# Mock yq command to simulate it not being installed
-mock_yq_not_installed() {
-	# shellcheck disable=SC2329
-	yq() {
-		echo "yq is required but not installed"
-		return 1
-	}
-	export -f yq
-
-	return 0
-}
 
 # Mock jq command to simulate it not being installed
 mock_jq_not_installed() {
@@ -215,9 +197,8 @@ mock_git_not_in_repo() {
 
 	run main --help
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Generate agentic tool rules for Cursor and Claude Code"
+	echo "$output" | grep -q "Generate agentic tool rules for Cursor"
 	echo "$output" | grep -q "git"
-	echo "$output" | grep -q "backup"
 	echo "$output" | grep -q "all"
 }
 
@@ -232,7 +213,7 @@ mock_git_not_in_repo() {
 	# Ensure file doesn't exist first
 	rm -f "./$CURSOR_RULES_DIR/rules-$quest_name.mdc"
 
-	run create_cursor_rule_file "$quest_name" "$description" "$always_apply" "$content"
+	run create_cursor_rule_file "$quest_name" "$description" "$always_apply" "$content" "[]"
 	[[ "$status" -eq 0 ]]
 	[[ -f "./$CURSOR_RULES_DIR/rules-$quest_name.mdc" ]]
 	grep -q "description: $description" "./$CURSOR_RULES_DIR/rules-$quest_name.mdc"
@@ -244,7 +225,7 @@ mock_git_not_in_repo() {
 	# Create initial file with different content
 	echo "initial content" >"./$CURSOR_RULES_DIR/rules-$quest_name.mdc"
 
-	run create_cursor_rule_file "$quest_name" "$description" "$always_apply" "$content"
+	run create_cursor_rule_file "$quest_name" "$description" "$always_apply" "$content" "[]"
 	[[ "$status" -eq 0 ]]
 	[[ -f "./$CURSOR_RULES_DIR/rules-$quest_name.mdc" ]]
 	grep -q "description: $description" "./$CURSOR_RULES_DIR/rules-$quest_name.mdc"
@@ -266,7 +247,7 @@ EOF
 	)
 	echo "$test_content" >"./$CURSOR_RULES_DIR/rules-$quest_name.mdc"
 
-	run create_cursor_rule_file "$quest_name" "$description" "$always_apply" "$content"
+	run create_cursor_rule_file "$quest_name" "$description" "$always_apply" "$content" "[]"
 	[[ "$status" -eq 0 ]]
 	[[ -f "./$CURSOR_RULES_DIR/rules-$quest_name.mdc" ]]
 	echo "$output" | grep -q "No changes:"
@@ -336,70 +317,6 @@ Line 3"
 
 	# Verify temp files are cleaned up by checking no temp files exist
 	[[ -z "$(find /tmp -name "tmp.*" -user "$(whoami)" 2>/dev/null | head -1)" ]] || true
-}
-
-########################################################
-# update_claude_file Function Tests
-########################################################
-
-@test 'update_claude_file:: updates existing claude file' {
-
-	# Create existing CLAUDE.md file with markers and old content
-	cat >"./$CLAUDE_FILE" <<EOF
-# Initial Content
-$QUEST_LOG_MARKER
-Old rule content
-$QUEST_LOG_MARKER
-# More Content
-EOF
-
-	local temp_file
-	temp_file=$(mktemp)
-	echo "New Rule Content" >"$temp_file"
-	echo "This is new rule content." >>"$temp_file"
-
-	run update_claude_file "$temp_file"
-	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Updating"
-
-	grep -q "New Rule Content" "./$CLAUDE_FILE"
-	grep -q "This is new rule content." "./$CLAUDE_FILE"
-	grep -v "Old rule content" "./$CLAUDE_FILE" >/dev/null
-}
-
-@test 'update_claude_file:: creates file when none exists' {
-	# Remove existing CLAUDE.md file to test creation
-	rm -f "$CLAUDE_FILE"
-
-	local temp_file
-	temp_file=$(mktemp)
-	echo "Test content for new file" >"$temp_file"
-
-	run update_claude_file "$temp_file"
-	[[ "$status" -eq 0 ]]
-	[[ -f "./$CLAUDE_FILE" ]]
-	echo "$output" | grep -q "Creating"
-	grep -q "$QUEST_LOG_MARKER" "./$CLAUDE_FILE"
-	grep -q "Test content for new file" "./$CLAUDE_FILE"
-}
-
-@test 'update_claude_file:: shows no changes when content is identical' {
-	# Create existing CLAUDE.md file with markers and content
-	cat >"./$CLAUDE_FILE" <<EOF
-# Initial Content
-$QUEST_LOG_MARKER
-Test content for new file
-$QUEST_LOG_MARKER
-# More Content
-EOF
-
-	local temp_file
-	temp_file=$(mktemp)
-	echo "Test content for new file" >"$temp_file"
-
-	run update_claude_file "$temp_file"
-	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "No changes:"
 }
 
 ########################################################
@@ -514,7 +431,6 @@ EOF
 	[[ "$status" -eq 0 ]]
 	[[ -f "$TEST_TEMP_DIR/.cursor/rules/rules-always.mdc" ]]
 	[[ -f "$TEST_TEMP_DIR/.cursor/rules/rules-author.mdc" ]]
-	[[ -f "$HOME/.claude/rules.md" ]]
 }
 
 @test 'main:: handles --all flag' {

@@ -9,7 +9,7 @@
 - Never use `rm -rf /` or similar dangerous commands
 - Never use `eval` or `exec`.
 - Never use `sudo`.
-- Never use `declare` for variable assignment.
+- Never use `declare -a` for array assignment.
 
 ## Mandatory Requirements, All Scripts Must Have
 
@@ -126,7 +126,6 @@ export name
 echo "PATH=${PATH}, PWD=${PWD}"
 
 # {Use arrays for lists}
-declare -a flags
 flags=(--foo --bar='baz')
 mybinary "${flags[@]}"
 
@@ -146,6 +145,10 @@ if [[ -z "${my_var}" ]]; then
 fi
 
 # {Arithmetic with (())}
+local a
+local b
+a=5
+b=10
 if (( a < b )); then
   echo "a is less than b"
 fi
@@ -155,10 +158,19 @@ fi
 
 ```bash
 # {Check return values}
-if ! mv "${file_list[@]}" "${dest_dir}/"; then
-  echo "Unable to move ${file_list[*]} to ${dest_dir}" >&2
-  return 1
-fi
+function_name() {
+  local file_list
+  local dest_dir
+  file_list=("file1.txt" "file2.txt")
+  dest_dir="/tmp"
+
+  if ! mv "${file_list[@]}" "${dest_dir}/"; then
+    echo "function_name:: Unable to move ${file_list[*]} to ${dest_dir}" >&2
+    return 1
+  fi
+
+  return 0
+}
 ```
 
 ## Shell Test Structure Template
@@ -169,8 +181,8 @@ fi
 # {Brief description of the test file}
 #
 GIT_ROOT="$(git rev-parse --show-toplevel || echo "")"
-SCRIPT="$GIT_ROOT/path/to/script.sh"
-[[ ! -f "$SCRIPT" ]] && echo "Script not found: $SCRIPT" >&2 && return 1
+SCRIPT="${GIT_ROOT}/path/to/script.sh"
+[[ ! -f "$SCRIPT" ]] && echo "setup:: Script not found: $SCRIPT" >&2 && return 1
 
 setup_file() {
   # {If needed check access to API's, databases, etc.}
@@ -197,9 +209,11 @@ setup() {
 ########################################################
 @test "function_name:: script handles unknown options" {
   local var
+  local script_path
   var="test"
+  script_path="$HOME/scripts/bin/script.sh"
 
-  run "$HOME/scripts/bin/script.sh" "$var"
+  run "$script_path" "$var"
   [[ "$status" -eq 1 ]]
 
   echo "$output" | grep -q "Unknown option"

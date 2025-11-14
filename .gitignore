@@ -23,6 +23,7 @@ Thumbs.db
 *.profile/
 CLAUDE.md
 .claude/
+
 # Test artifacts
 test_*
 temp_*

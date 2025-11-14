@@ -6,11 +6,11 @@ Development workflow utilities for shell environments.
 
 ### Quest Log
 
-AI assistant rules generator for Cursor and Claude Code from YAML templates.
+AI assistant rules generator for Cursor from JSON schema.
 
 ```bash
 ./tools/quest-log/quest-log.sh
-./tools/quest-log/quest-log.sh --backup
+./tools/quest-log/quest-log.sh --all
 ```
 
 ### Trilliax

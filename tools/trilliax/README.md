@@ -9,7 +9,7 @@ The name [Trilliax](https://www.wowhead.com/npc=104288/trilliax) comes from a Wo
 ## Features
 
 - Removes temporary files, cache directories, and build artifacts
-- Supports multiple cleanup targets (cursor, claude, python, node)
+- Supports multiple cleanup targets (cursor, python, node, fs)
 - Preserves important configuration files
 - Dry-run mode for safe preview of operations
 - Recursive cleanup with smart filtering
@@ -54,12 +54,6 @@ source /path/to/zangarmarsh/zangarmarsh.sh
 
 - `.cursor/` directories (recursively)
 - Cursor-related temporary files
-
-### Claude Target
-
-- `CLAUDE.md` files
-- Files starting with 'claude'
-- Claude-related temporary files
 
 ### Python Target
 

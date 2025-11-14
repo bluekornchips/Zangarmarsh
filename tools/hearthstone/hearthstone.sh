@@ -192,46 +192,6 @@ install_jq() {
 	fi
 }
 
-# Install yq by downloading the binary directly from GitHub releases
-#
-# Outputs:
-# - Status messages to stdout
-# - Error messages to stderr if installation fails
-#
-# Returns:
-# - 0 if yq is already installed or installation succeeds
-# - 1 if wget is not available or download/installation fails
-install_yq() {
-	local download_url
-	local install_path
-
-	if command -v yq &>/dev/null; then
-		echo "install_yq:: yq installed"
-		return 0
-	fi
-
-	echo "install_yq:: yq not found, attempting to install."
-
-	download_url="https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64"
-	install_path="/usr/local/bin/yq"
-
-	if ! command -v wget &>/dev/null; then
-		echo "install_yq:: wget is not available. Please install wget first or install yq manually." >&2
-		return 1
-	fi
-
-	echo "install_yq:: Downloading yq binary from GitHub releases."
-	if wget "${download_url}" -O "${install_path}" &&
-		chmod +x "${install_path}"; then
-		echo "install_yq:: yq installed successfully"
-		return 0
-	else
-		echo "install_yq:: Failed to download or install yq. Please install manually using:" >&2
-		echo "install_yq:: wget ${download_url} -O ${install_path} && chmod +x ${install_path}" >&2
-		return 1
-	fi
-}
-
 # Build the deck by ensuring required dependencies are installed
 #
 # Outputs:
@@ -240,15 +200,10 @@ install_yq() {
 #
 # Returns:
 # - 0 if all dependencies are successfully installed
-# - 1 if jq installation fails or yq download/installation fails
+# - 1 if jq installation fails
 build_deck() {
 	if ! install_jq; then
 		echo "build_deck:: Failed to install jq" >&2
-		return 1
-	fi
-
-	if ! install_yq; then
-		echo "build_deck:: Failed to install yq" >&2
 		return 1
 	fi
 
