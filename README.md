@@ -68,8 +68,23 @@ Zangarmarsh loads configuration from:
 
 ### Environment Variables
 
-- `ZANGARMARSH_VERBOSE=true`: Enable debug output
-- `ZANGARMARSH_ROOT`: Project root (auto-detected)
+#### Core Configuration
+
+- `ZANGARMARSH_ROOT`: Project root directory (auto-detected, usually not needed)
+- `ZANGARMARSH_VERBOSE=true`: Enable debug output for troubleshooting
+- `ZANGARMARSH_LAZY_LOADING=true`: Enable lazy loading for expensive operations like NVM (default: `true`)
+- `ZANGARMARSH_ENABLE_NVM=true`: Enable NVM lazy loading (default: `true`)
+- `ZANGARMARSH_ENABLE_SSH=true`: Enable SSH agent setup (default: `true`)
+
+#### Prompt Configuration
+
+- `ZANGARMARSH_PROMPT_CACHE_TTL=2`: Prompt cache time-to-live in seconds (default: `2`)
+- `ZANGARMARSH_GIT_PROMPT=true`: Show git branch in prompt (default: `true`)
+- `ZANGARMARSH_KUBE_PROMPT=true`: Show kubectl context in prompt (default: `true`)
+- `ZANGARMARSH_SHOW_USER=true`: Show username in prompt (default: `true`)
+- `ZANGARMARSH_SHOW_HOST=true`: Show hostname in prompt (default: `true`)
+- `ZANGARMARSH_SHORTEN_NAMES=true`: Shorten username/hostname to single character (default: `true`)
+- `ZANGARMARSH_PROMPT_SYMBOL=🌻`: Custom prompt symbol (default: `🌻`)
 
 ## Features
 
@@ -95,6 +110,8 @@ Development utilities in `tools/`:
 See `tools/README.md` for detailed documentation and usage examples.
 
 ## Development
+
+### Quick Commands
 
 ```bash
 # Run all tests

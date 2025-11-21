@@ -49,6 +49,44 @@ _nvm_load() {
 	# NVM is now loaded globally, no need to call it again
 }
 
+# Install Python dependencies from project files
+#
+# Inputs:
+# - None (reads from current directory)
+#
+# Side Effects:
+# - Installs dependencies using pip if pyproject.toml or requirements.txt found
+# - Sets dependency_installed flag
+#
+# Returns:
+# - 0 if dependencies installed or no dependency files found
+# - 1 if installation fails
+_penv_install_dependencies() {
+	local dependency_installed=false
+
+	if [[ -f "pyproject.toml" ]]; then
+		echo "Found pyproject.toml - installing with pip."
+		if pip install -e ".[dev]" 2>/dev/null || pip install -e . 2>/dev/null; then
+			dependency_installed=true
+		else
+			echo "pip install failed, you may need to install dependencies manually" >&2
+		fi
+	elif [[ -f "requirements.txt" ]]; then
+		echo "Found requirements.txt - installing dependencies."
+		if pip install -r requirements.txt 2>/dev/null; then
+			dependency_installed=true
+		else
+			echo "Failed to install requirements.txt dependencies" >&2
+		fi
+	fi
+
+	if [[ "$dependency_installed" != true ]]; then
+		echo "No dependency files found (pyproject.toml, requirements-dev.txt, requirements.txt)"
+	fi
+
+	return 0
+}
+
 penv() {
 	local env_name=".venv"
 	local python_version="python3"
@@ -162,33 +200,13 @@ EOF
 	fi
 
 	# Activate virtual environment
-
 	if ! source "$env_name/bin/activate" >/dev/null 2>&1; then
 		echo "Failed to activate virtual environment" >&2
 		return 1
 	fi
 
-	local dependency_installed=false
-
-	if [[ -f "pyproject.toml" ]]; then
-		echo "Found pyproject.toml - installing with pip."
-		if pip install -e ".[dev]" 2>/dev/null || pip install -e . 2>/dev/null; then
-			dependency_installed=true
-		else
-			echo "pip install failed, you may need to install dependencies manually" >&2
-		fi
-	elif [[ -f "requirements.txt" ]]; then
-		echo "Found requirements.txt - installing dependencies."
-		if pip install -r requirements.txt 2>/dev/null; then
-			dependency_installed=true
-		else
-			echo "Failed to install requirements.txt dependencies" >&2
-		fi
-	fi
-
-	if [[ "$dependency_installed" != true ]]; then
-		echo "No dependency files found (pyproject.toml, requirements-dev.txt, requirements.txt)"
-	fi
+	# Install dependencies if project files are present
+	_penv_install_dependencies
 
 	cat <<EOF
 
