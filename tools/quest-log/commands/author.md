@@ -1,107 +1,56 @@
-# Documentation Templates
+# PR and JIRA Documentation
 
-## PR Description
+Create two files when documenting code changes: `pr.md` and `jira.md`.
 
-```markdown
-## Issue Link
+Use simple language. Avoid fancy words, excessive quotes, parentheses, or dashes.
+
+## pr.md
+
+A short description of code changes for the included files.
+
+### Template
+
+````markdown
+## Issue Information
 
 - Issue Link: [TICKET-NUMBER](link)
 
 ## Description
 
-[Concise summary of changes]
+One or two sentences about the high level changes and improvements.
 
-- [List key changes]
-- [Why changes were made]
-- [Breaking changes or compatibility notes]
+Key highlights.
 
-## Verification Steps
-
-- [ ] Step 1
-- [ ] Step 2
-```
-
-Notes:
-
-- Use backticks for code, file paths, and commands
-- Always describe the why, not just the what
-- Link related files, symbols, or tickets where helpful
-
-### Jira Ticket
-
-```markdown
-Summary: [Concise objective]
-
-Description: [Context and background]
-
-Acceptance Criteria:
-
-- [ ] Requirement 1
-- [ ] Requirement 2
-
-Steps:
-
-1. Step 1
-2. Step 2
-```
-
-## README.md
-
-````markdown
-# Project Title
-
-## Overview
-
-[What it does]
-
-## Install
+## Testing Instructions
 
 ```bash
-[commands]
+path/to/script/
 ```
 ````
 
-## Usage
+````
 
-```bash
-[commands]
-```
+## jira.md
 
-## API Docs
+A short description of code changes written in future tense. This ticket describes what the changes accomplish at a high level.
 
-```markdown
-# API Reference
-
-## `GET /api/example`
-
-- Purpose: [What it does]
-- Params: [List]
-- Response: [Example]
-```
-
-## Technical Spec
+### Template
 
 ```markdown
-# Technical Spec: [Feature]
+High level description of changes and improvements in future tense. Three to four sentences covering the main changes and why they matter.
 
-## Problem
+## Acceptance
 
-[What needs solving]
+1.
+2.
+3.
+````
 
-## Solution
+## Guidelines
 
-[How it will be solved]
-
-## Testing
-
-[How to verify]
-```
-
-## Best Practices
-
-- Use clear, simple language
-- Follow templates strictly
-- Include test/verification steps
-- Use code blocks for commands/code
-- Check accuracy before publishing
-- Never use double asterisks for bolding
+- Use simple words
+- Write clearly and directly
+- Focus on what changed and why
+- Keep descriptions concise
+- Use future tense for JIRA tickets
+- Use past tense for PR descriptions

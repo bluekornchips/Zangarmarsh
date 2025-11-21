@@ -44,7 +44,9 @@
 
 ## File Structure Template
 
-Follow the below template for all scripts. Content inside comment blocks with curly braces are instructions and not intended to be part of the script.
+All scripts must maintain a consistent organizational structure. Functions should be grouped into logical sections in the following order: usage and help functions at the top, followed by validation and configuration initialization, then helper utilities, core business logic functions, the main entry point, and finally the source handler that enables both direct execution and sourcing.
+
+Content inside comment blocks with curly braces are instructions and not intended to be part of the script.
 
 ```bash
 #!/usr/bin/env bash
@@ -65,6 +67,35 @@ Options:
 EOF
 }
 
+# {Validation functions and configuration setup}
+# {Check dependencies, validate inputs, set up configuration}
+
+# {Helper functions used by main functionality}
+# {Description of the helper function}
+#
+# {Reference documentation if needed}
+# Inputs:
+# - $1 {argument name}, {description}
+#
+# Side Effects:
+# - {description}
+helper_function() {
+  # {input args defined as locals}
+  # {check required values are set}
+
+  # {
+  # if [[ -z "${some_var}" ]]; then
+  #   echo "helper_function:: some_var is not set" >&2
+  #   return 1
+  # fi
+  # }
+
+  # {Output lines should include the function name in the pattern of `echo "helper_function:: {content}"`}
+
+  return 0 # {Always return explicit status codes}
+}
+
+# {Core logic functions}
 # {Description of the function}
 #
 # {Reference documentation if needed}
@@ -175,6 +206,8 @@ function_name() {
 
 ## Shell Test Structure Template
 
+Test files should be organized with a clear hierarchy: Bats setup hooks (`setup_file` and `setup`) come first to establish the test environment, followed by mock function definitions for external dependencies, then any test helper utilities, function-specific test groups organized by the function being tested, and finally integration tests that exercise the full workflow.
+
 ```bash
 #!/usr/bin/env bats
 #
@@ -204,9 +237,14 @@ setup() {
   return 0
 }
 
-########################################################
+# {Mock functions for external dependencies}
+# {Mock API calls, file operations, etc.}
+
+# {Helper functions for test setup, assertions, etc.}
+
+# tests by function
+# {Group tests by function being tested}
 # function_name
-########################################################
 @test "function_name:: script handles unknown options" {
   local var
   local script_path
@@ -217,5 +255,10 @@ setup() {
   [[ "$status" -eq 1 ]]
 
   echo "$output" | grep -q "Unknown option"
+}
+
+# {End-to-end integration tests}
+@test "integration:: full workflow test" {
+  # {Integration test implementation}
 }
 ```

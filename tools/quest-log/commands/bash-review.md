@@ -39,6 +39,7 @@ Pragmatic review criteria for bash/shell script repositories. Focus on security,
 - [ ] _Function documentation_: Functions have header comments (purpose, inputs, side effects)
 - [ ] _Local variables_: Functions use `local` for all variables
 - [ ] _Sourcing support_: Scripts support both execution and sourcing (`BASH_SOURCE[0]` check)
+- [ ] _Organized sections_: Scripts maintain consistent section ordering: usage functions first, then validation/config initialization, helper utilities, core business logic, main entry point, and finally the source handler
 
 ---
 
@@ -86,6 +87,7 @@ Pragmatic review criteria for bash/shell script repositories. Focus on security,
 
 - [ ] _Bats framework_: Uses Bats for testing
 - [ ] _Test naming_: Tests use `function_name:: description` format
+- [ ] _Test organization_: Test files organized with setup hooks first, followed by mock definitions, helper utilities, function-specific test groups, and integration tests at the end
 - [ ] _Happy paths_: Happy path scenarios tested
 - [ ] _Error cases_: Error conditions tested
 - [ ] _Test isolation_: Tests don't depend on execution order
@@ -95,7 +97,6 @@ Pragmatic review criteria for bash/shell script repositories. Focus on security,
 - [ ] _Makefile targets_: `make test` or equivalent runs all tests
 - [ ] _CI integration_: Tests run in CI/CD pipeline
 - [ ] _Test documentation_: README includes test execution instructions
-- [ ] _Makefile targets_: `make test` runs all tests
 
 ---
 
