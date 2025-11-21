@@ -73,7 +73,39 @@ setup() {
 
 	export TEST_TEMP_DIR
 
+	# Temporarily disable errexit and traps to source script safely
+	set +e
+	trap - EXIT ERR
 	source "$SCRIPT"
+	# Disable traps again after sourcing (script re-enables them)
+	trap - EXIT ERR
+	# Keep errexit disabled - bats' run command handles error status
+	set +e
+
+	# Reset statistics for test isolation
+	STATS_CREATED=0
+	STATS_UPDATED=0
+	STATS_UNCHANGED=0
+	STATS_SKIPPED=0
+	STATS_ERRORS=0
+	STATS_WARNINGS=0
+	STATS_TOTAL_LINES=0
+
+	return 0
+}
+
+teardown() {
+	# Clean up test directory
+	[[ -n "${TEST_TEMP_DIR}" ]] && [[ -d "${TEST_TEMP_DIR}" ]] && rm -rf "${TEST_TEMP_DIR}"
+
+	# Reset statistics
+	STATS_CREATED=0
+	STATS_UPDATED=0
+	STATS_UNCHANGED=0
+	STATS_SKIPPED=0
+	STATS_ERRORS=0
+	STATS_WARNINGS=0
+	STATS_TOTAL_LINES=0
 
 	return 0
 }
@@ -133,7 +165,7 @@ mock_git_not_in_repo() {
 }
 
 ########################################################
-# determine_target_directory Function Tests
+# determine_target_directory
 ########################################################
 
 @test 'determine_target_directory:: uses git root when in git repo' {
@@ -168,49 +200,183 @@ mock_git_not_in_repo() {
 }
 
 ########################################################
-# Main Function Tests
+# validate_rule
 ########################################################
-@test 'main:: fails when target directory does not exist' {
-	TARGET_DIR="/tmp/does-not-exist"
 
-	run main
-	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "main:: Failed to change to target directory"
-}
+@test 'validate_rule:: passes validation for valid rule' {
+	local test_name="test-rule"
+	local test_content
+	test_content=$(printf 'Line 1\nLine 2\nLine 3')
+	local test_globs="[]"
+	local test_description="This is a valid test description"
+	local test_always_apply="false"
 
-@test 'main:: requires readable schema file' {
-	export SCHEMA_FILE="/tmp/does-not-exist"
+	STATS_ERRORS=0
+	STATS_WARNINGS=0
+	STATS_TOTAL_LINES=0
 
-	run main
-	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "main:: Schema file not found"
-}
-
-@test 'main:: validates schema file exists and is readable' {
-	#shellcheck disable=SC2031
-	[[ -f "$SCHEMA_FILE" ]]
-	#shellcheck disable=SC2031
-	[[ -r "$SCHEMA_FILE" ]]
-}
-
-@test 'main:: displays help message' {
-
-	run main --help
+	run validate_rule "${test_name}" "${test_content}" "${test_globs}" "${test_description}" "${test_always_apply}"
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Generate agentic tool rules for Cursor"
-	echo "$output" | grep -q "git"
-	echo "$output" | grep -q "all"
+	[[ "$STATS_ERRORS" -eq 0 ]]
+	[[ "$STATS_WARNINGS" -eq 0 ]]
 }
 
-@test 'main:: handles unknown options' {
+@test 'validate_rule:: errors when rule exceeds 500 lines' {
+	local test_name="test-rule"
+	local test_content
+	test_content=$(printf 'Line %d\n' {1..501})
+	local test_globs="[]"
+	local test_description="This is a valid test description"
+	local test_always_apply="false"
 
-	run main --unknown-option
+	STATS_ERRORS=0
+	STATS_WARNINGS=0
+
+	run validate_rule "${test_name}" "${test_content}" "${test_globs}" "${test_description}" "${test_always_apply}"
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "main:: Unknown option"
+	[[ "$STATS_ERRORS" -eq 1 ]]
+	echo "$output" | grep -q "validate_rule:: Error: Rule '${test_name}' exceeds 500 lines"
+	echo "$output" | grep -q "validate_rule:: Suggestion: Split into multiple rules"
 }
+
+@test 'validate_rule:: warns when rule exceeds 400 lines' {
+	local test_name="test-rule"
+	local test_content
+	test_content=$(printf 'Line %d\n' {1..401})
+	local test_globs="[]"
+	local test_description="This is a valid test description"
+	local test_always_apply="false"
+
+	STATS_ERRORS=0
+	STATS_WARNINGS=0
+
+	run validate_rule "${test_name}" "${test_content}" "${test_globs}" "${test_description}" "${test_always_apply}"
+	[[ "$status" -eq 0 ]]
+	[[ "$STATS_ERRORS" -eq 0 ]]
+	[[ "$STATS_WARNINGS" -eq 1 ]]
+	echo "$output" | grep -q "validate_rule:: Warning: Rule '${test_name}' is approaching the 500 line limit"
+}
+
+@test 'validate_rule:: warns for short description with intelligent application' {
+	local test_name="test-rule"
+	local test_content
+	test_content=$(printf 'Line 1\nLine 2')
+	local test_globs="[]"
+	local test_description="Short"
+	local test_always_apply="false"
+
+	STATS_ERRORS=0
+	STATS_WARNINGS=0
+
+	run validate_rule "${test_name}" "${test_content}" "${test_globs}" "${test_description}" "${test_always_apply}"
+	[[ "$status" -eq 0 ]]
+	[[ "$STATS_WARNINGS" -eq 1 ]]
+	echo "$output" | grep -q "validate_rule:: Warning: Rule '${test_name}' has a short description"
+}
+
+@test 'validate_rule:: does not warn for short description with globs' {
+	local test_name="test-rule"
+	local test_content
+	test_content=$(printf 'Line 1\nLine 2')
+	local test_globs='["**/*.sh"]'
+	local test_description="Short"
+	local test_always_apply="false"
+
+	STATS_ERRORS=0
+	STATS_WARNINGS=0
+
+	run validate_rule "${test_name}" "${test_content}" "${test_globs}" "${test_description}" "${test_always_apply}"
+	[[ "$status" -eq 0 ]]
+	[[ "$STATS_WARNINGS" -eq 0 ]]
+}
+
+@test 'validate_rule:: errors for empty description' {
+	local test_name="test-rule"
+	local test_content
+	test_content=$(printf 'Line 1\nLine 2')
+	local test_globs="[]"
+	local test_description=""
+	local test_always_apply="false"
+
+	STATS_ERRORS=0
+	STATS_WARNINGS=0
+
+	run validate_rule "${test_name}" "${test_content}" "${test_globs}" "${test_description}" "${test_always_apply}"
+	[[ "$status" -eq 1 ]]
+	[[ "$STATS_ERRORS" -eq 1 ]]
+	echo "$output" | grep -q "validate_rule:: Error: Rule '${test_name}' has empty description"
+}
+
+@test 'validate_rule:: errors for null description' {
+	local test_name="test-rule"
+	local test_content
+	test_content=$(printf 'Line 1\nLine 2')
+	local test_globs="[]"
+	local test_description="null"
+	local test_always_apply="false"
+
+	STATS_ERRORS=0
+	STATS_WARNINGS=0
+
+	run validate_rule "${test_name}" "${test_content}" "${test_globs}" "${test_description}" "${test_always_apply}"
+	[[ "$status" -eq 1 ]]
+	[[ "$STATS_ERRORS" -eq 1 ]]
+}
+
+@test 'validate_rule:: errors for invalid globs JSON' {
+	local test_name="test-rule"
+	local test_content
+	test_content=$(printf 'Line 1\nLine 2')
+	local test_globs="invalid json"
+	local test_description="This is a valid test description"
+	local test_always_apply="false"
+
+	STATS_ERRORS=0
+	STATS_WARNINGS=0
+
+	run validate_rule "${test_name}" "${test_content}" "${test_globs}" "${test_description}" "${test_always_apply}"
+	[[ "$status" -eq 1 ]]
+	[[ "$STATS_ERRORS" -eq 1 ]]
+	echo "$output" | grep -q "validate_rule:: Error: Rule '${test_name}' has invalid globs JSON format"
+}
+
+@test 'validate_rule:: warns for glob pattern with whitespace' {
+	local test_name="test-rule"
+	local test_content
+	test_content=$(printf 'Line 1\nLine 2')
+	local test_globs='["  **/*.sh  "]'
+	local test_description="This is a valid test description"
+	local test_always_apply="false"
+
+	STATS_ERRORS=0
+	STATS_WARNINGS=0
+
+	run validate_rule "${test_name}" "${test_content}" "${test_globs}" "${test_description}" "${test_always_apply}"
+	[[ "$status" -eq 0 ]]
+	[[ "$STATS_WARNINGS" -eq 1 ]]
+	echo "$output" | grep -q "validate_rule:: Warning: Rule '${test_name}' has glob pattern with leading/trailing whitespace"
+}
+
+@test 'validate_rule:: tracks total lines' {
+	local test_name="test-rule"
+	local test_content
+	test_content=$(printf 'Line %d\n' {1..10})
+	local test_globs="[]"
+	local test_description="This is a valid test description"
+	local test_always_apply="false"
+
+	STATS_TOTAL_LINES=0
+
+	run validate_rule "${test_name}" "${test_content}" "${test_globs}" "${test_description}" "${test_always_apply}"
+	[[ "$status" -eq 0 ]]
+	[[ "$STATS_TOTAL_LINES" -eq 10 ]]
+}
+
+########################################################
+# create_cursor_rule_file
+########################################################
 
 @test 'create_cursor_rule_file:: creates rule file with correct content' {
-	# Ensure file doesn't exist first
 	rm -f "./$CURSOR_RULES_DIR/rules-$quest_name.mdc"
 
 	run create_cursor_rule_file "$quest_name" "$description" "$always_apply" "$content" "[]"
@@ -222,7 +388,6 @@ mock_git_not_in_repo() {
 }
 
 @test 'create_cursor_rule_file:: updates existing rule file with different content' {
-	# Create initial file with different content
 	echo "initial content" >"./$CURSOR_RULES_DIR/rules-$quest_name.mdc"
 
 	run create_cursor_rule_file "$quest_name" "$description" "$always_apply" "$content" "[]"
@@ -232,7 +397,6 @@ mock_git_not_in_repo() {
 }
 
 @test 'create_cursor_rule_file:: shows no changes when content is identical' {
-	# Create file with same content that would be generated
 	local test_content
 	test_content=$(
 		cat <<EOF
@@ -245,7 +409,7 @@ alwaysApply: $always_apply
 $content
 EOF
 	)
-	echo "$test_content" >"./$CURSOR_RULES_DIR/rules-$quest_name.mdc"
+	echo "${test_content}" >"./$CURSOR_RULES_DIR/rules-$quest_name.mdc"
 
 	run create_cursor_rule_file "$quest_name" "$description" "$always_apply" "$content" "[]"
 	[[ "$status" -eq 0 ]]
@@ -253,8 +417,70 @@ EOF
 	echo "$output" | grep -q "No changes:"
 }
 
+@test 'create_cursor_rule_file:: tracks created statistics' {
+	rm -f "./$CURSOR_RULES_DIR/rules-test-stats.mdc"
+
+	STATS_CREATED=0
+	STATS_UPDATED=0
+	STATS_UNCHANGED=0
+
+	run create_cursor_rule_file "test-stats" "Test Description" "false" "Test content" "[]"
+	[[ "$status" -eq 0 ]]
+	[[ "$STATS_CREATED" -eq 1 ]]
+	[[ "$STATS_UPDATED" -eq 0 ]]
+	[[ "$STATS_UNCHANGED" -eq 0 ]]
+}
+
+@test 'create_cursor_rule_file:: tracks updated statistics' {
+	echo "old content" >"./$CURSOR_RULES_DIR/rules-test-stats.mdc"
+
+	STATS_CREATED=0
+	STATS_UPDATED=0
+	STATS_UNCHANGED=0
+
+	run create_cursor_rule_file "test-stats" "Test Description" "false" "New content" "[]"
+	[[ "$status" -eq 0 ]]
+	[[ "$STATS_CREATED" -eq 0 ]]
+	[[ "$STATS_UPDATED" -eq 1 ]]
+	[[ "$STATS_UNCHANGED" -eq 0 ]]
+}
+
+@test 'create_cursor_rule_file:: tracks unchanged statistics' {
+	local test_content
+	test_content=$(
+		cat <<EOF
+---
+description: Test Description
+globs:
+alwaysApply: false
+---
+
+Test content
+EOF
+	)
+	echo "${test_content}" >"./$CURSOR_RULES_DIR/rules-test-stats.mdc"
+
+	STATS_CREATED=0
+	STATS_UPDATED=0
+	STATS_UNCHANGED=0
+
+	run create_cursor_rule_file "test-stats" "Test Description" "false" "Test content" "[]"
+	[[ "$status" -eq 0 ]]
+	[[ "$STATS_CREATED" -eq 0 ]]
+	[[ "$STATS_UPDATED" -eq 0 ]]
+	[[ "$STATS_UNCHANGED" -eq 1 ]]
+}
+
+@test 'create_cursor_rule_file:: tracks errors when validation fails' {
+	STATS_ERRORS=0
+
+	run create_cursor_rule_file "test-error" "" "false" "Test content" "[]"
+	[[ "$status" -eq 1 ]]
+	[[ "$STATS_ERRORS" -eq 1 ]]
+}
+
 ########################################################
-# show_diff Function Tests
+# show_diff
 ########################################################
 
 @test 'show_diff:: shows diff for new file' {
@@ -281,7 +507,6 @@ EOF
 }
 
 @test 'show_diff:: shows no diff for identical content' {
-
 	local test_file="./test-identical-file.txt"
 	local content="Same content"
 	echo "$content" >"$test_file"
@@ -289,12 +514,10 @@ EOF
 	run show_diff "$test_file" "$content"
 	[[ "$status" -eq 0 ]]
 
-	# Should be no output for identical content
 	[[ -z "$output" ]]
 }
 
 @test 'show_diff:: handles multi-line content' {
-
 	local test_file="./test-multiline-file.txt"
 	local new_content="Line 1
 Line 2
@@ -303,27 +526,24 @@ Line 3"
 	run show_diff "$test_file" "$new_content"
 	[[ "$status" -eq 0 ]]
 
-	# Check for diff error message for non-existent file
 	grep -qF "File does not exist" <<<"$output"
 }
 
 @test 'show_diff:: cleans up temporary files' {
-
 	local test_file="./test-cleanup-file.txt"
 	local new_content="Test content"
 
 	run show_diff "$test_file" "$new_content"
 	[[ "$status" -eq 0 ]]
 
-	# Verify temp files are cleaned up by checking no temp files exist
 	[[ -z "$(find /tmp -name "tmp.*" -user "$(whoami)" 2>/dev/null | head -1)" ]] || true
 }
 
 ########################################################
-# fill_quest_log Function Tests
+# fill_quest_log
 ########################################################
-@test 'fill_quest_log:: generates core rule files by default' {
 
+@test 'fill_quest_log:: generates core rule files by default' {
 	run main
 	[[ "$status" -eq 0 ]]
 	[[ -f "./$CURSOR_RULES_DIR/rules-always.mdc" ]]
@@ -333,7 +553,6 @@ Line 3"
 }
 
 @test 'fill_quest_log:: skips warcraft and lotr by default' {
-
 	run main
 	[[ "$status" -eq 0 ]]
 	[[ ! -f "./$CURSOR_RULES_DIR/rules-lotr.mdc" ]]
@@ -343,7 +562,6 @@ Line 3"
 }
 
 @test 'fill_quest_log:: generates all rule files with --all flag' {
-
 	run main --all
 	[[ "$status" -eq 0 ]]
 	[[ -f "./$CURSOR_RULES_DIR/rules-always.mdc" ]]
@@ -355,7 +573,6 @@ Line 3"
 }
 
 @test 'fill_quest_log:: generates non-empty files' {
-
 	run main
 	[[ "$status" -eq 0 ]]
 
@@ -368,7 +585,6 @@ Line 3"
 }
 
 @test 'fill_quest_log:: generates files with rule headers' {
-
 	run main
 	[[ "$status" -eq 0 ]]
 
@@ -381,7 +597,6 @@ Line 3"
 }
 
 @test 'fill_quest_log:: generates files with proper formatting' {
-
 	run main
 	[[ "$status" -eq 0 ]]
 
@@ -393,15 +608,121 @@ Line 3"
 	done
 }
 
-@test 'main:: handles help option' {
+@test 'fill_quest_log:: tracks skipped statistics' {
+	STATS_SKIPPED=0
 
+	run fill_quest_log "${TEST_TEMP_DIR}"
+	[[ "$status" -eq 0 ]]
+	[[ "$STATS_SKIPPED" -eq 2 ]]
+	echo "$output" | grep -q "fill_quest_log:: Skipping warcraft"
+	echo "$output" | grep -q "fill_quest_log:: Skipping lotr"
+}
+
+########################################################
+# print_summary
+########################################################
+
+@test 'print_summary:: displays summary with all statistics' {
+	STATS_CREATED=2
+	STATS_UPDATED=3
+	STATS_UNCHANGED=1
+	STATS_SKIPPED=2
+	STATS_ERRORS=0
+	STATS_WARNINGS=0
+	STATS_TOTAL_LINES=100
+
+	run print_summary
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Summary"
+	echo "$output" | grep -q "Created: 2"
+	echo "$output" | grep -q "Updated: 3"
+	echo "$output" | grep -q "Unchanged: 1"
+	echo "$output" | grep -q "Skipped: 2"
+	echo "$output" | grep -q "Errors: 0"
+	echo "$output" | grep -q "Warnings: 0"
+	echo "$output" | grep -q "Total processed: 8"
+	echo "$output" | grep -q "Total lines: 100"
+	echo "$output" | grep -q "print_summary:: All rules processed successfully"
+}
+
+@test 'print_summary:: returns error status when errors exist' {
+	STATS_CREATED=1
+	STATS_UPDATED=0
+	STATS_UNCHANGED=0
+	STATS_SKIPPED=0
+	STATS_ERRORS=1
+	STATS_WARNINGS=0
+	STATS_TOTAL_LINES=50
+
+	run print_summary
+	[[ "$status" -eq 1 ]]
+	echo "$output" | grep -q "Errors: 1"
+	echo "$output" | grep -q "print_summary:: Some rules failed validation"
+}
+
+@test 'print_summary:: returns success status with warnings' {
+	STATS_CREATED=1
+	STATS_UPDATED=0
+	STATS_UNCHANGED=0
+	STATS_SKIPPED=0
+	STATS_ERRORS=0
+	STATS_WARNINGS=1
+	STATS_TOTAL_LINES=50
+
+	run print_summary
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Warnings: 1"
+	echo "$output" | grep -q "print_summary:: Some warnings were generated"
+}
+
+########################################################
+# Main
+########################################################
+
+@test 'main:: fails when target directory does not exist' {
+	TARGET_DIR="/tmp/does-not-exist"
+
+	run main
+	[[ "$status" -eq 1 ]]
+	echo "$output" | grep -q "main:: Failed to change to target directory"
+}
+
+@test 'main:: requires readable schema file' {
+	export SCHEMA_FILE="/tmp/does-not-exist"
+
+	run main
+	[[ "$status" -eq 1 ]]
+	echo "$output" | grep -q "main:: Schema file not found"
+}
+
+@test 'main:: validates schema file exists and is readable' {
+	#shellcheck disable=SC2031
+	[[ -f "$SCHEMA_FILE" ]]
+	#shellcheck disable=SC2031
+	[[ -r "$SCHEMA_FILE" ]]
+}
+
+@test 'main:: displays help message' {
+	run main --help
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Generate agentic tool rules for Cursor"
+	echo "$output" | grep -q "git"
+	echo "$output" | grep -q "all"
+}
+
+@test 'main:: handles unknown options' {
+	run main --unknown-option
+	[[ "$status" -eq 1 ]]
+	echo "$output" | grep -q "main:: Unknown option"
+}
+
+@test 'main:: handles help option' {
 	run main --help
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Generate agentic tool rules"
 }
 
 @test 'main:: handles invalid options' {
-
 	run main --invalid-option
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "main:: Unknown option"
@@ -434,7 +755,6 @@ Line 3"
 }
 
 @test 'main:: handles --all flag' {
-
 	run main --all
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -v "fill_quest_log:: Skipping warcraft"
@@ -444,9 +764,60 @@ Line 3"
 }
 
 @test 'main:: handles -a short flag' {
-
 	run main -a
 	[[ "$status" -eq 0 ]]
 	[[ -f "./$CURSOR_RULES_DIR/rules-warcraft.mdc" ]]
 	[[ -f "./$CURSOR_RULES_DIR/rules-lotr.mdc" ]]
+}
+
+@test 'main:: displays summary at end of execution' {
+	run main
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Summary"
+	echo "$output" | grep -q "Total processed:"
+	echo "$output" | grep -q "Total lines:"
+}
+
+@test 'main:: validation prevents creation of invalid rules' {
+	local invalid_schema
+	invalid_schema=$(
+		cat <<EOF
+[
+  {
+    "name": "invalid-rule",
+    "file": "always.md",
+    "icon": "💡",
+    "description": "",
+    "keywords": ["test"],
+    "cursor": {
+      "alwaysApply": false,
+      "globs": []
+    }
+  }
+]
+EOF
+	)
+	local invalid_schema_file
+	invalid_schema_file=$(mktemp)
+	echo "${invalid_schema}" >"${invalid_schema_file}"
+
+	SCHEMA_FILE="${invalid_schema_file}"
+	QUEST_DIR="${QUEST_LOG_ROOT}/quests"
+
+	STATS_ERRORS=0
+
+	run main
+	[[ "$STATS_ERRORS" -gt 0 ]]
+	echo "$output" | grep -q "validate_rule:: Error"
+}
+
+@test 'main:: tracks statistics correctly across multiple rules' {
+	run main
+	[[ "$status" -eq 0 ]]
+
+	echo "$output" | grep -q "Summary"
+	echo "$output" | grep -q "Created:"
+	echo "$output" | grep -q "Skipped: 2"
+	[[ -f "./$CURSOR_RULES_DIR/rules-always.mdc" ]]
+	[[ -f "./$CURSOR_RULES_DIR/rules-python.mdc" ]]
 }

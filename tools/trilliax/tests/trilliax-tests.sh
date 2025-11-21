@@ -306,7 +306,7 @@ teardown() {
 }
 
 ########################################################
-# Main function tests
+# Main
 ########################################################
 @test "main::fails when sourced without targets" {
 	run main "$TEST_CLEANUP_DIR"
@@ -338,7 +338,7 @@ teardown() {
 }
 
 ########################################################
-# Cleanup function tests
+# Cleanup
 ########################################################
 @test "clean_cursor::removes .cursor directories" {
 	local test_dir="$TEST_CLEANUP_DIR"

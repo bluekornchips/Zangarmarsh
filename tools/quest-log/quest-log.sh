@@ -7,8 +7,8 @@ set -eo pipefail
 # Global cleanup trap handler
 cleanup() {
 	local exit_code=$?
-	if [[ $exit_code -ne 0 ]]; then
-		echo "Error in $0 at line $LINENO" >&2
+	if ((exit_code != 0)); then
+		echo "Error in ${0} at line ${LINENO}" >&2
 	fi
 }
 trap cleanup EXIT ERR
@@ -34,6 +34,165 @@ EOF
 
 DEFAULT_INCLUDE_ALL=false
 SKIPPED_RULES=("warcraft" "lotr")
+
+# Statistics tracking
+STATS_CREATED=0
+STATS_UPDATED=0
+STATS_UNCHANGED=0
+STATS_SKIPPED=0
+STATS_ERRORS=0
+STATS_TOTAL_LINES=0
+STATS_WARNINGS=0
+
+# Validate rule content
+#
+# Inputs:
+# - $1, name, the name of the rule
+# - $2, file_content, the content of the rule file
+# - $3, globs, optional array of glob patterns for file matching
+# - $4, description, the description of the rule
+# - $5, cursor_always_apply, whether the rule should always apply
+#
+# Returns:
+# - 0 if validation passes
+# - 1 if validation fails
+# - Sets STATS_WARNINGS and STATS_ERRORS accordingly
+validate_rule() {
+	local name="$1"
+	local file_content="$2"
+	local globs="$3"
+	local description="$4"
+	local cursor_always_apply="$5"
+	local validation_failed=false
+
+	# Validate rule length (500 line limit per Cursor best practices)
+	local line_count
+	line_count=$(echo "${file_content}" | wc -l | tr -d ' ')
+	if ((line_count > 500)); then
+		echo "validate_rule:: Error: Rule '${name}' exceeds 500 lines (${line_count} lines)" >&2
+		echo "validate_rule:: Suggestion: Split into multiple rules or use rule composition" >&2
+		STATS_ERRORS=$((STATS_ERRORS + 1))
+		validation_failed=true
+	elif ((line_count > 400)); then
+		echo "validate_rule:: Warning: Rule '${name}' is approaching the 500 line limit (${line_count} lines)" >&2
+		echo "validate_rule:: Consider splitting into multiple rules" >&2
+		STATS_WARNINGS=$((STATS_WARNINGS + 1))
+	fi
+
+	# Validate description is meaningful when using intelligent application
+	if [[ "${cursor_always_apply}" == "false" ]]; then
+		local glob_count
+		glob_count=$(echo "${globs}" | jq 'length' 2>/dev/null || echo "0")
+		if [[ "${glob_count}" == "0" ]]; then
+			# Using intelligent application - description should be descriptive
+			local desc_length
+			desc_length=$(echo -n "${description}" | wc -c | tr -d ' ')
+			if ((desc_length < 20)); then
+				echo "validate_rule:: Warning: Rule '${name}' has a short description (${desc_length} chars) but uses intelligent application" >&2
+				echo "validate_rule:: Suggestion: Provide a more descriptive description for better AI matching" >&2
+				STATS_WARNINGS=$((STATS_WARNINGS + 1))
+			fi
+		fi
+	fi
+
+	# Validate glob patterns (basic syntax check)
+	if [[ -n "${globs}" ]] && [[ "${globs}" != "[]" ]]; then
+		local glob_array
+		if ! glob_array=$(echo "${globs}" | jq -r '.[]' 2>/dev/null); then
+			echo "validate_rule:: Error: Rule '${name}' has invalid globs JSON format" >&2
+			STATS_ERRORS=$((STATS_ERRORS + 1))
+			validation_failed=true
+		else
+			# Basic glob pattern validation
+			while IFS= read -r glob_pattern; do
+				if [[ -z "${glob_pattern}" ]]; then
+					continue
+				fi
+				# Check for common glob pattern issues
+				if [[ "${glob_pattern}" =~ ^[[:space:]]+ ]] || [[ "${glob_pattern}" =~ [[:space:]]+$ ]]; then
+					echo "validate_rule:: Warning: Rule '${name}' has glob pattern with leading/trailing whitespace: '${glob_pattern}'" >&2
+					STATS_WARNINGS=$((STATS_WARNINGS + 1))
+				fi
+			done <<<"${glob_array}"
+		fi
+	fi
+
+	# Validate description is not empty
+	if [[ -z "${description}" ]] || [[ "${description}" == "null" ]]; then
+		echo "validate_rule:: Error: Rule '${name}' has empty description" >&2
+		STATS_ERRORS=$((STATS_ERRORS + 1))
+		validation_failed=true
+	fi
+
+	# Track total lines
+	STATS_TOTAL_LINES=$((STATS_TOTAL_LINES + line_count))
+
+	if [[ "${validation_failed}" == "true" ]]; then
+		return 1
+	fi
+
+	return 0
+}
+
+# Validate MDC frontmatter syntax
+#
+# Inputs:
+# - $1, name, the name of the rule
+# - $2, frontmatter_content, the frontmatter YAML content (without --- delimiters)
+#
+# Returns:
+# - 0 if validation passes
+# - 1 if validation fails
+# - Sets STATS_WARNINGS and STATS_ERRORS accordingly
+validate_mdc_frontmatter() {
+	local name="$1"
+	local frontmatter_content="$2"
+	local validation_failed=false
+
+	# Check for required fields
+	if ! echo "${frontmatter_content}" | grep -q "^description:"; then
+		echo "validate_mdc_frontmatter:: Error: Rule '${name}' frontmatter missing required field 'description'" >&2
+		STATS_ERRORS=$((STATS_ERRORS + 1))
+		validation_failed=true
+	fi
+
+	if ! echo "${frontmatter_content}" | grep -q "^globs:"; then
+		echo "validate_mdc_frontmatter:: Error: Rule '${name}' frontmatter missing required field 'globs'" >&2
+		STATS_ERRORS=$((STATS_ERRORS + 1))
+		validation_failed=true
+	fi
+
+	if ! echo "${frontmatter_content}" | grep -q "^alwaysApply:"; then
+		echo "validate_mdc_frontmatter:: Error: Rule '${name}' frontmatter missing required field 'alwaysApply'" >&2
+		STATS_ERRORS=$((STATS_ERRORS + 1))
+		validation_failed=true
+	fi
+
+	# Validate YAML-like structure (basic check for colon-separated key-value pairs)
+	local line_count
+	line_count=$(echo "${frontmatter_content}" | wc -l | tr -d ' ')
+	if ((line_count == 0)); then
+		echo "validate_mdc_frontmatter:: Error: Rule '${name}' has empty frontmatter" >&2
+		STATS_ERRORS=$((STATS_ERRORS + 1))
+		validation_failed=true
+	fi
+
+	# Check for invalid YAML characters in keys (basic validation)
+	if echo "${frontmatter_content}" | grep -qE "^[^:]+:[[:space:]]*$"; then
+		local empty_value_lines
+		empty_value_lines=$(echo "${frontmatter_content}" | grep -cE "^[^:]+:[[:space:]]*$" || echo "0")
+		if ((empty_value_lines > 0)); then
+			echo "validate_mdc_frontmatter:: Warning: Rule '${name}' has ${empty_value_lines} frontmatter field(s) with empty values" >&2
+			STATS_WARNINGS=$((STATS_WARNINGS + 1))
+		fi
+	fi
+
+	if [[ "${validation_failed}" == "true" ]]; then
+		return 1
+	fi
+
+	return 0
+}
 
 # Create a cursor rule file with the provided content
 #
@@ -70,9 +229,15 @@ create_cursor_rule_file() {
 		return 1
 	fi
 
-	if [[ ! -d "$CURSOR_RULES_DIR" ]]; then
-		if ! mkdir -p "$CURSOR_RULES_DIR"; then
-			echo "Failed to create directory: $CURSOR_RULES_DIR" >&2
+	# Validate rule before creating
+	if ! validate_rule "${name}" "${file_content}" "${globs}" "${description}" "${cursor_always_apply}"; then
+		echo "create_cursor_rule_file:: Validation failed for rule '${name}'" >&2
+		return 1
+	fi
+
+	if [[ ! -d "${CURSOR_RULES_DIR}" ]]; then
+		if ! mkdir -p "${CURSOR_RULES_DIR}"; then
+			echo "create_cursor_rule_file:: Failed to create directory: ${CURSOR_RULES_DIR}" >&2
 			return 1
 		fi
 	fi
@@ -91,14 +256,27 @@ create_cursor_rule_file() {
 	local globs_formatted
 	globs_formatted=$(jq -r '.[]' <<<"${globs}" 2>/dev/null | sed 's/^/  - "/' | sed 's/$/"/' || echo "")
 
-	local new_content
-	new_content=$(
+	local frontmatter_content
+	frontmatter_content=$(
 		cat <<EOF
----
 description: $description
 globs:
 ${globs_formatted}
 alwaysApply: $cursor_always_apply
+EOF
+	)
+
+	# Validate MDC frontmatter syntax
+	if ! validate_mdc_frontmatter "${name}" "${frontmatter_content}"; then
+		echo "create_cursor_rule_file:: MDC frontmatter validation failed for rule '${name}'" >&2
+		return 1
+	fi
+
+	local new_content
+	new_content=$(
+		cat <<EOF
+---
+${frontmatter_content}
 ---
 
 $file_content
@@ -106,15 +284,24 @@ EOF
 	)
 
 	# Check if content actually changed
-	if [[ "$existing_content" == "$new_content" ]]; then
-		echo "No changes: $cursor_rule_file_abs"
+	if [[ "${existing_content}" == "${new_content}" ]]; then
+		echo "No changes: ${cursor_rule_file_abs}"
+		STATS_UNCHANGED=$((STATS_UNCHANGED + 1))
 	else
-		show_diff "$cursor_rule_file" "$new_content"
-		echo "$new_content" >"$cursor_rule_file"
-		if [[ -f "$cursor_rule_file" ]]; then
-			echo "Updated: $cursor_rule_file_abs"
+		show_diff "${cursor_rule_file}" "${new_content}"
+		echo "${new_content}" >"${cursor_rule_file}"
+		if [[ -f "${cursor_rule_file}" ]]; then
+			if [[ -n "${existing_content}" ]]; then
+				echo "Updated: ${cursor_rule_file_abs}"
+				STATS_UPDATED=$((STATS_UPDATED + 1))
+			else
+				echo "Created: ${cursor_rule_file_abs}"
+				STATS_CREATED=$((STATS_CREATED + 1))
+			fi
 		else
-			echo "Created: $cursor_rule_file_abs"
+			echo "create_cursor_rule_file:: Error: Failed to write rule file: ${cursor_rule_file_abs}" >&2
+			STATS_ERRORS=$((STATS_ERRORS + 1))
+			return 1
 		fi
 	fi
 
@@ -134,24 +321,24 @@ show_diff() {
 	local new_content="$2"
 	local temp_file
 	temp_file=$(mktemp)
-	chmod 0600 "$temp_file"
+	chmod 0600 "${temp_file}"
 
 	# Cleanup trap handler
-	trap 'rm -f "$temp_file"' EXIT
+	trap 'rm -f "${temp_file}"' EXIT
 
-	echo "$new_content" >"$temp_file"
+	echo "${new_content}" >"${temp_file}"
 
-	if [[ -f "$file_path" ]]; then
-		if ! diff -u --color=always "$file_path" "$temp_file"; then
-			echo "Differences found between $file_path and $temp_file"
+	if [[ -f "${file_path}" ]]; then
+		if ! diff -u --color=always "${file_path}" "${temp_file}"; then
+			echo "show_diff:: Differences found between ${file_path} and ${temp_file}"
 		fi
 	else
-		echo "File does not exist: $file_path"
+		echo "show_diff:: File does not exist: ${file_path}"
 	fi
 
 	# Remove trap and cleanup
 	trap - EXIT
-	rm -f "$temp_file"
+	rm -f "${temp_file}"
 	return $?
 }
 
@@ -198,6 +385,7 @@ EOF
 		# Skip warcraft and lotr rules unless INCLUDE_ALL is true
 		if [[ "${INCLUDE_ALL}" != "true" ]] && [[ "${SKIPPED_RULES[*]}" =~ ${name} ]]; then
 			echo "fill_quest_log:: Skipping ${name} (use --all to include)"
+			STATS_SKIPPED=$((STATS_SKIPPED + 1))
 			continue
 		fi
 
@@ -291,7 +479,7 @@ Generating daily-quests (Cursor commands).
 
 EOF
 
-		if [[ ! -d "${cursor_commands_dir}" ]]; then
+	if [[ ! -d "${cursor_commands_dir}" ]]; then
 		if ! mkdir -p "${cursor_commands_dir}"; then
 			echo "generate_commands:: Failed to create daily-quests directory: ${cursor_commands_dir}" >&2
 			return 1
@@ -369,6 +557,40 @@ EOF
 	return 0
 }
 
+# Print summary statistics
+#
+# Side Effects:
+# - Displays summary report to stdout
+print_summary() {
+	cat <<EOF
+
+=====
+Summary
+=====
+Rules:
+  Created: ${STATS_CREATED}
+  Updated: ${STATS_UPDATED}
+  Unchanged: ${STATS_UNCHANGED}
+  Skipped: ${STATS_SKIPPED}
+  Errors: ${STATS_ERRORS}
+  Warnings: ${STATS_WARNINGS}
+  Total processed: $((STATS_CREATED + STATS_UPDATED + STATS_UNCHANGED + STATS_SKIPPED + STATS_ERRORS))
+  Total lines: ${STATS_TOTAL_LINES}
+
+EOF
+
+	if ((STATS_ERRORS > 0)); then
+		echo "print_summary:: Some rules failed validation. Please review errors above." >&2
+		return 1
+	elif ((STATS_WARNINGS > 0)); then
+		echo "print_summary:: Some warnings were generated. Please review warnings above."
+		return 0
+	else
+		echo "print_summary:: All rules processed successfully."
+		return 0
+	fi
+}
+
 # Determine the target directory for rule generation
 #
 # Side Effects:
@@ -377,11 +599,11 @@ EOF
 determine_target_directory() {
 	local git_root
 	if git_root=$(git rev-parse --show-toplevel 2>/dev/null); then
-		TARGET_DIR="$git_root"
+		TARGET_DIR="${git_root}"
 		echo "Git repository detected"
-		echo "using git root: $git_root"
+		echo "using git root: ${git_root}"
 	else
-		TARGET_DIR=${TARGET_DIR:-$PWD}
+		TARGET_DIR=${TARGET_DIR:-${PWD}}
 		echo "Not in a git repository"
 	fi
 
@@ -469,6 +691,9 @@ EOF
 		generate_commands "${TARGET_DIR}"
 	fi
 
+	print_summary
+	local summary_exit_code=$?
+
 	cat <<EOF
 =====
 Finished ${BASH_SOURCE[0]:-$0}
@@ -476,7 +701,7 @@ Finished ${BASH_SOURCE[0]:-$0}
 
 EOF
 
-	return 0
+	return ${summary_exit_code}
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
