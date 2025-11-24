@@ -13,6 +13,7 @@
 - `eval()` or `exec()` with user input
 - Mutable default arguments: `def func(items=[]):`
 - Global variables for state management
+- `__init__.py` files
 
 ## Mandatory Requirements, All Code Must Have
 
@@ -31,9 +32,6 @@
 
 - Test coverage ≥90%: `pytest --cov=src --cov-fail-under=90`
 - Type safety: `mypy src/ --strict`
-- Security: `bandit -r src/ -ll`
-- Formatting: `ruff format src/`
-- Linting: `ruff check src/`
 
 ## Enforcement Level, Strict
 
