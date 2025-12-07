@@ -252,16 +252,16 @@ execute_operations() {
 	fi
 
 	echo "execute_operations:: Running: gdlf --install"
+	local gdlf_args=("-i")
 	if [[ "${FORCE:-}" = "true" ]]; then
-		if ! "${GDLF_SCRIPT}" -i -f; then
-			echo "execute_operations:: Failed to execute: gdlf -i -f" >&2
-			return 1
-		fi
-	else
-		if ! "${GDLF_SCRIPT}" -i; then
-			echo "execute_operations:: Failed to execute: gdlf -i" >&2
-			return 1
-		fi
+		gdlf_args+=("-f")
+	fi
+	if [[ "${skip_confirmation:-}" = "true" ]]; then
+		gdlf_args+=("-y")
+	fi
+	if ! "${GDLF_SCRIPT}" "${gdlf_args[@]}"; then
+		echo "execute_operations:: Failed to execute: gdlf ${gdlf_args[*]}" >&2
+		return 1
 	fi
 
 	return 0
@@ -307,6 +307,7 @@ main() {
 	GDLF_SCRIPT="${gdlf_script}"
 
 	export FORCE
+	export skip_confirmation
 	export TRILLIAX_SCRIPT
 	export QUESTLOG_SCRIPT
 	export GDLF_SCRIPT
