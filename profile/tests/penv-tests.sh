@@ -92,7 +92,7 @@ teardown() {
 
 @test "penv should fail with invalid Python version" {
 	run penv python9.99
-	[[ "$status" -eq 0 ]]
+	[[ "$status" -ne 0 ]]
 	echo "$output" | grep -q "python9.99 not found"
 	echo "$output" | grep -q "Available Python versions:"
 }
@@ -186,13 +186,13 @@ teardown() {
 
 @test "penv should handle missing dependency files gracefully" {
 	run penv
-	[ "$status" -eq 0 ]
+	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "No dependency files found"
 }
 
 @test "penv should show Python and pip versions in output" {
 	run penv
-	[ "$status" -eq 0 ]
+	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Python version:"
 	echo "$output" | grep -q "Pip version:"
 }
@@ -203,7 +203,7 @@ teardown() {
 	export -f python3
 
 	run penv
-	[ "$status" -eq 0 ]
+	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Failed to create virtual environment"
 }
 
@@ -212,7 +212,7 @@ teardown() {
 	mkdir -p .venv/bin
 
 	run penv
-	[ "$status" -eq 0 ]
+	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Virtual environment exists, activating"
 	echo "$output" | grep -q "Creating virtual environment"
 }
@@ -237,7 +237,7 @@ teardown() {
 	touch .venv/test_file
 
 	run penv -d --delete
-	[ "$status" -eq 0 ]
+	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Removing existing virtual environment"
 }
 
@@ -248,6 +248,6 @@ teardown() {
 	export -f python3
 
 	run penv python9.99
-	[ "$status" -eq 0 ]
+	[[ "$status" -ne 0 ]]
 	echo "$output" | grep -q "Try installing Python via Homebrew"
 }

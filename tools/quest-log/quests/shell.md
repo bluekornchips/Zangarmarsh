@@ -53,7 +53,6 @@ Content inside comment blocks with curly braces are instructions and not intende
 #
 # {Description of script purpose}
 #
-set -eo pipefail
 
 usage() {
   cat <<EOF

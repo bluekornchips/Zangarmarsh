@@ -336,9 +336,8 @@ show_diff() {
 		echo "show_diff:: File does not exist: ${file_path}"
 	fi
 
-	# Remove trap and cleanup
-	trap - EXIT
 	rm -f "${temp_file}"
+	trap - EXIT
 	return $?
 }
 

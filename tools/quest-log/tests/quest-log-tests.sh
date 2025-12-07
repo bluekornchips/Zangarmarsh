@@ -96,7 +96,11 @@ setup() {
 
 teardown() {
 	# Clean up test directory
-	[[ -n "${TEST_TEMP_DIR}" ]] && [[ -d "${TEST_TEMP_DIR}" ]] && rm -rf "${TEST_TEMP_DIR}"
+	if [[ -n "${TEST_TEMP_DIR}" ]] && [[ -d "${TEST_TEMP_DIR}" ]]; then
+		if ! rm -rf "${TEST_TEMP_DIR}"; then
+			echo "Failed to cleanup test directory: ${TEST_TEMP_DIR}" >&2
+		fi
+	fi
 
 	# Reset statistics
 	STATS_CREATED=0

@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set +e
 
 # NVM lazy loading function
 # Loads NVM environment when first called, then delegates to the real nvm command
@@ -66,7 +65,9 @@ _penv_install_dependencies() {
 
 	if [[ -f "pyproject.toml" ]]; then
 		echo "Found pyproject.toml - installing with pip."
-		if pip install -e ".[dev]" 2>/dev/null || pip install -e . 2>/dev/null; then
+		if pip install -e ".[dev]" 2>/dev/null; then
+			dependency_installed=true
+		elif pip install -e . 2>/dev/null; then
 			dependency_installed=true
 		else
 			echo "pip install failed, you may need to install dependencies manually" >&2
@@ -142,7 +143,7 @@ EOF
 		echo "Available Python versions:" >&2
 		find /usr/bin -maxdepth 1 -name "python*" -type f 2>/dev/null | head -5 || echo "No Python versions found in /usr/bin" >&2
 		[[ "$PLATFORM" == "macos" ]] && echo "Try installing Python via Homebrew: brew install python" >&2
-		return 0
+		return 1
 	fi
 
 	# Show Python version info

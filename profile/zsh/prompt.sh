@@ -2,7 +2,6 @@
 
 # Zsh prompt configuration
 # This script configures the zsh prompt with git branch, kubectl context, and custom formatting
-set +e
 
 setopt PROMPT_SUBST
 

@@ -22,7 +22,6 @@ Pragmatic review criteria for bash/shell script repositories. Focus on security,
 
 ## Error Handling (Must Fix)
 
-- [ ] _`set -eo pipefail`_: All scripts use strict error handling
 - [ ] _Explicit return codes_: Functions return 0 (success) or non-zero (failure)
 - [ ] _No `exit` in functions_: Use `return`, not `exit` (except in main) - allows sourcing
 - [ ] _Errors to stderr_: All error output uses `>&2`
@@ -134,7 +133,7 @@ Pragmatic review criteria for bash/shell script repositories. Focus on security,
 ### Priority Order
 
 1. _Critical Security_ - Security violations, error handling failures, temp file cleanup
-2. _Error Handling_ - Missing `set -eo pipefail`, no error checking, broken functionality
+2. _Error Handling_ - Missing error checking, broken functionality, improper return codes
 3. _Documentation_ - README mismatches, missing docs, logging consistency
 4. _Code Quality_ - Function granularity, test coverage, variable naming, organization
 
@@ -159,7 +158,7 @@ Pragmatic review criteria for bash/shell script repositories. Focus on security,
 ### Critical Issues
 
 - [ ] Unquoted variable - File: `path/to/file.sh:123`
-- [ ] Missing `set -eo pipefail` - File: `path/to/file.sh:45`
+- [ ] Missing error checking - File: `path/to/file.sh:45`
 
 ### Important Improvements
 
@@ -167,7 +166,7 @@ Pragmatic review criteria for bash/shell script repositories. Focus on security,
 
 ### Recommendations
 
-1. Add `set -eo pipefail` to all scripts
+1. Add explicit error checking for critical operations
 2. Consider refactoring large scripts to Python/Go
 ```
 

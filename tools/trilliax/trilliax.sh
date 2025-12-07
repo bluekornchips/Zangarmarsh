@@ -250,16 +250,75 @@ validate_targets() {
 # Main entry point for the trilliax cleanup script
 #
 # Inputs:
-# - $1, target_dir, optional directory to clean (default: current directory)
+# - Command line arguments: [OPTIONS] [DIRECTORY]
 #
 # Side Effects:
+# - Parses command line arguments
 # - Performs cleanup operations for selected targets in the specified directory
 # - Shows progress messages for each cleanup operation
 # - Uses global DRY_RUN variable to determine dry-run mode
 # - Returns 0 on success, 1 on error
 main() {
-	local target_dir="${1:-.}"
+	local target_dir="."
+	local targets_string=""
+	local all_flag="false"
 
+	# Parse command line arguments
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+		-d | --dir)
+			if [[ -z "${2:-}" ]] || [[ "${2:-}" == -* ]]; then
+				echo "main:: --dir requires a directory path" >&2
+				echo "main:: Use '$(basename "$0") --help' for usage information" >&2
+				return 1
+			fi
+			target_dir="${2}"
+			shift 2
+			;;
+		-t | --targets)
+			if [[ -z "${2:-}" ]] || [[ "${2:-}" == -* ]]; then
+				echo "main:: --targets requires a comma-separated list of targets" >&2
+				echo "main:: Use '$(basename "$0") --help' for usage information" >&2
+				return 1
+			fi
+			targets_string="${2}"
+			shift 2
+			;;
+		-a | --all)
+			all_flag="true"
+			shift
+			;;
+		-r | --dry-run)
+			DRY_RUN="true"
+			shift
+			;;
+		-h | --help)
+			usage
+			return 0
+			;;
+		*)
+			if [[ -d "${1}" ]]; then
+				target_dir="${1}"
+				shift
+			else
+				echo "main:: Unknown option '${1}'" >&2
+				echo "main:: Use '$(basename "$0") --help' for usage information" >&2
+				return 1
+			fi
+			;;
+		esac
+	done
+
+	# Validate targets
+	if ! validate_targets "${targets_string}" "${all_flag}"; then
+		return 1
+	fi
+
+	# Set DRY_RUN default if not set
+	DRY_RUN="${DRY_RUN:-false}"
+	export DRY_RUN
+
+	# Validate target directory
 	if [[ -z "${target_dir}" ]]; then
 		echo "main:: target_dir is required" >&2
 		return 1
@@ -317,65 +376,6 @@ main() {
 
 # Execute main function if script is called directly
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
-	target_dir="."
-	DRY_RUN="${DRY_RUN}"
-	targets_string=""
-	all_flag="false"
-
-	# Parse command line arguments
-	while [[ $# -gt 0 ]]; do
-		case "$1" in
-		-d | --dir)
-			if [[ -z "${2:-}" ]] || [[ "${2:-}" == -* ]]; then
-				echo "trilliax:: --dir requires a directory path" >&2
-				echo "trilliax:: Use '$(basename "$0") --help' for usage information" >&2
-				exit 1
-			fi
-			target_dir="${2}"
-			shift 2
-			;;
-		-t | --targets)
-			if [[ -z "${2:-}" ]] || [[ "${2:-}" == -* ]]; then
-				echo "trilliax:: --targets requires a comma-separated list of targets" >&2
-				echo "trilliax:: Use '$(basename "$0") --help' for usage information" >&2
-				exit 1
-			fi
-			targets_string="${2}"
-			shift 2
-			;;
-		-a | --all)
-			all_flag="true"
-			shift
-			;;
-		-r | --dry-run)
-			DRY_RUN="true"
-			shift
-			;;
-		-h | --help)
-			usage
-			exit 0
-			;;
-		*)
-			if [[ -d "${1}" ]]; then
-				target_dir="${1}"
-				shift
-			else
-				echo "trilliax:: Unknown option '${1}'" >&2
-				echo "trilliax:: Use '$(basename "$0") --help' for usage information" >&2
-				exit 1
-			fi
-			;;
-		esac
-	done
-
-	# Validate targets
-	if ! validate_targets "${targets_string}" "${all_flag}"; then
-		exit 1
-	fi
-
-	DRY_RUN="${DRY_RUN-false}"
-
-	export DRY_RUN
-
-	main "${target_dir}"
+	main "$@"
+	exit $?
 fi

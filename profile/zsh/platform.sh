@@ -2,9 +2,22 @@
 #
 # Platform detection and configuration for Zsh
 # Detects macOS, Linux, and WSL environments
-set +e
 
 # Detect platform with architecture
+#
+# Purpose:
+# - Detects the operating system platform and architecture
+# - Returns platform identifier in format: os_arch (e.g., macos_arm64, linux_x86_64)
+#
+# Inputs:
+# - None (uses environment variables OSTYPE and /proc/version)
+#
+# Side Effects:
+# - None (pure function)
+#
+# Returns:
+# - 0 on success
+# - Outputs platform string to stdout (e.g., "macos_arm64", "linux_x86_64", "wsl_x86_64")
 detect_platform() {
 	local os_type="unknown"
 	local arch

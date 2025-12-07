@@ -115,16 +115,7 @@ See `tools/README.md` for detailed documentation and usage examples.
 
 ```bash
 # Run all tests
-make test-all
-
-# Format shell scripts
-make format
-
-# Check shell scripts
-make lint
-
-# Run comprehensive checks
-make check
+make test
 
 # Run specific test suites
 bats profile/tests/
