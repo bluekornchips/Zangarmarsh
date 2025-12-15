@@ -7,8 +7,11 @@ SCRIPT="$GIT_ROOT/tools/hearthstone/hearthstone.sh"
 [[ ! -f "$SCRIPT" ]] && echo "Script not found: $SCRIPT" >&2 && return 1
 
 setup() {
-
+	set +e
+	trap - EXIT ERR
 	source "$SCRIPT"
+	trap - EXIT ERR
+	set +e
 
 	return 0
 }
@@ -66,12 +69,12 @@ mock_commands_failure() {
 ########################################################
 # verify_git_repository
 ########################################################
-@test "verify_git_repository::succeeds with valid directory structure" {
+@test "verify_git_repository:: succeeds with valid directory structure" {
 	run verify_git_repository
 	[[ "$status" -eq 0 ]]
 }
 
-@test "verify_git_repository::fails when tools directory missing" {
+@test "verify_git_repository:: fails when tools directory missing" {
 	GIT_ROOT="/nonexistent/path"
 
 	run verify_git_repository
@@ -83,7 +86,7 @@ mock_commands_failure() {
 ########################################################
 # vscodeoverride
 ########################################################
-@test "vscodeoverride::syncs when directory is empty" {
+@test "vscodeoverride:: syncs when directory is empty" {
 	FORCE=false
 	export FORCE
 
@@ -99,7 +102,7 @@ mock_commands_failure() {
 	cd - >/dev/null || return 1
 }
 
-@test "vscodeoverride::skips when directory exists and FORCE is false" {
+@test "vscodeoverride:: skips when directory exists and FORCE is false" {
 	FORCE=false
 	export FORCE
 
@@ -117,7 +120,7 @@ mock_commands_failure() {
 	cd - >/dev/null || return 1
 }
 
-@test "vscodeoverride::replaces when FORCE is true" {
+@test "vscodeoverride:: replaces when FORCE is true" {
 	FORCE=true
 	export FORCE
 
@@ -137,7 +140,7 @@ mock_commands_failure() {
 ########################################################
 # execute_operations
 ########################################################
-@test "execute_operations::runs all commands successfully without FORCE" {
+@test "execute_operations:: runs all commands successfully without FORCE" {
 	mock_commands_success
 	FORCE=false
 	export FORCE
@@ -151,7 +154,7 @@ mock_commands_failure() {
 	grep -q "execute_operations:: Running: gdlf --install" <<<"$output"
 }
 
-@test "execute_operations::runs all commands including trilliax with FORCE" {
+@test "execute_operations:: runs all commands including trilliax with FORCE" {
 	mock_commands_success
 	FORCE=true
 	export FORCE
@@ -165,7 +168,7 @@ mock_commands_failure() {
 	grep -q "execute_operations:: Running: gdlf --install" <<<"$output"
 }
 
-@test "execute_operations::fails when trilliax fails with FORCE" {
+@test "execute_operations:: fails when trilliax fails with FORCE" {
 	mock_commands_failure
 	FORCE=true
 	export FORCE
@@ -176,7 +179,7 @@ mock_commands_failure() {
 	grep -q "execute_operations:: Failed to execute: trilliax --all" <<<"$output"
 }
 
-@test "execute_operations::passes force flag to gdlf when FORCE is true" {
+@test "execute_operations:: passes force flag to gdlf when FORCE is true" {
 	local mock_dir
 	mock_dir="$(mktemp -d)"
 
@@ -205,7 +208,7 @@ mock_commands_failure() {
 	grep -q "Args: -i -f" <<<"$output"
 }
 
-@test "execute_operations::does not pass force flag to gdlf when FORCE is false" {
+@test "execute_operations:: does not pass force flag to gdlf when FORCE is false" {
 	local mock_dir
 	mock_dir="$(mktemp -d)"
 
@@ -238,7 +241,7 @@ mock_commands_failure() {
 ########################################################
 # build_deck
 ########################################################
-@test "build_deck::succeeds when jq is installed" {
+@test "build_deck:: succeeds when jq is installed" {
 	install_jq() {
 		echo "install_jq:: jq installed"
 		return 0
@@ -249,7 +252,7 @@ mock_commands_failure() {
 	[[ "$status" -eq 0 ]]
 }
 
-@test "build_deck::succeeds when jq needs installation but succeeds" {
+@test "build_deck:: succeeds when jq needs installation but succeeds" {
 	command() {
 		case "$2" in
 		"jq") return 1 ;;
@@ -268,7 +271,7 @@ mock_commands_failure() {
 	[[ "$status" -eq 0 ]]
 }
 
-@test "build_deck::fails when jq installation fails" {
+@test "build_deck:: fails when jq installation fails" {
 	command() {
 		case "$2" in
 		"jq" | "apt-get" | "brew" | "pacman") return 1 ;;
@@ -291,21 +294,21 @@ mock_commands_failure() {
 ########################################################
 # main
 ########################################################
-@test "main::script handles help option" {
+@test "main:: script handles help option" {
 	run bash "$SCRIPT" --help
 	[[ "$status" -eq 0 ]]
 
 	grep -q "Usage:" <<<"$output"
 }
 
-@test "main::script handles unknown options" {
+@test "main:: script handles unknown options" {
 	run bash "$SCRIPT" --unknown
 	[[ "$status" -eq 1 ]]
 
 	grep -q "main:: Unknown option '--unknown'" <<<"$output"
 }
 
-@test "main::script handles yes flag to skip confirmation" {
+@test "main:: script handles yes flag to skip confirmation" {
 	mock_commands_success
 
 	run bash "$SCRIPT" --yes
@@ -314,20 +317,20 @@ mock_commands_failure() {
 	grep -q "Running Hearthstone" <<<"$output"
 }
 
-@test "main::script cancels when user declines confirmation" {
+@test "main:: script cancels when user declines confirmation" {
 	confirm_proceed() {
 		echo "confirm_proceed:: Operation cancelled by user"
 		return 1
 	}
 	export -f confirm_proceed
 
-	run main
+	run run_hearthstone
 	[[ "$status" -eq 1 ]]
 
 	grep -q "confirm_proceed:: Operation cancelled by user" <<<"$output"
 }
 
-@test "main::script handles force option" {
+@test "main:: script handles force option" {
 	run bash "$SCRIPT" --help
 	[[ "$status" -eq 0 ]]
 
@@ -335,7 +338,7 @@ mock_commands_failure() {
 	grep -q "Force operations" <<<"$output"
 }
 
-@test "main::script accepts force flag" {
+@test "main:: script accepts force flag" {
 	mock_commands_success
 
 	run bash "$SCRIPT" --yes --force
@@ -345,7 +348,7 @@ mock_commands_failure() {
 	grep -q "Hearthstone Complete" <<<"$output"
 }
 
-@test "main::script accepts short force flag" {
+@test "main:: script accepts short force flag" {
 	mock_commands_success
 
 	run bash "$SCRIPT" -y -f

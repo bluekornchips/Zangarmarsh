@@ -267,7 +267,7 @@ execute_operations() {
 	return 0
 }
 
-main() {
+run_hearthstone() {
 	local skip_confirmation
 	local trilliax_script
 	local questlog_script
@@ -295,8 +295,8 @@ main() {
 			return 0
 			;;
 		*)
-			echo "main:: Unknown option '${1}'" >&2
-			echo "main:: Use '$(basename "$0") --help' for usage information" >&2
+			echo "run_hearthstone:: Unknown option '${1}'" >&2
+			echo "run_hearthstone:: Use '$(basename "$0") --help' for usage information" >&2
 			return 1
 			;;
 		esac
@@ -330,7 +330,7 @@ Running Hearthstone
 EOF
 
 	if ! execute_operations; then
-		echo "main:: Hearthstone operations failed" >&2
+		echo "run_hearthstone:: Hearthstone operations failed" >&2
 		return 1
 	fi
 
@@ -346,6 +346,6 @@ EOF
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
-	main "$@"
+	run_hearthstone "$@"
 	exit $?
 fi

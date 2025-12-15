@@ -177,16 +177,6 @@ validate_mdc_frontmatter() {
 		validation_failed=true
 	fi
 
-	# Check for invalid YAML characters in keys (basic validation)
-	if echo "${frontmatter_content}" | grep -qE "^[^:]+:[[:space:]]*$"; then
-		local empty_value_lines
-		empty_value_lines=$(echo "${frontmatter_content}" | grep -cE "^[^:]+:[[:space:]]*$" || echo "0")
-		if ((empty_value_lines > 0)); then
-			echo "validate_mdc_frontmatter:: Warning: Rule '${name}' has ${empty_value_lines} frontmatter field(s) with empty values" >&2
-			STATS_WARNINGS=$((STATS_WARNINGS + 1))
-		fi
-	fi
-
 	if [[ "${validation_failed}" == "true" ]]; then
 		return 1
 	fi
@@ -254,14 +244,21 @@ create_cursor_rule_file() {
 
 	# Format globs for MDC frontmatter
 	local globs_formatted
-	globs_formatted=$(jq -r '.[]' <<<"${globs}" 2>/dev/null | sed 's/^/  - "/' | sed 's/$/"/' || echo "")
+	local glob_count
+	glob_count=$(echo "${globs}" | jq 'length' 2>/dev/null || echo "0")
+	if ((glob_count > 0)); then
+		globs_formatted=$(jq -r '.[]' <<<"${globs}" 2>/dev/null | sed 's/^/  - "/' | sed 's/$/"/' || echo "")
+		globs_formatted="
+${globs_formatted}"
+	else
+		globs_formatted=" []"
+	fi
 
 	local frontmatter_content
 	frontmatter_content=$(
 		cat <<EOF
 description: $description
-globs:
-${globs_formatted}
+globs:${globs_formatted}
 alwaysApply: $cursor_always_apply
 EOF
 	)
@@ -323,8 +320,7 @@ show_diff() {
 	temp_file=$(mktemp)
 	chmod 0600 "${temp_file}"
 
-	# Cleanup trap handler
-	trap 'rm -f "${temp_file}"' EXIT
+	trap 'rm -f "${temp_file}"' EXIT ERR
 
 	echo "${new_content}" >"${temp_file}"
 
@@ -332,13 +328,12 @@ show_diff() {
 		if ! diff -u --color=always "${file_path}" "${temp_file}"; then
 			echo "show_diff:: Differences found between ${file_path} and ${temp_file}"
 		fi
-	else
-		echo "show_diff:: File does not exist: ${file_path}"
 	fi
 
 	rm -f "${temp_file}"
-	trap - EXIT
-	return $?
+	trap cleanup EXIT ERR
+
+	return 0
 }
 
 # Create all rule files from the quest schema
@@ -618,7 +613,7 @@ determine_target_directory() {
 # - Processes command line options
 # - Generates rule files
 # - Exits with appropriate status code
-main() {
+run_quest_log() {
 	cat <<EOF
 =====
 Running ${BASH_SOURCE[0]:-$0}
@@ -627,7 +622,7 @@ EOF
 
 	# Check for jq availability
 	if ! command -v jq &>/dev/null; then
-		echo "main:: jq is required but not installed." >&2
+		echo "run_quest_log:: jq is required but not installed." >&2
 		exit 1
 	fi
 
@@ -653,7 +648,7 @@ EOF
 			exit 0
 			;;
 		-*)
-			echo "main:: Unknown option: ${1}" >&2
+			echo "run_quest_log:: Unknown option: ${1}" >&2
 			usage
 			exit 1
 			;;
@@ -668,17 +663,17 @@ EOF
 
 	# Change to target directory for file operations
 	if ! cd "${TARGET_DIR}"; then
-		echo "main:: Failed to change to target directory: ${TARGET_DIR}" >&2
+		echo "run_quest_log:: Failed to change to target directory: ${TARGET_DIR}" >&2
 		exit 1
 	fi
 
 	if [[ ! -d "${TARGET_DIR}" ]]; then
-		echo "main:: Target directory is required" >&2
+		echo "run_quest_log:: Target directory is required" >&2
 		exit 1
 	fi
 
 	if [[ ! -r "${SCHEMA_FILE}" ]]; then
-		echo "main:: Schema file not found: ${SCHEMA_FILE}" >&2
+		echo "run_quest_log:: Schema file not found: ${SCHEMA_FILE}" >&2
 		exit 1
 	fi
 
@@ -704,6 +699,6 @@ EOF
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
-	main "$@"
+	run_quest_log "$@"
 	exit $?
 fi

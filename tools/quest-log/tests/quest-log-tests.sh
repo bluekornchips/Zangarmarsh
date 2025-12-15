@@ -548,7 +548,7 @@ Line 3"
 ########################################################
 
 @test 'fill_quest_log:: generates core rule files by default' {
-	run main
+	run run_quest_log
 	[[ "$status" -eq 0 ]]
 	[[ -f "./$CURSOR_RULES_DIR/rules-always.mdc" ]]
 	[[ -f "./$CURSOR_RULES_DIR/rules-author.mdc" ]]
@@ -557,7 +557,7 @@ Line 3"
 }
 
 @test 'fill_quest_log:: skips warcraft and lotr by default' {
-	run main
+	run run_quest_log
 	[[ "$status" -eq 0 ]]
 	[[ ! -f "./$CURSOR_RULES_DIR/rules-lotr.mdc" ]]
 	[[ ! -f "./$CURSOR_RULES_DIR/rules-warcraft.mdc" ]]
@@ -566,7 +566,7 @@ Line 3"
 }
 
 @test 'fill_quest_log:: generates all rule files with --all flag' {
-	run main --all
+	run run_quest_log --all
 	[[ "$status" -eq 0 ]]
 	[[ -f "./$CURSOR_RULES_DIR/rules-always.mdc" ]]
 	[[ -f "./$CURSOR_RULES_DIR/rules-author.mdc" ]]
@@ -577,7 +577,7 @@ Line 3"
 }
 
 @test 'fill_quest_log:: generates non-empty files' {
-	run main
+	run run_quest_log
 	[[ "$status" -eq 0 ]]
 
 	for file in "./$CURSOR_RULES_DIR"/*.mdc; do
@@ -589,7 +589,7 @@ Line 3"
 }
 
 @test 'fill_quest_log:: generates files with rule headers' {
-	run main
+	run run_quest_log
 	[[ "$status" -eq 0 ]]
 
 	for file in "./$CURSOR_RULES_DIR"/*.mdc; do
@@ -601,7 +601,7 @@ Line 3"
 }
 
 @test 'fill_quest_log:: generates files with proper formatting' {
-	run main
+	run run_quest_log
 	[[ "$status" -eq 0 ]]
 
 	for file in "./$CURSOR_RULES_DIR"/*.mdc; do
@@ -683,83 +683,83 @@ Line 3"
 # Main
 ########################################################
 
-@test 'main:: fails when target directory does not exist' {
+@test 'run_quest_log:: fails when target directory does not exist' {
 	TARGET_DIR="/tmp/does-not-exist"
 
-	run main
+	run run_quest_log
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "main:: Failed to change to target directory"
+	echo "$output" | grep -q "run_quest_log:: Failed to change to target directory"
 }
 
-@test 'main:: requires readable schema file' {
+@test 'run_quest_log:: requires readable schema file' {
 	export SCHEMA_FILE="/tmp/does-not-exist"
 
-	run main
+	run run_quest_log
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "main:: Schema file not found"
+	echo "$output" | grep -q "run_quest_log:: Schema file not found"
 }
 
-@test 'main:: validates schema file exists and is readable' {
+@test 'run_quest_log:: validates schema file exists and is readable' {
 	#shellcheck disable=SC2031
 	[[ -f "$SCHEMA_FILE" ]]
 	#shellcheck disable=SC2031
 	[[ -r "$SCHEMA_FILE" ]]
 }
 
-@test 'main:: displays help message' {
-	run main --help
+@test 'run_quest_log:: displays help message' {
+	run run_quest_log --help
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Generate agentic tool rules for Cursor"
 	echo "$output" | grep -q "git"
 	echo "$output" | grep -q "all"
 }
 
-@test 'main:: handles unknown options' {
-	run main --unknown-option
+@test 'run_quest_log:: handles unknown options' {
+	run run_quest_log --unknown-option
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "main:: Unknown option"
+	echo "$output" | grep -q "run_quest_log:: Unknown option"
 }
 
-@test 'main:: handles help option' {
-	run main --help
+@test 'run_quest_log:: handles help option' {
+	run run_quest_log --help
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Generate agentic tool rules"
 }
 
-@test 'main:: handles invalid options' {
-	run main --invalid-option
+@test 'run_quest_log:: handles invalid options' {
+	run run_quest_log --invalid-option
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "main:: Unknown option"
+	echo "$output" | grep -q "run_quest_log:: Unknown option"
 }
 
-@test 'main:: uses git root when in git repository' {
+@test 'run_quest_log:: uses git root when in git repository' {
 	mock_git_in_repo
 
-	run main
+	run run_quest_log
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Git repository detected"
 	echo "$output" | grep -q "using git root: $TEST_TEMP_DIR"
 }
 
-@test 'main:: uses specified directory when not in git repository' {
+@test 'run_quest_log:: uses specified directory when not in git repository' {
 	mock_git_not_in_repo
 
-	run main
+	run run_quest_log
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Not in a git repository"
 }
 
-@test 'main:: creates files in git root directory when in git repo' {
+@test 'run_quest_log:: creates files in git root directory when in git repo' {
 	mock_git_in_repo
 
-	run main
+	run run_quest_log
 	[[ "$status" -eq 0 ]]
 	[[ -f "$TEST_TEMP_DIR/.cursor/rules/rules-always.mdc" ]]
 	[[ -f "$TEST_TEMP_DIR/.cursor/rules/rules-author.mdc" ]]
 }
 
-@test 'main:: handles --all flag' {
-	run main --all
+@test 'run_quest_log:: handles --all flag' {
+	run run_quest_log --all
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -v "fill_quest_log:: Skipping warcraft"
 	echo "$output" | grep -v "fill_quest_log:: Skipping lotr"
@@ -767,22 +767,22 @@ Line 3"
 	[[ -f "./$CURSOR_RULES_DIR/rules-lotr.mdc" ]]
 }
 
-@test 'main:: handles -a short flag' {
-	run main -a
+@test 'run_quest_log:: handles -a short flag' {
+	run run_quest_log -a
 	[[ "$status" -eq 0 ]]
 	[[ -f "./$CURSOR_RULES_DIR/rules-warcraft.mdc" ]]
 	[[ -f "./$CURSOR_RULES_DIR/rules-lotr.mdc" ]]
 }
 
-@test 'main:: displays summary at end of execution' {
-	run main
+@test 'run_quest_log:: displays summary at end of execution' {
+	run run_quest_log
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Summary"
 	echo "$output" | grep -q "Total processed:"
 	echo "$output" | grep -q "Total lines:"
 }
 
-@test 'main:: validation prevents creation of invalid rules' {
+@test 'run_quest_log:: validation prevents creation of invalid rules' {
 	local invalid_schema
 	invalid_schema=$(
 		cat <<EOF
@@ -810,13 +810,13 @@ EOF
 
 	STATS_ERRORS=0
 
-	run main
+	run run_quest_log
 	[[ "$STATS_ERRORS" -gt 0 ]]
 	echo "$output" | grep -q "validate_rule:: Error"
 }
 
-@test 'main:: tracks statistics correctly across multiple rules' {
-	run main
+@test 'run_quest_log:: tracks statistics correctly across multiple rules' {
+	run run_quest_log
 	[[ "$status" -eq 0 ]]
 
 	echo "$output" | grep -q "Summary"

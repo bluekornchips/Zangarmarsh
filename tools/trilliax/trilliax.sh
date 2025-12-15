@@ -198,8 +198,6 @@ clean_node() {
 		-type d -name "node_modules" \
 		-o -type d -name ".npm" \
 		-o -type d -name ".yarn" \
-		-o -name "package-lock.json" \
-		-o -name "yarn.lock" \
 		-o -name ".yarnrc.yml" \
 		-o -name "npm-debug.log*" \
 		-o -name "yarn-debug.log*" \
@@ -258,7 +256,7 @@ validate_targets() {
 # - Shows progress messages for each cleanup operation
 # - Uses global DRY_RUN variable to determine dry-run mode
 # - Returns 0 on success, 1 on error
-main() {
+run_trilliax() {
 	local target_dir="."
 	local targets_string=""
 	local all_flag="false"
@@ -268,8 +266,8 @@ main() {
 		case "$1" in
 		-d | --dir)
 			if [[ -z "${2:-}" ]] || [[ "${2:-}" == -* ]]; then
-				echo "main:: --dir requires a directory path" >&2
-				echo "main:: Use '$(basename "$0") --help' for usage information" >&2
+				echo "run_trilliax:: --dir requires a directory path" >&2
+				echo "run_trilliax:: Use '$(basename "$0") --help' for usage information" >&2
 				return 1
 			fi
 			target_dir="${2}"
@@ -277,8 +275,8 @@ main() {
 			;;
 		-t | --targets)
 			if [[ -z "${2:-}" ]] || [[ "${2:-}" == -* ]]; then
-				echo "main:: --targets requires a comma-separated list of targets" >&2
-				echo "main:: Use '$(basename "$0") --help' for usage information" >&2
+				echo "run_trilliax:: --targets requires a comma-separated list of targets" >&2
+				echo "run_trilliax:: Use '$(basename "$0") --help' for usage information" >&2
 				return 1
 			fi
 			targets_string="${2}"
@@ -301,8 +299,8 @@ main() {
 				target_dir="${1}"
 				shift
 			else
-				echo "main:: Unknown option '${1}'" >&2
-				echo "main:: Use '$(basename "$0") --help' for usage information" >&2
+				echo "run_trilliax:: Unknown option '${1}'" >&2
+				echo "run_trilliax:: Use '$(basename "$0") --help' for usage information" >&2
 				return 1
 			fi
 			;;
@@ -320,31 +318,31 @@ main() {
 
 	# Validate target directory
 	if [[ -z "${target_dir}" ]]; then
-		echo "main:: target_dir is required" >&2
+		echo "run_trilliax:: target_dir is required" >&2
 		return 1
 	fi
 
-	echo "main:: Apologies for the mess master, I shall tidy up immediately."
+	echo "run_trilliax:: Apologies for the mess master, I shall tidy up immediately."
 
 	# Set MAX_DEPTH globally so clean_fs can access it
 	MAX_DEPTH="${MAX_DEPTH:-${DEFAULT_MAX_DEPTH}}"
 
 	if [[ ! -d "${target_dir}" ]]; then
-		echo "main:: Directory '${target_dir}' does not exist" >&2
+		echo "run_trilliax:: Directory '${target_dir}' does not exist" >&2
 		return 1
 	fi
 
 	pushd "${target_dir}" >/dev/null
 	target_dir="$(pwd)"
 	popd >/dev/null
-	echo "main:: Cleaning directory: ${target_dir}"
+	echo "run_trilliax:: Cleaning directory: ${target_dir}"
 
 	if [[ -z "${ENABLED_TARGETS}" ]]; then
-		echo "main:: No targets selected for cleanup." >&2
+		echo "run_trilliax:: No targets selected for cleanup." >&2
 		return 1
 	fi
 
-	echo "main:: Filthy, filthy, FILTHY!"
+	echo "run_trilliax:: Filthy, filthy, FILTHY!"
 	local cleanup_count=0
 	# Convert space-separated string to array for safe iteration
 	local -a targets_array
@@ -371,11 +369,11 @@ main() {
 		esac
 	done
 
-	echo "main:: Please don't say such things! The master is back, and things need to be kept tidy."
+	echo "run_trilliax:: Please don't say such things! The master is back, and things need to be kept tidy."
 }
 
 # Execute main function if script is called directly
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
-	main "$@"
+	run_trilliax "$@"
 	exit $?
 fi

@@ -65,7 +65,6 @@ source /path/to/zangarmarsh/zangarmarsh.sh
 ### Node Target
 
 - `node_modules/` directories
-- Package lock files (`package-lock.json`, `yarn.lock`)
 - NPM cache directories
 
 ## Environment Variables

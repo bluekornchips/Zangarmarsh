@@ -4,6 +4,11 @@
 
 Generate AI assistant rules for Cursor based on project-specific rule templates. Quest Log reads from a JSON schema configuration and creates standardized rule files. Rules are installed locally in the project directory.
 
+## Prerequisites
+
+- Bash 3.2 or greater
+- `jq` (JSON processor)
+
 ## Install
 
 ```bash

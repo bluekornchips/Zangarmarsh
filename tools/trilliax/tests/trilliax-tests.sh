@@ -12,8 +12,12 @@ setup_file() {
 }
 
 setup() {
+	set +e
+	trap - EXIT ERR
 	# shellcheck disable=SC1091
 	source "$SCRIPT"
+	trap - EXIT ERR
+	set +e
 
 	export TEST_DIR
 	TEST_DIR="$(mktemp -d)"
@@ -48,7 +52,7 @@ teardown() {
 ########################################################
 # clean_fs
 ########################################################
-@test "clean_fs::removes empty directories" {
+@test "clean_fs:: removes empty directories" {
 	local test_dir="$TEST_CLEANUP_DIR"
 	mkdir -p "$test_dir/empty_dir"
 
@@ -57,7 +61,7 @@ teardown() {
 	[[ ! -d "$test_dir/empty_dir" ]]
 }
 
-@test "clean_fs::dry-run shows what would be removed" {
+@test "clean_fs:: dry-run shows what would be removed" {
 	local test_dir="$TEST_CLEANUP_DIR"
 	mkdir -p "$test_dir/empty_dir"
 
@@ -66,7 +70,7 @@ teardown() {
 	echo "$output" | grep -q "clean_fs:: Would remove: $test_dir/empty_dir"
 }
 
-@test "clean_fs::handles nested empty directories" {
+@test "clean_fs:: handles nested empty directories" {
 	local test_dir="$TEST_CLEANUP_DIR"
 	mkdir -p "$test_dir/empty_dir"
 	mkdir -p "$test_dir/empty_dir/empty_subdir"
@@ -77,7 +81,7 @@ teardown() {
 	[[ ! -d "$test_dir/empty_dir/empty_subdir" ]]
 }
 
-@test "clean_fs::handles nested empty directories with dry-run" {
+@test "clean_fs:: handles nested empty directories with dry-run" {
 	local test_dir="$TEST_CLEANUP_DIR"
 	mkdir -p "$test_dir/empty_dir"
 	mkdir -p "$test_dir/empty_dir/empty_subdir"
@@ -88,7 +92,7 @@ teardown() {
 	echo "$output" | grep -q "clean_fs:: Would remove: $test_dir/empty_dir/empty_subdir"
 }
 
-@test "clean_fs::respects max depth limit" {
+@test "clean_fs:: respects max depth limit" {
 	local test_dir="$TEST_CLEANUP_DIR"
 	# Create empty directories at different depths
 	mkdir -p "$test_dir/level1"
@@ -103,7 +107,7 @@ teardown() {
 	echo "$output" | grep -q "Would remove: $test_dir/level1/level2/level3" && false || true
 }
 
-@test "fs target::cleans empty directories with main function" {
+@test "fs target:: cleans empty directories with run_trilliax function" {
 	local test_dir="$TEST_CLEANUP_DIR"
 	mkdir -p "$test_dir/empty_to_clean"
 
@@ -112,7 +116,7 @@ teardown() {
 	[[ ! -d "$test_dir/empty_to_clean" ]]
 }
 
-@test "fs target::dry-run shows empty directories" {
+@test "fs target:: dry-run shows empty directories" {
 	local test_dir="$TEST_CLEANUP_DIR"
 	mkdir -p "$test_dir/empty_to_preview"
 
@@ -125,16 +129,16 @@ teardown() {
 ########################################################
 # Script structure and help
 ########################################################
-@test "main::has proper shebang and structure" {
+@test "main:: has proper shebang and structure" {
 	run bash -n "$SCRIPT"
 	[[ "$status" -eq 0 ]]
 }
 
-@test "main::is executable" {
+@test "main:: is executable" {
 	[[ -x "$SCRIPT" ]]
 }
 
-@test "usage::displays help when called with --help" {
+@test "usage:: displays help when called with --help" {
 	run "$SCRIPT" --help
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Usage: "
@@ -142,92 +146,92 @@ teardown() {
 	echo "$output" | grep -q "CLEANUP OPERATIONS:"
 }
 
-@test "usage::displays help when called with -h" {
+@test "usage:: displays help when called with -h" {
 	run "$SCRIPT" -h
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Usage: "
 }
 
-@test "main::handles unknown options" {
+@test "main:: handles unknown options" {
 	run "$SCRIPT" --invalid-option
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "trilliax:: Unknown option '--invalid-option'"
 	echo "$output" | grep -q "trilliax:: Use 'trilliax.sh --help' for usage information"
 }
 
-@test "main::rejects --dry-run option without targets" {
+@test "main:: rejects --dry-run option without targets" {
 	run "$SCRIPT" --dry-run
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "validate_targets:: No targets specified"
 }
 
-@test "main::rejects --dry-run with directory argument" {
+@test "main:: rejects --dry-run with directory argument" {
 	run "$SCRIPT" --dry-run "$TEST_CLEANUP_DIR"
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "validate_targets:: No targets specified"
 }
 
-@test "main::rejects DRY_RUN environment variable without targets" {
+@test "main:: rejects DRY_RUN environment variable without targets" {
 	run bash -c "DRY_RUN=true $SCRIPT $TEST_CLEANUP_DIR"
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "validate_targets:: No targets specified"
 }
 
-@test "main::rejects DRY_RUN override without targets" {
+@test "main:: rejects DRY_RUN override without targets" {
 	run bash -c "DRY_RUN=false $SCRIPT --dry-run $TEST_CLEANUP_DIR"
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "validate_targets:: No targets specified"
 }
 
-@test "main::rejects directory as first argument without targets" {
+@test "main:: rejects directory as first argument without targets" {
 	run "$SCRIPT" "$TEST_CLEANUP_DIR"
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "validate_targets:: No targets specified"
 }
 
-@test "main::rejects --dir option without targets" {
+@test "main:: rejects --dir option without targets" {
 	run "$SCRIPT" --dir "$TEST_CLEANUP_DIR"
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "validate_targets:: No targets specified"
 }
 
-@test "main::rejects -d option without targets" {
+@test "main:: rejects -d option without targets" {
 	run "$SCRIPT" -d "$TEST_CLEANUP_DIR"
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "validate_targets:: No targets specified"
 }
 
-@test "main::rejects --dir option with dry-run without targets" {
+@test "main:: rejects --dir option with dry-run without targets" {
 	run "$SCRIPT" --dir "$TEST_CLEANUP_DIR" --dry-run
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "validate_targets:: No targets specified"
 }
 
-@test "main::accepts --all option" {
+@test "main:: accepts --all option" {
 	run "$SCRIPT" --all "$TEST_CLEANUP_DIR"
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "main:: Cleaning directory: $TEST_CLEANUP_DIR"
+	echo "$output" | grep -q "run_trilliax:: Cleaning directory: $TEST_CLEANUP_DIR"
 	echo "$output" | grep -q "clean_cursor:: Cleaning .cursor directories."
 	echo "$output" | grep -q "clean_python:: Cleaning Python files."
 	echo "$output" | grep -q "clean_node:: Cleaning Node.js files."
 	echo "$output" | grep -q "clean_fs:: Cleaning empty directories."
 }
 
-@test "main::accepts -a option" {
+@test "main:: accepts -a option" {
 	run "$SCRIPT" -a "$TEST_CLEANUP_DIR"
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "main:: Cleaning directory: $TEST_CLEANUP_DIR"
+	echo "$output" | grep -q "run_trilliax:: Cleaning directory: $TEST_CLEANUP_DIR"
 	echo "$output" | grep -q "clean_cursor:: Cleaning .cursor directories."
 }
 
-@test "main::accepts --all with --dry-run" {
+@test "main:: accepts --all with --dry-run" {
 	run "$SCRIPT" --all --dry-run "$TEST_CLEANUP_DIR"
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "main:: Cleaning directory: $TEST_CLEANUP_DIR"
+	echo "$output" | grep -q "run_trilliax:: Cleaning directory: $TEST_CLEANUP_DIR"
 	echo "$output" | grep -q "Would remove:"
 }
 
-@test "main::accepts --all with --targets (all overrides targets)" {
+@test "main:: accepts --all with --targets (all overrides targets)" {
 	run "$SCRIPT" --all --targets cursor "$TEST_CLEANUP_DIR"
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "clean_cursor:: Cleaning .cursor directories."
@@ -239,7 +243,7 @@ teardown() {
 ########################################################
 # Target selection tests
 ########################################################
-@test "validate_targets::accepts --targets option with single target" {
+@test "validate_targets:: accepts --targets option with single target" {
 	run "$SCRIPT" --targets cursor --dry-run "$TEST_CLEANUP_DIR"
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "clean_cursor:: Cleaning .cursor directories."
@@ -248,7 +252,7 @@ teardown() {
 	echo "$output" | grep -q "clean_node:: Cleaning Node.js files." && false || true
 }
 
-@test "validate_targets::accepts --targets option with multiple targets" {
+@test "validate_targets:: accepts --targets option with multiple targets" {
 	run "$SCRIPT" --targets cursor,python --dry-run "$TEST_CLEANUP_DIR"
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "clean_cursor:: Cleaning .cursor directories."
@@ -256,7 +260,7 @@ teardown() {
 	echo "$output" | grep -q "clean_node:: Cleaning Node.js files." && false || true
 }
 
-@test "validate_targets::accepts -t option shorthand" {
+@test "validate_targets:: accepts -t option shorthand" {
 	run "$SCRIPT" -t python "$TEST_CLEANUP_DIR"
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "clean_python:: Cleaning Python files."
@@ -264,7 +268,7 @@ teardown() {
 	echo "$output" | grep -q "clean_node:: Cleaning Node.js files." && false || true
 }
 
-@test "validate_targets::handles --targets with all targets" {
+@test "validate_targets:: handles --targets with all targets" {
 	run "$SCRIPT" --targets cursor,python,node --dry-run "$TEST_CLEANUP_DIR"
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "clean_cursor:: Cleaning .cursor directories."
@@ -272,75 +276,75 @@ teardown() {
 	echo "$output" | grep -q "clean_node:: Cleaning Node.js files."
 }
 
-@test "validate_targets::handles --targets with dry-run" {
+@test "validate_targets:: handles --targets with dry-run" {
 	run "$SCRIPT" --targets node --dry-run "$TEST_CLEANUP_DIR"
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "clean_node:: Cleaning Node.js files."
 	echo "$output" | grep -q "Would remove:"
 }
 
-@test "validate_targets::handles invalid target" {
+@test "validate_targets:: handles invalid target" {
 	run "$SCRIPT" --targets invalid "$TEST_CLEANUP_DIR"
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "validate_targets:: Invalid target 'invalid'. Available targets:"
 }
 
-@test "validate_targets::handles mixed valid and invalid targets" {
+@test "validate_targets:: handles mixed valid and invalid targets" {
 	run "$SCRIPT" --targets cursor,invalid,python "$TEST_CLEANUP_DIR"
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "validate_targets:: Invalid target 'invalid'. Available targets:"
 }
 
-@test "validate_targets::handles --targets with spaces" {
+@test "validate_targets:: handles --targets with spaces" {
 	run "$SCRIPT" --targets "cursor, python" --dry-run "$TEST_CLEANUP_DIR"
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "clean_cursor:: Cleaning .cursor directories."
 	echo "$output" | grep -q "clean_python:: Cleaning Python files."
 }
 
-@test "validate_targets::handles --targets combined with directory" {
+@test "validate_targets:: handles --targets combined with directory" {
 	run "$SCRIPT" --targets python "$TEST_CLEANUP_DIR"
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "main:: Cleaning directory: $TEST_CLEANUP_DIR"
+	echo "$output" | grep -q "run_trilliax:: Cleaning directory: $TEST_CLEANUP_DIR"
 	echo "$output" | grep -q "clean_python:: Cleaning Python files."
 }
 
 ########################################################
 # Main
 ########################################################
-@test "main::fails when sourced without targets" {
-	run main "$TEST_CLEANUP_DIR"
+@test "run_trilliax:: fails when sourced without targets" {
+	run run_trilliax "$TEST_CLEANUP_DIR"
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "main:: No targets selected for cleanup."
+	echo "$output" | grep -q "run_trilliax:: No targets selected for cleanup."
 }
 
-@test "main::handles non-existent directory" {
-	run main "/non/existent/directory"
+@test "run_trilliax:: handles non-existent directory" {
+	run run_trilliax "/non/existent/directory"
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "main:: Directory '/non/existent/directory' does not exist"
+	echo "$output" | grep -q "run_trilliax:: Directory '/non/existent/directory' does not exist"
 }
 
-@test "main::fails when no directory argument provided" {
+@test "run_trilliax:: fails when no directory argument provided" {
 	cd "$TEST_CLEANUP_DIR" || return 1
-	run main
+	run run_trilliax
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "main:: No targets selected for cleanup."
+	echo "$output" | grep -q "run_trilliax:: No targets selected for cleanup."
 }
 
-@test "main::fails with relative path without targets" {
+@test "run_trilliax:: fails with relative path without targets" {
 	local relative_path="tools/trilliax/tests"
 	local absolute_path
 	absolute_path="$(cd "$GIT_ROOT/$relative_path" && pwd)"
 
-	run main "$GIT_ROOT/$relative_path"
+	run run_trilliax "$GIT_ROOT/$relative_path"
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "main:: No targets selected for cleanup."
+	echo "$output" | grep -q "run_trilliax:: No targets selected for cleanup."
 }
 
 ########################################################
 # Cleanup
 ########################################################
-@test "clean_cursor::removes .cursor directories" {
+@test "clean_cursor:: removes .cursor directories" {
 	local test_dir="$TEST_CLEANUP_DIR"
 	mkdir -p "$test_dir/.cursor/subdir"
 
@@ -349,7 +353,7 @@ teardown() {
 	[[ ! -d "$test_dir/.cursor" ]]
 }
 
-@test "clean_cursor::dry-run shows what would be removed" {
+@test "clean_cursor:: dry-run shows what would be removed" {
 	local test_dir="$TEST_CLEANUP_DIR"
 	mkdir -p "$test_dir/.cursor/subdir"
 
@@ -359,7 +363,7 @@ teardown() {
 	[[ -d "$test_dir/.cursor" ]]
 }
 
-@test "clean_python::removes Python files and directories" {
+@test "clean_python:: removes Python files and directories" {
 	local test_dir="$TEST_CLEANUP_DIR"
 
 	mkdir -p "$test_dir/venv"
@@ -380,7 +384,7 @@ teardown() {
 	[[ -f "$test_dir/.env" ]]
 }
 
-@test "clean_python::dry-run shows what would be removed" {
+@test "clean_python:: dry-run shows what would be removed" {
 	local test_dir="$TEST_CLEANUP_DIR"
 
 	mkdir -p "$test_dir/venv"
@@ -402,7 +406,7 @@ teardown() {
 	[[ -f "$test_dir/.env" ]]
 }
 
-@test "clean_node::removes Node.js files and directories" {
+@test "clean_node:: removes Node.js files and directories" {
 	local test_dir="$TEST_CLEANUP_DIR"
 
 	mkdir -p "$test_dir/node_modules"
@@ -426,7 +430,7 @@ teardown() {
 	[[ ! -f "$test_dir/yarn-error.log" ]]
 }
 
-@test "clean_node::dry-run shows what would be removed" {
+@test "clean_node:: dry-run shows what would be removed" {
 	local test_dir="$TEST_CLEANUP_DIR"
 
 	mkdir -p "$test_dir/node_modules"
@@ -448,26 +452,26 @@ teardown() {
 ########################################################
 # Dry-run integration tests
 ########################################################
-@test "main::dry-run integration test fails without targets" {
+@test "run_trilliax:: dry-run integration test fails without targets" {
 	local test_dir="$TEST_CLEANUP_DIR"
 
-	DRY_RUN=true run main "$test_dir"
+	DRY_RUN=true run run_trilliax "$test_dir"
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "main:: No targets selected for cleanup."
+	echo "$output" | grep -q "run_trilliax:: No targets selected for cleanup."
 }
 
 ########################################################
 # Integration tests
 ########################################################
-@test "main::full cleanup fails without targets" {
+@test "run_trilliax:: full cleanup fails without targets" {
 	local test_dir="$TEST_CLEANUP_DIR"
 
-	run main "$test_dir"
+	run run_trilliax "$test_dir"
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "main:: No targets selected for cleanup."
+	echo "$output" | grep -q "run_trilliax:: No targets selected for cleanup."
 }
 
-@test "main::cleanup fails to preserve files without targets" {
+@test "run_trilliax:: cleanup fails to preserve files without targets" {
 	local test_dir="$TEST_CLEANUP_DIR"
 
 	echo "keep me" >"$test_dir/important.txt"
@@ -475,50 +479,50 @@ teardown() {
 	mkdir -p "$test_dir/normal_dir"
 	echo "keep me" >"$test_dir/normal_dir/file.txt"
 
-	run main "$test_dir"
+	run run_trilliax "$test_dir"
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "main:: No targets selected for cleanup."
+	echo "$output" | grep -q "run_trilliax:: No targets selected for cleanup."
 }
 
-@test "main::cleanup fails to preserve .env and .nvmrc without targets" {
+@test "run_trilliax:: cleanup fails to preserve .env and .nvmrc without targets" {
 	local test_dir="$TEST_CLEANUP_DIR"
 
 	[[ -f "$test_dir/.env" ]]
 	[[ -f "$test_dir/.nvmrc" ]]
 
-	run main "$test_dir"
+	run run_trilliax "$test_dir"
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "main:: No targets selected for cleanup."
+	echo "$output" | grep -q "run_trilliax:: No targets selected for cleanup."
 }
 
 ########################################################
 # Edge case tests
 ########################################################
-@test "main::handles empty directory fails without targets" {
+@test "run_trilliax:: handles empty directory fails without targets" {
 	local empty_dir="$TEST_DIR/empty_test"
 	mkdir -p "$empty_dir"
 
-	run main "$empty_dir"
+	run run_trilliax "$empty_dir"
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "main:: No targets selected for cleanup."
+	echo "$output" | grep -q "run_trilliax:: No targets selected for cleanup."
 }
 
-@test "main::handles directory with spaces fails without targets" {
+@test "run_trilliax:: handles directory with spaces fails without targets" {
 	local spaced_dir="$TEST_DIR/test with spaces"
 	mkdir -p "$spaced_dir"
 
 	mkdir -p "$spaced_dir/.cursor"
 
-	run main "$spaced_dir"
+	run run_trilliax "$spaced_dir"
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "main:: No targets selected for cleanup."
+	echo "$output" | grep -q "run_trilliax:: No targets selected for cleanup."
 }
 
-@test "main::handles nested directory fails without targets" {
+@test "run_trilliax:: handles nested directory fails without targets" {
 	local nested_dir="$TEST_DIR/nested/test/deep"
 	mkdir -p "$nested_dir/.cursor"
 
-	run main "$TEST_DIR/nested"
+	run run_trilliax "$TEST_DIR/nested"
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "main:: No targets selected for cleanup."
+	echo "$output" | grep -q "run_trilliax:: No targets selected for cleanup."
 }
