@@ -35,6 +35,7 @@
   "editor.renderWhitespace": "all",
   "editor.lineNumbers": "on",
   "editor.fontSize": 14,
+  "editor.fontFamily": "DejaVu Sans Mono, monospace",
   "workbench.activityBar.orientation": "vertical",
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "[json]": {
