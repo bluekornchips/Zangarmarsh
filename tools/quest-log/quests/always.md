@@ -18,7 +18,7 @@
 - Generic responses without specific implementation details
 - Placeholder code without actual functionality
 - Never invoke git commands.
-- Parentheses in comments, unless they already exist. Use commas for speech patterns that would require parentheses instead.
+- Parentheses in comments, unless they already exist. When reviewing code, check if parentheses are already present in comments before making changes. Only preserve existing parentheses, never add new ones. Use commas for speech patterns that would require parentheses instead.
 
 ## Mandatory Response Requirements
 
