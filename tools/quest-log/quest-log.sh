@@ -23,6 +23,7 @@ and daily-quests are installed locally in the project directory.
 
 OPTIONS:
     -a, --all           Include all rules (including warcraft and lotr)
+    -f, --force         Force operations (replace existing VSCode settings)
     -h, --help          Show this help message
 
 EXAMPLES:
@@ -33,6 +34,7 @@ EOF
 }
 
 DEFAULT_INCLUDE_ALL=false
+DEFAULT_FORCE=false
 SKIPPED_RULES=("warcraft" "lotr")
 
 # Statistics tracking
@@ -551,6 +553,49 @@ EOF
 	return 0
 }
 
+# Sync VSCode settings from Zangarmarsh root to current directory
+#
+# Outputs:
+# - Status messages to stdout
+# - Error messages to stderr if copy operation fails
+#
+# Returns:
+# - 0 if sync is successful or already in git root
+# - 1 if copy operation fails
+vscodeoverride() {
+	if [[ -z "${GIT_ROOT:-}" ]]; then
+		echo "vscodeoverride:: GIT_ROOT is not set" >&2
+		return 1
+	fi
+
+	if [[ ! -d "${GIT_ROOT}/.vscode" ]]; then
+		echo "vscodeoverride:: VSCode settings directory not found in ${GIT_ROOT}/.vscode" >&2
+		return 1
+	fi
+
+	mkdir -p "${PWD}/.vscode"
+
+	if [[ "${FORCE:-}" = "true" ]]; then
+		if cp -rf "${GIT_ROOT}/.vscode/"* "${PWD}/.vscode/" 2>/dev/null || true; then
+			echo "vscodeoverride:: VSCode settings synced (replaced existing)"
+		else
+			echo "vscodeoverride:: Failed to copy VSCode settings" >&2
+			return 1
+		fi
+	elif [[ ! "$(ls -A "${PWD}/.vscode" 2>/dev/null)" ]]; then
+		if cp -rf "${GIT_ROOT}/.vscode/"* "${PWD}/.vscode/" 2>/dev/null || true; then
+			echo "vscodeoverride:: VSCode settings synced"
+		else
+			echo "vscodeoverride:: Failed to copy VSCode settings" >&2
+			return 1
+		fi
+	else
+		echo "vscodeoverride:: VSCode settings already exist (use --force to replace)"
+	fi
+
+	return 0
+}
+
 # Print summary statistics
 #
 # Side Effects:
@@ -635,12 +680,17 @@ EOF
 	# Environment variables with defaults
 	SCHEMA_FILE=${SCHEMA_FILE:-"${SCRIPT_DIR}/schema.json"}
 	INCLUDE_ALL=${INCLUDE_ALL:-"${DEFAULT_INCLUDE_ALL}"}
+	FORCE=${FORCE:-${DEFAULT_FORCE}}
 	TARGET_DIR=${TARGET_DIR:-${PWD}}
 
 	while [[ $# -gt 0 ]]; do
 		case $1 in
 		-a | --all)
 			INCLUDE_ALL=true
+			shift
+			;;
+		-f | --force)
+			FORCE=true
 			shift
 			;;
 		-h | --help)
@@ -660,6 +710,9 @@ EOF
 	done
 
 	determine_target_directory
+
+	# Set GIT_ROOT to TARGET_DIR (which is the git root if in a git repo, or current directory)
+	GIT_ROOT="${TARGET_DIR}"
 
 	# Change to target directory for file operations
 	if ! cd "${TARGET_DIR}"; then
@@ -684,6 +737,9 @@ EOF
 	if [[ -d "${QUEST_LOG_ROOT}/commands" ]]; then
 		generate_commands "${TARGET_DIR}"
 	fi
+
+	# Sync VSCode settings
+	vscodeoverride
 
 	print_summary
 	local summary_exit_code=$?

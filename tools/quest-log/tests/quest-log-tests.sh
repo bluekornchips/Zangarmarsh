@@ -72,6 +72,8 @@ setup() {
 	create_test_quest_file "$TEST_QUEST_FILE" "$quest_name" "$icon" "$description" "$keywords" "$always_apply"
 
 	export TEST_TEMP_DIR
+	export GIT_ROOT
+	export FORCE
 
 	# Temporarily disable errexit and traps to source script safely
 	set +e
@@ -680,6 +682,82 @@ Line 3"
 }
 
 ########################################################
+# vscodeoverride
+########################################################
+
+@test 'vscodeoverride:: syncs when directory is empty' {
+	local test_git_root
+	test_git_root="$(mktemp -d)"
+	mkdir -p "${test_git_root}/.vscode"
+	echo '{"test": "settings"}' >"${test_git_root}/.vscode/settings.json"
+
+	GIT_ROOT="${test_git_root}"
+	FORCE=false
+
+	run vscodeoverride
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "vscodeoverride:: VSCode settings synced"
+	[[ -d "${TEST_TEMP_DIR}/.vscode" ]]
+	[[ -f "${TEST_TEMP_DIR}/.vscode/settings.json" ]]
+}
+
+@test 'vscodeoverride:: skips when directory exists and FORCE is false' {
+	local test_git_root
+	test_git_root="$(mktemp -d)"
+	mkdir -p "${test_git_root}/.vscode"
+	echo '{"test": "settings"}' >"${test_git_root}/.vscode/settings.json"
+
+	GIT_ROOT="${test_git_root}"
+	FORCE=false
+
+	mkdir -p "${TEST_TEMP_DIR}/.vscode"
+	echo "existing" >"${TEST_TEMP_DIR}/.vscode/settings.json"
+
+	run vscodeoverride
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "vscodeoverride:: VSCode settings already exist"
+	echo "$output" | grep -q "use --force to replace"
+}
+
+@test 'vscodeoverride:: replaces when FORCE is true' {
+	local test_git_root
+	test_git_root="$(mktemp -d)"
+	mkdir -p "${test_git_root}/.vscode"
+	echo '{"test": "settings"}' >"${test_git_root}/.vscode/settings.json"
+
+	GIT_ROOT="${test_git_root}"
+	FORCE=true
+
+	mkdir -p "${TEST_TEMP_DIR}/.vscode"
+	echo "existing" >"${TEST_TEMP_DIR}/.vscode/settings.json"
+
+	run vscodeoverride
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "vscodeoverride:: VSCode settings synced (replaced existing)"
+}
+
+@test 'vscodeoverride:: fails when GIT_ROOT is not set' {
+	unset GIT_ROOT
+	FORCE=false
+
+	run vscodeoverride
+	[[ "$status" -eq 1 ]]
+	echo "$output" | grep -q "vscodeoverride:: GIT_ROOT is not set"
+}
+
+@test 'vscodeoverride:: fails when .vscode directory does not exist in git root' {
+	local test_git_root
+	test_git_root="$(mktemp -d)"
+
+	GIT_ROOT="${test_git_root}"
+	FORCE=false
+
+	run vscodeoverride
+	[[ "$status" -eq 1 ]]
+	echo "$output" | grep -q "vscodeoverride:: VSCode settings directory not found"
+}
+
+########################################################
 # Main
 ########################################################
 
@@ -712,6 +790,7 @@ Line 3"
 	echo "$output" | grep -q "Generate agentic tool rules for Cursor"
 	echo "$output" | grep -q "git"
 	echo "$output" | grep -q "all"
+	echo "$output" | grep -q "force"
 }
 
 @test 'run_quest_log:: handles unknown options' {
@@ -824,4 +903,23 @@ EOF
 	echo "$output" | grep -q "Skipped: 2"
 	[[ -f "./$CURSOR_RULES_DIR/rules-always.mdc" ]]
 	[[ -f "./$CURSOR_RULES_DIR/rules-python.mdc" ]]
+}
+
+@test 'run_quest_log:: handles force flag' {
+	run run_quest_log --help
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "\-f, \-\-force"
+	echo "$output" | grep -q "Force operations"
+}
+
+@test 'run_quest_log:: accepts force flag' {
+	run run_quest_log --force
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Running"
+}
+
+@test 'run_quest_log:: accepts short force flag' {
+	run run_quest_log -f
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Running"
 }
