@@ -553,14 +553,14 @@ EOF
 	return 0
 }
 
-# Sync VSCode settings from Zangarmarsh root to current directory
+# Sync VSCode settings from Zangarmarsh root to git root
 #
 # Outputs:
 # - Status messages to stdout
 # - Error messages to stderr if copy operation fails
 #
 # Returns:
-# - 0 if sync is successful or already in git root
+# - 0 if sync is successful
 # - 1 if copy operation fails
 vscodeoverride() {
 	if [[ -z "${GIT_ROOT:-}" ]]; then
@@ -568,29 +568,32 @@ vscodeoverride() {
 		return 1
 	fi
 
-	if [[ ! -d "${GIT_ROOT}/.vscode" ]]; then
-		echo "vscodeoverride:: VSCode settings directory not found in ${GIT_ROOT}/.vscode" >&2
+	local zangarmarsh_root
+	zangarmarsh_root="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
+	if [[ ! -d "${zangarmarsh_root}/.vscode" ]]; then
+		echo "vscodeoverride:: VSCode settings directory not found in ${zangarmarsh_root}/.vscode" >&2
 		return 1
 	fi
 
-	mkdir -p "${PWD}/.vscode"
+	mkdir -p "${GIT_ROOT}/.vscode"
 
 	if [[ "${FORCE:-}" = "true" ]]; then
-		if cp -rf "${GIT_ROOT}/.vscode/"* "${PWD}/.vscode/" 2>/dev/null || true; then
-			echo "vscodeoverride:: VSCode settings synced (replaced existing)"
+		if cp -rf "${zangarmarsh_root}/.vscode/"* "${GIT_ROOT}/.vscode/" 2>/dev/null; then
+			echo "vscodeoverride:: VSCode settings synced to ${GIT_ROOT}/.vscode (replaced existing)"
 		else
 			echo "vscodeoverride:: Failed to copy VSCode settings" >&2
 			return 1
 		fi
-	elif [[ ! "$(ls -A "${PWD}/.vscode" 2>/dev/null)" ]]; then
-		if cp -rf "${GIT_ROOT}/.vscode/"* "${PWD}/.vscode/" 2>/dev/null || true; then
-			echo "vscodeoverride:: VSCode settings synced"
+	elif [[ ! "$(ls -A "${GIT_ROOT}/.vscode" 2>/dev/null)" ]]; then
+		if cp -rf "${zangarmarsh_root}/.vscode/"* "${GIT_ROOT}/.vscode/" 2>/dev/null; then
+			echo "vscodeoverride:: VSCode settings synced to ${GIT_ROOT}/.vscode"
 		else
 			echo "vscodeoverride:: Failed to copy VSCode settings" >&2
 			return 1
 		fi
 	else
-		echo "vscodeoverride:: VSCode settings already exist (use --force to replace)"
+		echo "vscodeoverride:: VSCode settings already exist in ${GIT_ROOT}/.vscode (use --force to replace)"
 	fi
 
 	return 0
@@ -674,6 +677,7 @@ EOF
 	SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
 	SCRIPT_DIR="$(cd "$(dirname "${SCRIPT_PATH}")" && pwd)"
 	QUEST_LOG_ROOT="${SCRIPT_DIR}"
+	export SCRIPT_DIR
 
 	readonly QUEST_DIR="${SCRIPT_DIR}/quests"
 

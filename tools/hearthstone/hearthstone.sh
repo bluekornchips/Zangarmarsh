@@ -109,14 +109,14 @@ verify_git_repository() {
 	return 0
 }
 
-# Sync VSCode settings from Zangarmarsh root to current directory
+# Sync VSCode settings from Zangarmarsh root to git root
 #
 # Outputs:
 # - Status messages to stdout
 # - Error messages to stderr if copy operation fails
 #
 # Returns:
-# - 0 if sync is successful or already in git root
+# - 0 if sync is successful
 # - 1 if copy operation fails
 vscodeoverride() {
 	if [[ -z "${GIT_ROOT:-}" ]]; then
@@ -124,29 +124,36 @@ vscodeoverride() {
 		return 1
 	fi
 
+	local target_git_root
+	if target_git_root=$(git rev-parse --show-toplevel 2>/dev/null); then
+		:
+	else
+		target_git_root="${PWD}"
+	fi
+
 	if [[ ! -d "${GIT_ROOT}/.vscode" ]]; then
 		echo "vscodeoverride:: VSCode settings directory not found in ${GIT_ROOT}/.vscode" >&2
 		return 1
 	fi
 
-	mkdir -p "${PWD}/.vscode"
+	mkdir -p "${target_git_root}/.vscode"
 
 	if [[ "${FORCE:-}" = "true" ]]; then
-		if cp -rf "${GIT_ROOT}/.vscode/"* "${PWD}/.vscode/" 2>/dev/null || true; then
-			echo "vscodeoverride:: VSCode settings synced (replaced existing)"
+		if cp -rf "${GIT_ROOT}/.vscode/"* "${target_git_root}/.vscode/" 2>/dev/null; then
+			echo "vscodeoverride:: VSCode settings synced to ${target_git_root}/.vscode (replaced existing)"
 		else
 			echo "vscodeoverride:: Failed to copy VSCode settings" >&2
 			return 1
 		fi
-	elif [[ ! "$(ls -A "${PWD}/.vscode" 2>/dev/null)" ]]; then
-		if cp -rf "${GIT_ROOT}/.vscode/"* "${PWD}/.vscode/" 2>/dev/null || true; then
-			echo "vscodeoverride:: VSCode settings synced"
+	elif [[ ! "$(ls -A "${target_git_root}/.vscode" 2>/dev/null)" ]]; then
+		if cp -rf "${GIT_ROOT}/.vscode/"* "${target_git_root}/.vscode/" 2>/dev/null; then
+			echo "vscodeoverride:: VSCode settings synced to ${target_git_root}/.vscode"
 		else
 			echo "vscodeoverride:: Failed to copy VSCode settings" >&2
 			return 1
 		fi
 	else
-		echo "vscodeoverride:: VSCode settings already exist (use --force to replace)"
+		echo "vscodeoverride:: VSCode settings already exist in ${target_git_root}/.vscode (use --force to replace)"
 	fi
 
 	return 0
