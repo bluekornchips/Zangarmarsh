@@ -1,4 +1,5 @@
 {
+  // Exclude files from search and replace
   "files.exclude": {
     "**/__pycache__": true,
     "**/*.pyc": true,
@@ -25,24 +26,24 @@
     "**/*.pyc": true,
     "**/*.pyo": true
   },
+  // workbench
   "workbench.colorTheme": "Default Dark+",
+  "workbench.activityBar.location": "default",
+  "workbench.panel.defaultLocation": "bottom",
+  "workbench.activityBar.orientation": "vertical",
+  "workbench.panel.showLabels": true,
+  "workbench.editor.showTabs": "multiple",
+  // editor
   "editor.fontSize": 14,
   "editor.fontFamily": "DejaVu Sans Mono, monospace",
   "editor.minimap.enabled": false,
   "editor.renderWhitespace": "all",
+  // terminal
   "terminal.integrated.fontFamily": "DejaVu Sans Mono, monospace",
   "terminal.integrated.fontSize": 14,
-  "workbench.activityBar.orientation": "vertical",
-  "[shellscript]": {
-    "editor.tabSize": 2,
-    "editor.insertSpaces": false,
-    "editor.formatOnSave": false
-  },
-  "[bash]": {
-    "editor.tabSize": 2,
-    "editor.insertSpaces": false,
-    "editor.formatOnSave": false
-  },
+  // misc
+  "redhat.telemetry.enabled": false,
+  // languages
   "[json]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
@@ -64,11 +65,16 @@
   "[yaml]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
+  "[shellscript]": {
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true
+  },
+  "[bash]": {
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true
+  },
   "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
   "shellcheck.customArgs": [
     "${workspaceFolder}/.shellcheckrc"
   ],
-  "redhat.telemetry.enabled": false,
-  "git.confirmSync": false,
-  "makefile.configureOnOpen": false
 }
