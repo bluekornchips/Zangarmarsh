@@ -3,7 +3,7 @@
 ## Critical Violations, Scripts Will Be Rejected
 
 - Never use echo statements with line lengths over 160.
-- Never use manual removal of temporary files/directories
+- Never remove temporary files or directories manually. Use trap to clean up temporary paths created by the script
 - Never use `exit` to exit a script inside a function
 - Never use unquoted variables: `echo $var` instead of `echo "$var"`
 - Never use `rm -rf /` or similar dangerous commands
@@ -18,7 +18,7 @@
 - Bats for testing
 - `#!/usr/bin/env bash` for executables
 - Error messages to STDERR: `>&2`
-- Descriptions and comments for function headers. Conditionally include inputs and side effects if they exist
+- Function header comments are required. Include Inputs and Side Effects sections only when they apply
 - Input validation for all functions
 - Proper error handling with `return` status codes.
 
@@ -29,8 +29,11 @@
 - Use `$(command)` instead of backticks
 - Use `(( ... ))` for arithmetic
 - Use explicit paths: `rm -v ./*`
-- Use builtins over external commands
+- Use builtins over external commands when reasonable
+- Using `cat` for heredoc blocks is strongly preferred for readability
+- Use array literals for lists. Avoid `declare -a` unless needed
 - Always `return` explicit status codes
+- Always leave a newline before a return statement
 - Functions in test scripts do not require comments.
 - Functions in invoked scripts do require comments unless they are both obvious and short.
 
@@ -39,6 +42,7 @@
 - Always prefix the test with the function name for direct function testing, such as `@test "function_name:: test description" {`
 - Use proper spacing between any changes or inputs before the run command to show what is being tested, changed, or mocked.
 - Never execute actual changes with tests unless that functionality already exists.
+- Always use worktrees for bats tests that require any form of git interaction in the test file
 - Use `setup_file` to set up the test environment and source the script for external dependencies.
 - Use `setup` to set up the test environment and source the script for external dependencies.
 
@@ -196,8 +200,27 @@ function_name() {
 
   if ! mv "${file_list[@]}" "${dest_dir}/"; then
     echo "function_name:: Unable to move ${file_list[*]} to ${dest_dir}" >&2
+
     return 1
   fi
+
+  return 0
+}
+```
+
+## Example
+
+```bash
+create_temp_dir() {
+  local temp_dir
+  temp_dir="$(mktemp -d)"
+
+  if [[ "${temp_dir}" = "" ]]; then
+    echo "create_temp_dir: mktemp failed" >&2
+    return 1
+  fi
+
+  trap 'rm -rf "$temp_dir"' EXIT
 
   return 0
 }

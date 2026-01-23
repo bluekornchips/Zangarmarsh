@@ -197,7 +197,7 @@ EOF
 		echo "Failed to create virtual environment" >&2
 		echo "Make sure $python_version has venv module installed" >&2
 		echo "Try: $python_version -m pip install --user virtualenv" >&2
-		return 0
+		return 1
 	fi
 
 	# Activate virtual environment
@@ -287,7 +287,10 @@ shfmt_smart() {
 
 	local -a files
 	# Mapfile is not available in all shells, so we use bash -c to execute the command
-	bash -c "mapfile -t files < <(find . -type f -name '*.sh' -maxdepth '$depth' 2>/dev/null)"
+	if ! bash -c "mapfile -t files < <(find . -type f -name '*.sh' -maxdepth '$depth' 2>/dev/null)"; then
+		echo "shfmt_smart:: Failed to find shell files" >&2
+		return 1
+	fi
 
 	if [[ ${#files[@]} -eq 0 ]]; then
 		echo "No .sh files found within depth $depth"

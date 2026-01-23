@@ -203,7 +203,7 @@ teardown() {
 	export -f python3
 
 	run penv
-	[[ "$status" -eq 0 ]]
+	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "Failed to create virtual environment"
 }
 

@@ -1,7 +1,6 @@
 {
   "recommendations": [
     "aaron-bond.better-comments",
-    "dsznajder.es7-react-js-snippets",
     "eamodio.gitlens",
     "esbenp.prettier-vscode",
     "ms-python.python",
@@ -10,6 +9,5 @@
     "redhat.vscode-yaml",
     "tim-koehler.helm-intellisense",
     "timonwong.shellcheck",
-    "wix.vscode-import-cost"
   ]
 }

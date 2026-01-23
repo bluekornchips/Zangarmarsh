@@ -319,10 +319,13 @@ show_diff() {
 	local file_path="$1"
 	local new_content="$2"
 	local temp_file
-	temp_file=$(mktemp)
-	chmod 0600 "${temp_file}"
+	temp_file=$(mktemp) || {
+		echo "show_diff:: Failed to create temporary file" >&2
+		return 1
+	}
 
 	trap 'rm -f "${temp_file}"' EXIT ERR
+	chmod 0600 "${temp_file}"
 
 	echo "${new_content}" >"${temp_file}"
 
@@ -333,7 +336,7 @@ show_diff() {
 	fi
 
 	rm -f "${temp_file}"
-	trap cleanup EXIT ERR
+	trap - EXIT ERR
 
 	return 0
 }

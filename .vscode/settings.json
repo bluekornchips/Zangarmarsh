@@ -77,4 +77,5 @@
   "shellcheck.customArgs": [
     "${workspaceFolder}/.shellcheckrc"
   ],
+  "makefile.configureOnOpen": false,
 }

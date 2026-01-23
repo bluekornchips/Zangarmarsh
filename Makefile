@@ -8,3 +8,6 @@ test:
 	./tools/quest-log/tests/quest-log-tests.sh \
 	./tools/trilliax/tests/trilliax-tests.sh \
 	./tools/hearthstone/tests/hearthstone-tests.sh
+
+lint:
+	find . -name "*.sh" -type f | xargs shellcheck

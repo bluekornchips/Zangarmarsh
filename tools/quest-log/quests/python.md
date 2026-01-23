@@ -30,8 +30,33 @@
 
 ### Code Quality Requirements
 
-- Test coverage ≥90%: `pytest --cov=src --cov-fail-under=90`
-- Type safety: `mypy src/ --strict`
+- Production modules and shared libraries must reach coverage 90 percent or higher with `pytest --cov=src --cov-fail-under=90`
+- Run `mypy src/ --strict` on production modules and shared libraries
+- For scripts, add type hints and targeted tests when practical
+
+## Example
+
+```python
+import logging
+
+logger = logging.getLogger(__name__)
+
+def read_port(value: str) -> int:
+    if value == "":
+        raise ValueError("read_port: value is required")
+
+    try:
+        port = int(value)
+    except ValueError as exc:
+        raise ValueError("read_port: invalid int") from exc
+
+    if port < 1 or port > 65535:
+        raise ValueError("read_port: out of range")
+
+    logger.info("read_port: parsed port %s", port)
+
+    return port
+```
 
 ## Enforcement Level, Strict
 
