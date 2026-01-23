@@ -33,7 +33,7 @@
 - Using `cat` for heredoc blocks is strongly preferred for readability
 - Use array literals for lists. Avoid `declare -a` unless needed
 - Always `return` explicit status codes
-- Always leave a newline before a return statement
+- Always leave a newline before a return statement at the end of a function.
 - Functions in test scripts do not require comments.
 - Functions in invoked scripts do require comments unless they are both obvious and short.
 
