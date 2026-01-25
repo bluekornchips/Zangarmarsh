@@ -2,29 +2,36 @@
 
 ## Critical Violations, Scripts Will Be Rejected
 
-- Never use echo statements with line lengths over 160.
-- Never remove temporary files or directories manually. Use trap to clean up temporary paths created by the script
+### Never Use, Immediate Rejection
+
+- Never use echo statements with line lengths over 160
+- Never remove paths the script did not create. Use trap to clean up long lived temporary paths created by the script. Manual cleanup is allowed for short lived temp files and error handling
 - Never use `exit` to exit a script inside a function
-- Never use unquoted variables: `echo $var` instead of `echo "$var"`
+- Never use unquoted variables, use `echo "$var"` not `echo $var`
 - Never use `rm -rf /` or similar dangerous commands
-- Never use `eval` or `exec`.
-- Never use `sudo`.
-- Never use `declare -a` for array assignment.
+- Never use `eval` or `exec`
+- Never use `sudo`
+- Never use `declare -a` for array assignment
 
 ## Mandatory Requirements, All Scripts Must Have
 
-- Heredocs for output spread across more than 2 lines.
-- Minimal comments.
-- Bats for testing
-- `#!/usr/bin/env bash` for executables
+### Always Use, Non Negotiable
+
+- Heredocs for output spread across more than 2 lines
+- Purposeful comments and section headers, include function docs for nontrivial functions
+- Bats for testing when practical. Provide a health check or validation mode for scripts that call external services
+- Use `#!/usr/bin/env bash` or `#!/usr/bin/env zsh` for executables. Match the shell to features used
+- Guard strict mode and umask in the direct execution block when the script can be sourced
 - Error messages to STDERR: `>&2`
-- Function header comments are required. Include Inputs and Side Effects sections only when they apply
+- Function header comments are required. Include Inputs or Arguments, Outputs, Side Effects, and Returns sections when they apply
 - Input validation for all functions
-- Proper error handling with `return` status codes.
+- Proper error handling with `return` status codes
 
 ## Best Practices
 
-- Use bash version 3.2 or greater syntax.
+### General Practices
+
+- For bash scripts, use bash version 3.2 or greater syntax. For zsh scripts, use zsh 5.0 or greater syntax
 - Use `[[ ... ]]`
 - Use `$(command)` instead of backticks
 - Use `(( ... ))` for arithmetic
@@ -33,18 +40,20 @@
 - Using `cat` for heredoc blocks is strongly preferred for readability
 - Use array literals for lists. Avoid `declare -a` unless needed
 - Always `return` explicit status codes
-- Always leave a newline before a return statement at the end of a function.
-- Functions in test scripts do not require comments.
-- Functions in invoked scripts do require comments unless they are both obvious and short.
+- Always leave a newline before a return statement at the end of a function
+- Functions in test scripts do not require comments
+- Functions in invoked scripts do require comments unless they are both obvious and short
+- Use `command -v` for dependency checks and return helpful error messages
+- Use `mktemp` with explicit templates and secure temp files with `chmod 0600` when they contain secrets
 
 ## Testing
 
 - Always prefix the test with the function name for direct function testing, such as `@test "function_name:: test description" {`
-- Use proper spacing between any changes or inputs before the run command to show what is being tested, changed, or mocked.
-- Never execute actual changes with tests unless that functionality already exists.
+- Use proper spacing between any changes or inputs before the run command to show what is being tested, changed, or mocked
+- Never execute actual changes with tests unless that functionality already exists
 - Always use worktrees for bats tests that require any form of git interaction in the test file
-- Use `setup_file` to set up the test environment and source the script for external dependencies.
-- Use `setup` to set up the test environment and source the script for external dependencies.
+- Use `setup_file` to set up the test environment and source the script for external dependencies
+- Use `setup` to set up the test environment and source the script for external dependencies
 
 ## File Structure Template
 
@@ -58,6 +67,19 @@ Content inside comment blocks with curly braces are instructions and not intende
 # {Description of script purpose}
 #
 
+# Only enable strict mode when executed directly, not when sourced
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  set -eo pipefail
+  umask 077
+fi
+
+# {Display usage information}
+#
+# Side Effects:
+# - {description}
+#
+# Returns:
+# - 0 always
 usage() {
   cat <<EOF
 Usage: $(basename "$0") [OPTIONS]
@@ -82,6 +104,13 @@ EOF
 #
 # Side Effects:
 # - {description}
+#
+# Outputs:
+# - {description}
+#
+# Returns:
+# - 0 on success
+# - 1 on failure
 helper_function() {
   # {input args defined as locals}
   # {check required values are set}
@@ -107,6 +136,13 @@ helper_function() {
 #
 # Side Effects:
 # - {description}
+#
+# Outputs:
+# - {description}
+#
+# Returns:
+# - 0 on success
+# - 1 on failure
 function_name() {
   # {input args defined as locals}
   # {check required values are set}
@@ -145,8 +181,6 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
   main "$@"
   exit $?
 fi
-
-```
 
 ## Variables
 

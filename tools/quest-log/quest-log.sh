@@ -20,6 +20,7 @@ Usage: $0 [OPTIONS] [DIRECTORY]
 
 Generate agentic tool rules and daily-quests for Cursor based on schema.json. Rules
 and daily-quests are installed locally in the project directory.
+Baseline quests include always, python, shell, and typescript.
 
 OPTIONS:
     -a, --all           Include all rules (including warcraft and lotr)

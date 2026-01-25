@@ -50,6 +50,17 @@
     }
   },
   {
+    "name": "typescript",
+    "file": "typescript.md",
+    "icon": "🟦",
+    "description": "Comprehensive TypeScript standards covering typing, linting, error handling, testing, security, and enterprise best practices.",
+    "keywords": ["typescript", "ts", "tsx", "tsconfig", "eslint", "prettier", "node", "deno"],
+    "cursor": {
+      "alwaysApply": false,
+      "globs": ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"]
+    }
+  },
+  {
     "name": "lotr",
     "file": "lotr.md",
     "icon": "📚",
