@@ -357,11 +357,7 @@ fill_quest_log() {
 		return 1
 	fi
 
-	cat <<EOF
-
-Filling quest log.
-
-EOF
+	echo "fill_quest_log: running"
 
 	local schema_contents
 	if ! schema_contents=$(cat "${SCHEMA_FILE}"); then
@@ -384,7 +380,6 @@ EOF
 
 		# Skip warcraft and lotr rules unless INCLUDE_ALL is true
 		if [[ "${INCLUDE_ALL}" != "true" ]] && [[ "${SKIPPED_RULES[*]}" =~ ${name} ]]; then
-			echo "fill_quest_log:: Skipping ${name} (use --all to include)"
 			STATS_SKIPPED=$((STATS_SKIPPED + 1))
 			continue
 		fi
@@ -448,6 +443,7 @@ EOF
 	done \
 		<<<"$(jq -c '.[]' <<<"${schema_contents}")"
 
+	echo "fill_quest_log: complete"
 	return 0
 }
 
@@ -473,11 +469,7 @@ generate_commands() {
 		return 0
 	fi
 
-	cat <<EOF
-
-Generating daily-quests (Cursor commands).
-
-EOF
+	echo "generate_commands: running"
 
 	if [[ ! -d "${cursor_commands_dir}" ]]; then
 		if ! mkdir -p "${cursor_commands_dir}"; then
@@ -515,6 +507,7 @@ EOF
 		fi
 	done < <(find "${commands_dir}" -maxdepth 1 -name "*.md" -type f -print0 2>/dev/null || true)
 
+	echo "generate_commands: complete"
 	return 0
 }
 
@@ -524,11 +517,7 @@ EOF
 # - Creates local Cursor rules directory at TARGET_DIR/.cursor/rules/
 # - Installs rules from quest-log schema
 install_rules() {
-	cat <<EOF
-
-Installing quest-log rules for Cursor.
-
-EOF
+	echo "install_rules: running"
 
 	# Define directories
 	local cursor_rules_dir="${TARGET_DIR}/.cursor/rules"
@@ -542,17 +531,10 @@ EOF
 	# Set target directory
 	readonly CURSOR_RULES_DIR="${cursor_rules_dir}"
 
-	echo "install_rules:: Cursor rules directory: ${cursor_rules_dir}"
-
 	# Generate rules
 	fill_quest_log "${TARGET_DIR}"
 
-	cat <<EOF
-
-Installation complete.
-Cursor rules are available locally in this project.
-
-EOF
+	echo "install_rules: complete"
 
 	return 0
 }
@@ -572,6 +554,8 @@ vscodeoverride() {
 		return 1
 	fi
 
+	echo "vscodeoverride: running"
+
 	local zangarmarsh_root
 	zangarmarsh_root="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
@@ -580,26 +564,30 @@ vscodeoverride() {
 		return 1
 	fi
 
+	if [[ "${GIT_ROOT}" == "${zangarmarsh_root}" ]]; then
+		echo "vscodeoverride: complete"
+		return 0
+	fi
+
 	mkdir -p "${GIT_ROOT}/.vscode"
 
 	if [[ "${FORCE:-}" = "true" ]]; then
 		if cp -rf "${zangarmarsh_root}/.vscode/"* "${GIT_ROOT}/.vscode/" 2>/dev/null; then
-			echo "vscodeoverride:: VSCode settings synced to ${GIT_ROOT}/.vscode (replaced existing)"
+			:
 		else
 			echo "vscodeoverride:: Failed to copy VSCode settings" >&2
 			return 1
 		fi
 	elif [[ ! "$(ls -A "${GIT_ROOT}/.vscode" 2>/dev/null)" ]]; then
 		if cp -rf "${zangarmarsh_root}/.vscode/"* "${GIT_ROOT}/.vscode/" 2>/dev/null; then
-			echo "vscodeoverride:: VSCode settings synced to ${GIT_ROOT}/.vscode"
+			:
 		else
 			echo "vscodeoverride:: Failed to copy VSCode settings" >&2
 			return 1
 		fi
-	else
-		echo "vscodeoverride:: VSCode settings already exist in ${GIT_ROOT}/.vscode (use --force to replace)"
 	fi
 
+	echo "vscodeoverride: complete"
 	return 0
 }
 
@@ -608,22 +596,25 @@ vscodeoverride() {
 # Side Effects:
 # - Displays summary report to stdout
 print_summary() {
+	if ((STATS_ERRORS > 0 || STATS_WARNINGS > 0)); then
+		return 1
+	fi
+
 	cat <<EOF
 
-=====
+=============================
 Summary
-=====
-Rules:
-  Created: ${STATS_CREATED}
-  Updated: ${STATS_UPDATED}
-  Unchanged: ${STATS_UNCHANGED}
-  Skipped: ${STATS_SKIPPED}
-  Errors: ${STATS_ERRORS}
-  Warnings: ${STATS_WARNINGS}
-  Total processed: $((STATS_CREATED + STATS_UPDATED + STATS_UNCHANGED + STATS_SKIPPED + STATS_ERRORS))
-  Total lines: ${STATS_TOTAL_LINES}
-
+=============================
 EOF
+	[[ ${STATS_CREATED} -gt 0 ]] && echo "Created: ${STATS_CREATED}"
+	[[ ${STATS_UPDATED} -gt 0 ]] && echo "Updated: ${STATS_UPDATED}"
+	[[ ${STATS_UNCHANGED} -gt 0 ]] && echo "Unchanged: ${STATS_UNCHANGED}"
+	[[ ${STATS_SKIPPED} -gt 0 ]] && echo "Skipped: ${STATS_SKIPPED}"
+	[[ ${STATS_ERRORS} -gt 0 ]] && echo "Errors: ${STATS_ERRORS}"
+	[[ ${STATS_WARNINGS} -gt 0 ]] && echo "Warnings: ${STATS_WARNINGS}"
+	[[ ${STATS_TOTAL_LINES} -gt 0 ]] && echo "Total lines: ${STATS_TOTAL_LINES}"
+
+	echo ""
 
 	if ((STATS_ERRORS > 0)); then
 		echo "print_summary:: Some rules failed validation. Please review errors above." >&2
@@ -646,11 +637,10 @@ determine_target_directory() {
 	local git_root
 	if git_root=$(git rev-parse --show-toplevel 2>/dev/null); then
 		TARGET_DIR="${git_root}"
-		echo "Git repository detected"
-		echo "using git root: ${git_root}"
+		echo "git_root: ${git_root}"
 	else
 		TARGET_DIR=${TARGET_DIR:-${PWD}}
-		echo "Not in a git repository"
+		echo "git_root: none"
 	fi
 
 	return 0
@@ -666,11 +656,7 @@ determine_target_directory() {
 # - Generates rule files
 # - Exits with appropriate status code
 run_quest_log() {
-	cat <<EOF
-=====
-Running ${BASH_SOURCE[0]:-$0}
-=====
-EOF
+	echo "quest-log: running"
 
 	# Check for jq availability
 	if ! command -v jq &>/dev/null; then
@@ -752,12 +738,9 @@ EOF
 	print_summary
 	local summary_exit_code=$?
 
-	cat <<EOF
-=====
-Finished ${BASH_SOURCE[0]:-$0}
-=====
-
-EOF
+	if ((summary_exit_code == 0)); then
+		echo "quest-log: complete"
+	fi
 
 	return ${summary_exit_code}
 }
