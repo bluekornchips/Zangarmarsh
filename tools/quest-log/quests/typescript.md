@@ -1,5 +1,9 @@
 # TypeScript Standards
 
+## Priority
+
+- Level 1 of 2
+
 ## Critical Violations, Code Will Be Rejected
 
 ### Never Use, Immediate Rejection
@@ -22,7 +26,7 @@
 - Input validation for all boundary functions, use `unknown` and narrow types
 - Error handling with typed errors and `catch (err: unknown)`
 - `const` and `readonly` to prevent mutation
-- Absolute imports from a project root alias
+- Absolute imports from a project root alias when configured, otherwise use relative imports within the package
 
 ### Code Quality Requirements
 
@@ -71,10 +75,3 @@ export function readPort(value: string): number {
   return port;
 }
 ```
-
-## Enforcement Level, Strict
-
-- TypeScript code without strict type checking will be rejected
-- Public APIs without explicit return types will be rejected
-- Code with security vulnerabilities will be rejected
-- Missing tests for critical functions will be rejected

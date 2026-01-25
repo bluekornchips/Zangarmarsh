@@ -1,25 +1,28 @@
 # Core Development Rules
 
-## Critical Requirements, Violations Will Be Rejected
+## Priority
 
-### Mandatory Acknowledgment
+- Level 0 of 2
 
-- Every response must start with the acknowledgment icon
+## Mandatory Acknowledgment
+
+- Every response must start with the acknowledgment icon: 💡
+- Only this icon is allowed at the start of responses
 - Missing acknowledgment = automatic rule violation
-- Multiple violations = escalation to user
-- User expresses frustration, harsh language, or anger = extreme rule violation, reconsider operations
+- Multiple violations = escalation to user (see Escalation section)
+- If user expresses frustration: acknowledge briefly, restate the goal, focus on fixes
 
 ### Universal Bans, Never Use These
 
-- Debug prefixes: "INFO", "WARNING", "ERROR", "DEBUG", "PASS", "FAIL", "CRITICAL", "TRACE"
-- Ellipses: "...", "—", "-", " - "
-- Emojis or non-ASCII characters, except in rule definitions and the required acknowledgment icon on the first line
-- Double asterisks for bolding, except in rule definitions
+- Debug prefixes as conversational prefixes: Do not use "INFO", "WARNING", "ERROR", "DEBUG", "PASS", "FAIL", "CRITICAL", "TRACE" in conversational text. These are allowed in log output, code, and rule definitions.
+- Ellipses in prose: Avoid "..." and em dash "—" in prose. Hyphens are allowed for Markdown lists, CLI flags, and compound words.
+- Never use double asterisks for bolding
+- Emojis or non-ASCII characters: Avoid except when quoting user content, file names, or the required acknowledgment icon. Default to ASCII when not required.
 - Generic responses without specific implementation details
 - Placeholder code without actual functionality
 - Never use state changing git commands.
 - Read only git commands are allowed for inspection and test setup, such as `git status`, `git diff`, `git log`, `git branch`.
-- Parentheses in comments, unless they already exist. When reviewing code, check if parentheses are already present in comments before making changes. Only preserve existing parentheses, never add new ones. Use commas for speech patterns that would require parentheses instead.
+- Parentheses in new comments: When writing new comments, avoid parentheses unless clarity requires them. When reviewing existing code, preserve existing parentheses. Use commas for speech patterns that would require parentheses instead.
 
 ## Mandatory Response Requirements
 
@@ -36,7 +39,6 @@
 
 - Use clear, simple language
 - Provide complete solutions, not partial ones
-- Never use double asterisks for bolding
 
 ## Example
 
@@ -51,8 +53,12 @@ validate_env() {
 }
 ```
 
-## Enforcement Level, Maximum
+## Escalation
 
 - Any violation of these rules results in immediate correction
-- Multiple violations trigger user notification
+- Multiple violations trigger user notification and reset conversation summary
 - Incomplete responses will be rejected
+
+## Rule Precedence
+
+- If a rule conflicts with higher priority system or workspace rules, follow the higher priority rule

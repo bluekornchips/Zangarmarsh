@@ -1,5 +1,9 @@
 # Shell Standards
 
+## Priority
+
+- Level 2 of 2
+
 ## Critical Violations, Scripts Will Be Rejected
 
 ### Never Use, Immediate Rejection
@@ -61,13 +65,12 @@ All scripts must maintain a consistent organizational structure. Functions shoul
 
 Content inside comment blocks with curly braces are instructions and not intended to be part of the script.
 
-```bash
+````bash
 #!/usr/bin/env bash
 #
 # {Description of script purpose}
 #
 
-# Only enable strict mode when executed directly, not when sourced
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
   set -eo pipefail
   umask 077
@@ -100,7 +103,7 @@ EOF
 #
 # {Reference documentation if needed}
 # Inputs:
-# - $1 {argument name}, {description}
+# - $1 {argument name}, {description. Not needed for environment variables}
 #
 # Side Effects:
 # - {description}
@@ -197,7 +200,7 @@ echo "PATH=${PATH}, PWD=${PWD}"
 flags=(--foo --bar='baz')
 mybinary "${flags[@]}"
 
-```
+````
 
 ## Control Flow
 

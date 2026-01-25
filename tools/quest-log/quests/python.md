@@ -1,5 +1,9 @@
 # Python Standards
 
+## Priority
+
+- Level 1 of 2
+
 ## Critical Violations, Code Will Be Rejected
 
 ### Never Use, Immediate Rejection
@@ -21,7 +25,7 @@
 
 - Specific exceptions: `except ValueError as e:`
 - Environment variables: `api_key = os.getenv("API_KEY")`
-- Absolute imports: `from myproject.utils import parse_data`
+- Absolute imports from project root when available, otherwise use relative imports within the package
 - Proper logging: `logger.info("Process started")`
 - Type hints and docstrings
 - Input validation for all functions
@@ -57,10 +61,3 @@ def read_port(value: str) -> int:
 
     return port
 ```
-
-## Enforcement Level, Strict
-
-- Python code without type hints will be rejected
-- Functions without proper error handling will be rejected
-- Code with security vulnerabilities will be rejected
-- Missing tests for critical functions will be rejected
