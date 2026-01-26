@@ -33,3 +33,7 @@ temp_*
 *.bak
 *.backup
 .agent-rules-backup/
+
+# Python virtual environments
+.venv/
+venv/
