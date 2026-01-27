@@ -179,7 +179,6 @@ main() {
   return 0
 }
 
-# {Allow script to be executed directly with arguments, or sourced}
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
   main "$@"
   exit $?
