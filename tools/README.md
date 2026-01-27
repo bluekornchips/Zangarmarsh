@@ -22,6 +22,16 @@ Development environment cleanup tool for generated files and build artifacts.
 ./tools/trilliax/trilliax.sh --dry-run
 ```
 
+### Talent Calculator
+
+Development tools installation script for managing CLI tools on workstations.
+
+```bash
+./tools/talent-calculator/talent-calculator.sh
+./tools/talent-calculator/talent-calculator.sh --dry-run
+./tools/talent-calculator/talent-calculator.sh --reset-talents
+```
+
 ## Testing
 
 ```bash

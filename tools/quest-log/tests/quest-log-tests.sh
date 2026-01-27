@@ -260,7 +260,7 @@ mock_git_not_in_repo() {
 	[[ "$status" -eq 0 ]]
 	[[ "$STATS_ERRORS" -eq 0 ]]
 	[[ "$STATS_WARNINGS" -eq 1 ]]
-	echo "$output" | grep -q "validate_rule:: Warning: Rule '${test_name}' is approaching the 500 line limit"
+	echo "$output" | grep -q "validate_rule:: Rule '${test_name}' is approaching the 500 line limit"
 }
 
 @test 'validate_rule:: warns for short description with intelligent application' {
@@ -277,7 +277,7 @@ mock_git_not_in_repo() {
 	run validate_rule "${test_name}" "${test_content}" "${test_globs}" "${test_description}" "${test_always_apply}"
 	[[ "$status" -eq 0 ]]
 	[[ "$STATS_WARNINGS" -eq 1 ]]
-	echo "$output" | grep -q "validate_rule:: Warning: Rule '${test_name}' has a short description"
+	echo "$output" | grep -q "validate_rule:: Rule '${test_name}' has a short description"
 }
 
 @test 'validate_rule:: does not warn for short description with globs' {
@@ -360,7 +360,7 @@ mock_git_not_in_repo() {
 	run validate_rule "${test_name}" "${test_content}" "${test_globs}" "${test_description}" "${test_always_apply}"
 	[[ "$status" -eq 0 ]]
 	[[ "$STATS_WARNINGS" -eq 1 ]]
-	echo "$output" | grep -q "validate_rule:: Warning: Rule '${test_name}' has glob pattern with leading/trailing whitespace"
+	echo "$output" | grep -q "validate_rule:: Rule '${test_name}' has glob pattern with leading/trailing whitespace"
 }
 
 @test 'validate_rule:: tracks total lines' {

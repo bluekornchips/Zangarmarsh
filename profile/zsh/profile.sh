@@ -10,7 +10,7 @@ plugins=(git zsh-autosuggestions)
 # Check and load Oh My Zsh
 if [[ ! -f "$ZSH/oh-my-zsh.sh" ]]; then
 	cat <<EOF >&2
-Warning: Oh My Zsh is not installed.
+Oh My Zsh is not installed.
 To install Oh My Zsh, run:
 	sh -c "\$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 Or visit: https://ohmyz.sh/#install
@@ -23,7 +23,7 @@ fi
 # Check zsh-autosuggestions plugin
 if [[ ! -d "$ZSH/plugins/zsh-autosuggestions" ]]; then
 	cat <<EOF >&2
-Warning: zsh-autosuggestions plugin is not installed.
+zsh-autosuggestions plugin is not installed.
 To install zsh-autosuggestions, run:
 	git clone https://github.com/zsh-users/zsh-autosuggestions \$ZSH/plugins/zsh-autosuggestions
 Or visit: https://github.com/zsh-users/zsh-autosuggestions

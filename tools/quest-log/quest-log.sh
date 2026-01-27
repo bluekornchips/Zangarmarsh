@@ -77,7 +77,7 @@ validate_rule() {
 		STATS_ERRORS=$((STATS_ERRORS + 1))
 		validation_failed=true
 	elif ((line_count > 400)); then
-		echo "validate_rule:: Warning: Rule '${name}' is approaching the 500 line limit (${line_count} lines)" >&2
+		echo "validate_rule:: Rule '${name}' is approaching the 500 line limit (${line_count} lines)" >&2
 		echo "validate_rule:: Consider splitting into multiple rules" >&2
 		STATS_WARNINGS=$((STATS_WARNINGS + 1))
 	fi
@@ -91,7 +91,7 @@ validate_rule() {
 			local desc_length
 			desc_length=$(echo -n "${description}" | wc -c | tr -d ' ')
 			if ((desc_length < 20)); then
-				echo "validate_rule:: Warning: Rule '${name}' has a short description (${desc_length} chars) but uses intelligent application" >&2
+				echo "validate_rule:: Rule '${name}' has a short description (${desc_length} chars) but uses intelligent application" >&2
 				echo "validate_rule:: Suggestion: Provide a more descriptive description for better AI matching" >&2
 				STATS_WARNINGS=$((STATS_WARNINGS + 1))
 			fi
@@ -113,7 +113,7 @@ validate_rule() {
 				fi
 				# Check for common glob pattern issues
 				if [[ "${glob_pattern}" =~ ^[[:space:]]+ ]] || [[ "${glob_pattern}" =~ [[:space:]]+$ ]]; then
-					echo "validate_rule:: Warning: Rule '${name}' has glob pattern with leading/trailing whitespace: '${glob_pattern}'" >&2
+					echo "validate_rule:: Rule '${name}' has glob pattern with leading/trailing whitespace: '${glob_pattern}'" >&2
 					STATS_WARNINGS=$((STATS_WARNINGS + 1))
 				fi
 			done <<<"${glob_array}"
@@ -661,7 +661,7 @@ run_quest_log() {
 	# Check for jq availability
 	if ! command -v jq &>/dev/null; then
 		echo "run_quest_log:: jq is required but not installed." >&2
-		exit 1
+		return 1
 	fi
 
 	SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
@@ -689,12 +689,12 @@ run_quest_log() {
 			;;
 		-h | --help)
 			usage
-			exit 0
+			return 0
 			;;
 		-*)
 			echo "run_quest_log:: Unknown option: ${1}" >&2
 			usage
-			exit 1
+			return 1
 			;;
 		*)
 			TARGET_DIR="${1}"
@@ -711,17 +711,17 @@ run_quest_log() {
 	# Change to target directory for file operations
 	if ! cd "${TARGET_DIR}"; then
 		echo "run_quest_log:: Failed to change to target directory: ${TARGET_DIR}" >&2
-		exit 1
+		return 1
 	fi
 
 	if [[ ! -d "${TARGET_DIR}" ]]; then
 		echo "run_quest_log:: Target directory is required" >&2
-		exit 1
+		return 1
 	fi
 
 	if [[ ! -r "${SCHEMA_FILE}" ]]; then
 		echo "run_quest_log:: Schema file not found: ${SCHEMA_FILE}" >&2
-		exit 1
+		return 1
 	fi
 
 	# Install rules

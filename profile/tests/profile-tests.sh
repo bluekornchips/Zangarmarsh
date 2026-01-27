@@ -90,14 +90,14 @@ teardown() {
 	rm -rf "$ZSH"
 	run zsh -c "source '$SCRIPT'"
 	[ "$status" -eq 0 ]
-	echo "$output" | grep -q "Warning: Oh My Zsh is not installed"
+	echo "$output" | grep -q "Oh My Zsh is not installed"
 }
 
 @test "profile should handle missing zsh-autosuggestions plugin gracefully" {
 	rm -rf "$ZSH/plugins/zsh-autosuggestions"
 	run zsh -c "source '$SCRIPT'"
 	[ "$status" -eq 0 ]
-	echo "$output" | grep -q "Warning: zsh-autosuggestions plugin is not installed"
+	echo "$output" | grep -q "zsh-autosuggestions plugin is not installed"
 }
 
 @test "profile should set ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE when plugin is available" {

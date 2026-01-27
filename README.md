@@ -49,7 +49,7 @@ echo 'source /path/to/zangarmarsh/zangarmarsh.sh' >> ~/.zshrc
 
 ```bash
 # Test all components
-make test-all
+make test
 
 # Reload configuration
 source ~/.bashrc  # or ~/.zshrc
@@ -106,6 +106,7 @@ Development utilities in `tools/`:
 
 - Quest Log: AI assistant rules generator for Cursor from JSON schema
 - Trilliax: Development environment cleanup tool that removes generated files and build artifacts
+- Talent Calculator: Development tools installation script for managing CLI tools on workstations
 
 See `tools/README.md` for detailed documentation and usage examples.
 

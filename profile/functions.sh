@@ -188,7 +188,7 @@ EOF
 	)
 	for cache_file in "${CACHE_FILES[@]}"; do
 		# Use explicit path and validate results before deletion
-		find "${current_dir}" -maxdepth 10 -type d -name "$cache_file" -exec rm -rf {} + 2>/dev/null 2>&1 || true
+		find "${current_dir}" -maxdepth 10 -type d -name "$cache_file" -exec rm -rf {} + 2>/dev/null || true
 	done
 
 	# Create virtual environment

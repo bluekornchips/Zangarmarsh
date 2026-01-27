@@ -67,7 +67,7 @@ confirm_proceed() {
 	fi
 
 	cat <<EOF
-WARNING: This script performs destructive operations. You will be prompted
+This script performs destructive operations. You will be prompted
 to confirm before proceeding unless the -y flag is provided.
 
 OPERATIONS:

@@ -65,7 +65,7 @@ load_bash_components() {
 
 load_common_components
 
-SHELL_NAME=$(ps -p $$ -o comm= 2>/dev/null | tail -1)
+SHELL_NAME=$(ps -p "$$" -o comm= 2>/dev/null | tail -1)
 [[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "Shell detection: ZSH_VERSION='${ZSH_VERSION:-}', BASH_VERSION='${BASH_VERSION:-}', SHELL_NAME='$SHELL_NAME'" >&2
 if [[ -n "${ZSH_VERSION:-}" ]] || [[ "$SHELL_NAME" == *zsh ]]; then
 	[[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "Sourcing profile/zsh/profile.sh" >&2
