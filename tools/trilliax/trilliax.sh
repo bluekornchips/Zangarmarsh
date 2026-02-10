@@ -5,15 +5,6 @@
 #
 set -eo pipefail
 
-# Global cleanup trap handler
-cleanup() {
-	local exit_code=$?
-	if [[ $exit_code -ne 0 ]]; then
-		echo "Error in $0 at line $LINENO" >&2
-	fi
-}
-trap cleanup EXIT ERR
-
 ENABLED_TARGETS=""
 DEFAULT_MAX_DEPTH=10
 

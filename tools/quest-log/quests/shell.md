@@ -71,18 +71,6 @@ Content inside comment blocks with curly braces are instructions and not intende
 # {Description of script purpose}
 #
 
-if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
-  set -eo pipefail
-  umask 077
-fi
-
-# {Display usage information}
-#
-# Side Effects:
-# - {description}
-#
-# Returns:
-# - 0 always
 usage() {
   cat <<EOF
 Usage: $(basename "$0") [OPTIONS]
@@ -180,6 +168,9 @@ main() {
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  set -eo pipefail
+  umask 077
+  
   main "$@"
   exit $?
 fi

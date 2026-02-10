@@ -63,6 +63,22 @@ Summary of how the changes will be implemented. One to two sentences.
 - Low/Medium/High risk items and mitigation strategies
 ```
 
+## Reviewing Changes
+
+Before writing documentation, review the code changes using the GitHub CLI to compare branches:
+
+```bash
+gh pr diff <branch-name>..<base-branch>
+```
+
+For example, to compare your feature branch against main:
+
+```bash
+gh pr diff feature-branch..main
+```
+
+This helps ensure accurate documentation by showing exactly what changed in the codebase.
+
 ## Guidelines
 
 ### Writing Standards

@@ -4,15 +4,6 @@
 #
 set -eo pipefail
 
-# Global cleanup trap handler
-cleanup() {
-	local exit_code=$?
-	if [[ $exit_code -ne 0 ]]; then
-		echo "Error in $0 at line $LINENO" >&2
-	fi
-}
-trap cleanup EXIT ERR
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GIT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 

@@ -348,7 +348,7 @@ show_diff() {
 # - $1, target_dir, the directory where rules should be generated
 #
 # Side Effects:
-# - Creates cursor rule files in .cursor/rules directory
+# - Creates cursor rule files in .cursor/rules/user directory
 fill_quest_log() {
 	local target_dir="$1"
 
@@ -453,7 +453,7 @@ EOF
 # - $1, target_dir, the directory where daily-quests should be generated
 #
 # Side Effects:
-# - Creates daily-quest files in .cursor/commands directory
+# - Creates daily-quest files in .cursor/commands/user directory
 generate_commands() {
 	local target_dir="$1"
 
@@ -463,7 +463,7 @@ generate_commands() {
 	fi
 
 	local commands_dir="${QUEST_LOG_ROOT}/commands"
-	local cursor_commands_dir="${target_dir}/.cursor/commands"
+	local cursor_commands_dir="${target_dir}/.cursor/commands/user"
 
 	if [[ ! -d "${commands_dir}" ]]; then
 		return 0
@@ -514,13 +514,13 @@ generate_commands() {
 # Install quest-log rules for Cursor
 #
 # Side Effects:
-# - Creates local Cursor rules directory at TARGET_DIR/.cursor/rules/
+# - Creates local Cursor rules directory at TARGET_DIR/.cursor/rules/user/
 # - Installs rules from quest-log schema
 install_rules() {
 	echo "install_rules: running"
 
 	# Define directories
-	local cursor_rules_dir="${TARGET_DIR}/.cursor/rules"
+	local cursor_rules_dir="${TARGET_DIR}/.cursor/rules/user"
 
 	# Create local Cursor rules directory
 	if ! mkdir -p "${cursor_rules_dir}"; then
