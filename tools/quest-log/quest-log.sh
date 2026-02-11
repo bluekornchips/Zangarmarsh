@@ -235,14 +235,30 @@ create_cursor_rule_file() {
 		fi
 	fi
 
+	if [[ ! -d "${AGENT_RULES_DIR}" ]]; then
+		if ! mkdir -p "${AGENT_RULES_DIR}"; then
+			echo "create_cursor_rule_file:: Failed to create directory: ${AGENT_RULES_DIR}" >&2
+			return 1
+		fi
+	fi
+
 	local cursor_rule_file="${CURSOR_RULES_DIR}/rules-${name}.mdc"
 	local cursor_rule_file_abs
 	cursor_rule_file_abs=$(realpath "${cursor_rule_file}" 2>/dev/null || echo "${cursor_rule_file}")
 
-	# Check if file exists and read existing content
-	local existing_content=""
+	local agent_rule_file="${AGENT_RULES_DIR}/rules-${name}.md"
+	local agent_rule_file_abs
+	agent_rule_file_abs=$(realpath "${agent_rule_file}" 2>/dev/null || echo "${agent_rule_file}")
+
+	# Check if files exist and read existing content
+	local cursor_existing_content=""
 	if [[ -f "${cursor_rule_file}" ]]; then
-		existing_content=$(cat "${cursor_rule_file}" 2>/dev/null || true)
+		cursor_existing_content=$(cat "${cursor_rule_file}" 2>/dev/null || true)
+	fi
+
+	local agent_existing_content=""
+	if [[ -f "${agent_rule_file}" ]]; then
+		agent_existing_content=$(cat "${agent_rule_file}" 2>/dev/null || true)
 	fi
 
 	# Format globs for MDC frontmatter
@@ -283,15 +299,15 @@ $file_content
 EOF
 	)
 
-	# Check if content actually changed
-	if [[ "${existing_content}" == "${new_content}" ]]; then
+	# Check and update Cursor rule file
+	if [[ "${cursor_existing_content}" == "${new_content}" ]]; then
 		echo "No changes: ${cursor_rule_file_abs}"
 		STATS_UNCHANGED=$((STATS_UNCHANGED + 1))
 	else
 		show_diff "${cursor_rule_file}" "${new_content}"
 		echo "${new_content}" >"${cursor_rule_file}"
 		if [[ -f "${cursor_rule_file}" ]]; then
-			if [[ -n "${existing_content}" ]]; then
+			if [[ -n "${cursor_existing_content}" ]]; then
 				echo "Updated: ${cursor_rule_file_abs}"
 				STATS_UPDATED=$((STATS_UPDATED + 1))
 			else
@@ -300,6 +316,25 @@ EOF
 			fi
 		else
 			echo "create_cursor_rule_file:: Error: Failed to write rule file: ${cursor_rule_file_abs}" >&2
+			STATS_ERRORS=$((STATS_ERRORS + 1))
+			return 1
+		fi
+	fi
+
+	# Check and update Agent rule file
+	if [[ "${agent_existing_content}" == "${new_content}" ]]; then
+		echo "No changes: ${agent_rule_file_abs}"
+	else
+		show_diff "${agent_rule_file}" "${new_content}"
+		echo "${new_content}" >"${agent_rule_file}"
+		if [[ -f "${agent_rule_file}" ]]; then
+			if [[ -n "${agent_existing_content}" ]]; then
+				echo "Updated: ${agent_rule_file_abs}"
+			else
+				echo "Created: ${agent_rule_file_abs}"
+			fi
+		else
+			echo "create_cursor_rule_file:: Error: Failed to write rule file: ${agent_rule_file_abs}" >&2
 			STATS_ERRORS=$((STATS_ERRORS + 1))
 			return 1
 		fi
@@ -511,6 +546,86 @@ generate_commands() {
 	return 0
 }
 
+# Generate Agent workflows from markdown files
+#
+# Inputs:
+# - $1, target_dir, the directory where workflows should be generated
+#
+# Side Effects:
+# - Creates workflow files in .agent/workflows directory
+generate_workflows() {
+	local target_dir="$1"
+
+	if [[ -z "${target_dir}" ]]; then
+		echo "generate_workflows:: target_dir is required" >&2
+		return 1
+	fi
+
+	local commands_dir="${QUEST_LOG_ROOT}/commands"
+	local agent_workflows_dir="${target_dir}/.agent/workflows"
+
+	if [[ ! -d "${commands_dir}" ]]; then
+		return 0
+	fi
+
+	echo "generate_workflows: running"
+
+	if [[ ! -d "${agent_workflows_dir}" ]]; then
+		if ! mkdir -p "${agent_workflows_dir}"; then
+			echo "generate_workflows:: Failed to create workflows directory: ${agent_workflows_dir}" >&2
+			return 1
+		fi
+	fi
+
+	local command_file
+	while IFS= read -r -d '' command_file; do
+		local command_name
+		command_name=$(basename "${command_file}" .md)
+
+		local command_content
+		command_content=$(cat "${command_file}")
+
+		# Workflows need a description frontmatter for Antigravity
+		local description
+		description=$(head -n 1 "${command_file}" | sed 's/^# //')
+		
+		local workflow_content
+		workflow_content=$(
+			cat <<EOF
+---
+description: ${description}
+---
+
+${command_content}
+EOF
+		)
+
+		local agent_workflow_file="${agent_workflows_dir}/${command_name}.md"
+
+		# Check if content changed
+		local existing_content=""
+		if [[ -f "${agent_workflow_file}" ]]; then
+			existing_content=$(cat "${agent_workflow_file}" 2>/dev/null || true)
+		fi
+
+		if [[ "$existing_content" == "$workflow_content" ]]; then
+			echo "No changes: ${agent_workflow_file}"
+		else
+			show_diff "${agent_workflow_file}" "${workflow_content}"
+			echo "${workflow_content}" >"${agent_workflow_file}"
+			if [[ -f "${agent_workflow_file}" ]]; then
+				echo "Updated: ${agent_workflow_file}"
+			else
+				echo "Created: ${agent_workflow_file}"
+			fi
+		fi
+	done < <(find "${commands_dir}" -maxdepth 1 -name "*.md" -type f -print0 2>/dev/null || true)
+
+	echo "generate_workflows: complete"
+
+	return 0
+}
+
 # Install quest-log rules for Cursor
 #
 # Side Effects:
@@ -528,8 +643,16 @@ install_rules() {
 		return 1
 	fi
 
+	# Create local Agent rules directory
+	local agent_rules_dir="${TARGET_DIR}/.agent/rules"
+	if ! mkdir -p "${agent_rules_dir}"; then
+		echo "install_rules:: Failed to create Agent rules directory: ${agent_rules_dir}" >&2
+		return 1
+	fi
+
 	# Set target directory
 	readonly CURSOR_RULES_DIR="${cursor_rules_dir}"
+	readonly AGENT_RULES_DIR="${agent_rules_dir}"
 
 	# Generate rules
 	fill_quest_log "${TARGET_DIR}"
@@ -730,6 +853,7 @@ run_quest_log() {
 	# Generate daily-quests if commands directory exists
 	if [[ -d "${QUEST_LOG_ROOT}/commands" ]]; then
 		generate_commands "${TARGET_DIR}"
+		generate_workflows "${TARGET_DIR}"
 	fi
 
 	# Sync VSCode settings

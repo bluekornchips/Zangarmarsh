@@ -58,6 +58,7 @@ setup() {
 	cd "$TEST_TEMP_DIR"
 
 	mkdir -p "./$CURSOR_RULES_DIR"
+	mkdir -p "./.agent/rules"
 
 	quest_name="test-quest"
 	icon="🧪"
@@ -382,15 +383,20 @@ mock_git_not_in_repo() {
 # create_cursor_rule_file
 ########################################################
 
-@test 'create_cursor_rule_file:: creates rule file with correct content' {
+@test 'create_cursor_rule_file:: creates rule files with correct content' {
 	rm -f "./$CURSOR_RULES_DIR/rules-$quest_name.mdc"
+	rm -f "./.agent/rules/rules-$quest_name.md"
 
 	run create_cursor_rule_file "$quest_name" "$description" "$always_apply" "$content" "[]"
 	[[ "$status" -eq 0 ]]
 	[[ -f "./$CURSOR_RULES_DIR/rules-$quest_name.mdc" ]]
+	[[ -f "./.agent/rules/rules-$quest_name.md" ]]
 	grep -q "description: $description" "./$CURSOR_RULES_DIR/rules-$quest_name.mdc"
+	grep -q "description: $description" "./.agent/rules/rules-$quest_name.md"
 	grep -q "alwaysApply: $always_apply" "./$CURSOR_RULES_DIR/rules-$quest_name.mdc"
+	grep -q "alwaysApply: $always_apply" "./.agent/rules/rules-$quest_name.md"
 	grep -q "Test Content" "./$CURSOR_RULES_DIR/rules-$quest_name.mdc"
+	grep -q "Test Content" "./.agent/rules/rules-$quest_name.md"
 }
 
 @test 'create_cursor_rule_file:: updates existing rule file with different content' {
@@ -835,6 +841,10 @@ Line 3"
 	[[ "$status" -eq 0 ]]
 	[[ -f "$TEST_TEMP_DIR/.cursor/rules/rules-always.mdc" ]]
 	[[ -f "$TEST_TEMP_DIR/.cursor/rules/rules-author.mdc" ]]
+	[[ -f "$TEST_TEMP_DIR/.agent/rules/rules-always.md" ]]
+	[[ -f "$TEST_TEMP_DIR/.agent/rules/rules-author.md" ]]
+	[[ -f "$TEST_TEMP_DIR/.cursor/commands/user/author.md" ]]
+	[[ -f "$TEST_TEMP_DIR/.agent/workflows/author.md" ]]
 }
 
 @test 'run_quest_log:: handles --all flag' {

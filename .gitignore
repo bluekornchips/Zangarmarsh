@@ -1,5 +1,8 @@
 # IDE and editor files
 .cursor
+.agent
+.claude
+
 # .vscode/ # Intentionally not ignored
 *.swp
 *.swo

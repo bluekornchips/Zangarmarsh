@@ -21,9 +21,10 @@ questlog
 
 ## Features
 
-- Generates rules from JSON schema configuration
 - Creates Cursor rules locally (.cursor/rules/)
+- Creates Agent rules locally (.agent/rules/)
 - Generates daily-quests (Cursor commands) from markdown files (.cursor/commands/)
+- Generates Agent workflows from markdown files (.agent/workflows/)
 - Template-based rule generation system
 - Configurable rule categories and content
 - Automatic file organization and naming
@@ -71,10 +72,14 @@ Daily-quests are automatically copied to `.cursor/commands/` when you run `quest
 
 - `.cursor/rules/`: Local Cursor rules directory in project
   - Rule files are named based on the quest template names (e.g., `rules-python.mdc`)
-- `.cursor/commands/`: Local Cursor daily-quests directory in project
-  - Daily-quest files are generated from `tools/quest-log/commands/*.md`
-  - Daily-quests can be invoked in Cursor chat with `/command-name`
-  - See [Cursor Commands documentation](https://cursor.com/docs/agent/chat/commands) for details
+- .agent/rules/: Local Agent rules directory in project
+  - Rule files are named based on the quest template names (e.g., rules-python.md)
+- .cursor/commands/: Local Cursor daily-quests directory in project
+  - Daily-quest files are generated from tools/quest-log/commands/\*.md
+  - Daily-quests can be invoked in Cursor chat with /command-name
+  - See Cursor Commands documentation for details
+- .agent/workflows/: Local Agent workflows directory in project
+  - Workflow files are generated from tools/quest-log/commands/\*.md
 
 ## Schema Format
 

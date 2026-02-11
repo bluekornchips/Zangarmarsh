@@ -32,6 +32,16 @@ Development tools installation script for managing CLI tools on workstations.
 ./tools/talent-calculator/talent-calculator.sh --reset-talents
 ```
 
+### Hearthstone
+
+Setup and sync tool for initializing and synchronizing the Zangarmarsh development environment. It manages VS Code settings, AI assistant rules, and cleans build artifacts.
+
+```bash
+./tools/hearthstone/hearthstone.sh
+./tools/hearthstone/hearthstone.sh --yes
+./tools/hearthstone/hearthstone.sh --force
+```
+
 ## Testing
 
 ```bash
