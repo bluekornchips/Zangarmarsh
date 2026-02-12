@@ -88,6 +88,33 @@ _penv_install_dependencies() {
 	return 0
 }
 
+# Run git worktree from the git root
+#
+# Encapsulates git worktree so it always runs relative to the repository root,
+# regardless of the current working directory.
+#
+# Inputs:
+# - $@: arguments passed to git worktree
+#
+# Side Effects:
+# - Invokes git worktree in the repository root
+#
+# Returns:
+# - 0 on success
+# - 1 if not in a git repository or git worktree fails
+gw() {
+	local git_root
+	git_root="$(git rev-parse --show-toplevel 2>/dev/null)"
+	if [[ -z "${git_root}" ]]; then
+		echo "gw:: not in a git repository" >&2
+		return 1
+	fi
+
+	# Don't capture output, allow uninterrupted flow
+	git -C "${git_root}" worktree "$@"
+	return $?
+}
+
 penv() {
 	local env_name=".venv"
 	local python_version="python3"
@@ -132,7 +159,7 @@ EOF
 		*)
 			echo "Unknown option '$1'" >&2
 			echo "Use 'penv --help' for usage information" >&2
-			return 0
+			return 1
 			;;
 		esac
 	done
@@ -180,15 +207,19 @@ EOF
 		return 1
 	fi
 
-	CACHE_FILES=(
+	CACHE_DIRS=(
 		"__pycache__"
-		"*.pyc"
 		".mypy_cache"
 		".pytest_cache"
 	)
+
+	CACHE_FILES=("*.pyc")
+	for cache_dir in "${CACHE_DIRS[@]}"; do
+		find "${current_dir}" -maxdepth 10 -type d -name "${cache_dir}" -exec rm -rf {} + 2>/dev/null || true
+	done
+
 	for cache_file in "${CACHE_FILES[@]}"; do
-		# Use explicit path and validate results before deletion
-		find "${current_dir}" -maxdepth 10 -type d -name "$cache_file" -exec rm -rf {} + 2>/dev/null || true
+		find "${current_dir}" -maxdepth 10 -type f -name "${cache_file}" -exec rm -f {} + 2>/dev/null || true
 	done
 
 	# Create virtual environment
@@ -286,11 +317,7 @@ shfmt_smart() {
 	[[ "$verbose" == true ]] && echo "Searching for .sh files with max depth: $depth"
 
 	local -a files
-	# Mapfile is not available in all shells, so we use bash -c to execute the command
-	if ! bash -c "mapfile -t files < <(find . -type f -name '*.sh' -maxdepth '$depth' 2>/dev/null)"; then
-		echo "shfmt_smart:: Failed to find shell files" >&2
-		return 1
-	fi
+	mapfile -t files < <(find . -type f -name '*.sh' -maxdepth "${depth}" 2>/dev/null) || true
 
 	if [[ ${#files[@]} -eq 0 ]]; then
 		echo "No .sh files found within depth $depth"

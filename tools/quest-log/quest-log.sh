@@ -2,16 +2,6 @@
 #
 # Generate agentic tool rules for Cursor based on schema.json
 #
-set -eo pipefail
-
-# Global cleanup trap handler
-cleanup() {
-	local exit_code=$?
-	if ((exit_code != 0)); then
-		echo "Error in ${0} at line ${LINENO}" >&2
-	fi
-}
-trap cleanup EXIT ERR
 
 # Display usage information
 usage() {
@@ -588,7 +578,6 @@ generate_workflows() {
 		# Workflows need a description frontmatter for Antigravity
 		local description
 		description=$(head -n 1 "${command_file}" | sed 's/^# //')
-		
 		local workflow_content
 		workflow_content=$(
 			cat <<EOF
@@ -870,6 +859,16 @@ run_quest_log() {
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+	set -eo pipefail
+
+	cleanup() {
+		local exit_code=$?
+		if ((exit_code != 0)); then
+			echo "Error in ${0} at line ${LINENO}" >&2
+		fi
+	}
+	trap cleanup EXIT ERR
+
 	run_quest_log "$@"
 	exit $?
 fi

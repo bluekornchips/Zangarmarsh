@@ -2,7 +2,6 @@
 #
 # Hearthstone setup and sync tool
 #
-set -eo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GIT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
@@ -344,6 +343,8 @@ EOF
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+	set -eo pipefail
+
 	run_hearthstone "$@"
 	exit $?
 fi

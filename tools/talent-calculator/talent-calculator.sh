@@ -266,7 +266,7 @@ check_tools_status() {
 	# Check core tools
 	echo "check_tools_status:: Core tools:"
 	for tool in "${CORE_TOOLS[@]}"; do
-		cmd_name=$(extract_cmd_name ${tool})
+		cmd_name=$(extract_cmd_name "${tool}")
 		if check_tool_status "${cmd_name}"; then
 			((installed_count++)) || true
 		else
@@ -278,7 +278,7 @@ check_tools_status() {
 	# Check brew tools
 	echo "check_tools_status:: Brew tools:"
 	for tool in "${BREW_TOOLS[@]}"; do
-		cmd_name=$(extract_cmd_name ${tool})
+		cmd_name=$(extract_cmd_name "${tool}")
 		if check_tool_status "${cmd_name}"; then
 			((installed_count++)) || true
 		else
@@ -321,7 +321,7 @@ check_tools_status() {
 # - 0 always
 install_core_tools() {
 	for tool in "${CORE_TOOLS[@]}"; do
-		install_brew_package ${tool}
+		install_brew_package "${tool}"
 	done
 
 	return 0
@@ -413,7 +413,7 @@ run_talent_calculator() {
 	fi
 
 	for tool in "${BREW_TOOLS[@]}"; do
-		install_brew_package ${tool}
+		install_brew_package "${tool}"
 	done
 
 	echo "run_talent_calculator:: Installation complete"

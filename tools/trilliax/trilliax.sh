@@ -3,7 +3,6 @@
 # Trilliax cleanup script
 # Removes generated files and directories from development environments
 #
-set -eo pipefail
 
 ENABLED_TARGETS=""
 DEFAULT_MAX_DEPTH=10
@@ -363,8 +362,9 @@ run_trilliax() {
 	echo "run_trilliax:: Please don't say such things! The master is back, and things need to be kept tidy."
 }
 
-# Execute main function if script is called directly
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+	set -eo pipefail
+
 	run_trilliax "$@"
 	exit $?
 fi

@@ -85,7 +85,7 @@ teardown() {
 
 @test "penv with unknown option should fail" {
 	run penv --unknown-option
-	[[ "$status" -eq 0 ]]
+	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "Unknown option"
 	echo "$output" | grep -q "Use 'penv --help'"
 }
