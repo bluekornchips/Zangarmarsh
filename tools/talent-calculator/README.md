@@ -52,6 +52,7 @@ talents --help
 Installed first, essential for development:
 
 - `jq` - JSON processor
+- `yq` - YAML processor
 - `bats-core` - Bash Automated Testing System
 - `kubectl` - Kubernetes command-line tool
 

@@ -201,7 +201,7 @@ install_docker_colima() {
 # Install all other tools (non-brew)
 #
 # This function installs all tools that are not installed via Homebrew.
-# Note: Core tools (brew, jq, bats-core, kubectl) are installed separately.
+# Note: Core tools (brew, jq, yq, bats-core, kubectl) are installed separately.
 # It expects the helper functions (check_is_installed, uninstall_with_brew, etc.)
 # to be available from the parent script.
 #

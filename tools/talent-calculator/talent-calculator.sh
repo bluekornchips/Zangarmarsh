@@ -19,6 +19,7 @@ fi
 
 CORE_TOOLS=(
 	"jq"                               # https://jqlang.org/download/
+	"yq"                               # https://github.com/mikefarah/yq
 	"bats --package bats-core"         # https://github.com/bats-core/bats-core#installation
 	"kubectl --package kubernetes-cli" # https://kubernetes.io/docs/tasks/tools/
 )
@@ -314,6 +315,7 @@ check_tools_status() {
 #
 # Core tools are essential development tools:
 # - jq (JSON processor)
+# - yq (YAML processor)
 # - bats-core (Bash Automated Testing System)
 # - kubectl (Kubernetes command-line tool)
 #

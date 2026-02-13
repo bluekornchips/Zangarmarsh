@@ -270,6 +270,7 @@ mock_uname_linux_arm64() {
 ########################################################
 @test "install_core_tools:: installs all core tools in order" {
 	mock_command_not_installed "jq"
+	mock_command_not_installed "yq"
 	mock_command_not_installed "bats"
 	mock_command_not_installed "kubectl"
 	DRY_RUN="true"
@@ -279,6 +280,7 @@ mock_uname_linux_arm64() {
 
 	# Verify core tools are processed
 	echo "$output" | grep -q "jq"
+	echo "$output" | grep -q "yq"
 	echo "$output" | grep -q "bats"
 	echo "$output" | grep -q "kubectl"
 }
@@ -376,6 +378,7 @@ mock_uname_linux_arm64() {
 	# Verify core tools are checked first
 	echo "$output" | grep -q "brew is already installed\|Would install Homebrew"
 	echo "$output" | grep -q "jq is already installed\|Would install: brew install jq"
+	echo "$output" | grep -q "yq is already installed\|Would install: brew install yq"
 	echo "$output" | grep -q "bats is already installed\|Would install: brew install bats-core"
 	echo "$output" | grep -q "kubectl is already installed\|Would install: brew install kubernetes-cli"
 }
