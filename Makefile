@@ -11,7 +11,8 @@ test:
 	./tools/hearthstone/tests/hearthstone-tests.sh \
 	./tools/talent-calculator/tests/talent-calculator-tests.sh \
 	./tools/talent-calculator/tests/brew-tools-tests.sh \
-	./tools/talent-calculator/tests/other-tools-tests.sh
+	./tools/talent-calculator/tests/other-tools-tests.sh \
+	./tools/ice-block/tests/ice-block-tests.sh
 
 lint:
 	find . -name "*.sh" -type f | xargs shellcheck

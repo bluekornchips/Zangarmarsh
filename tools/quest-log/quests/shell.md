@@ -9,9 +9,9 @@
 ### Never Use, Immediate Rejection
 
 - Never use echo statements with line lengths over 160
-- Never remove paths the script did not create. Use trap to clean up long lived temporary paths created by the script. Manual cleanup is allowed for short lived temp files and error handling
-- Never use `exit` to exit a script inside a function
-- Never use unquoted variables, use `echo "$var"` not `echo $var`
+- Never remove paths the script did not create. Use `trap` to clean up long-lived temporary paths created by the script. Manual cleanup is allowed for short-lived temp files and error handling
+- Never use `exit` inside a function — use `return` instead
+- Never use unquoted variables: `echo "$var"` not `echo $var`
 - Never use `rm -rf /` or similar dangerous commands
 - Never use `eval` or `exec`
 - Never use `sudo`
@@ -19,15 +19,15 @@
 
 ## Mandatory Requirements, All Scripts Must Have
 
-### Always Use, Non Negotiable
+### Always Use, Non-Negotiable
 
 - Heredocs for output spread across more than 2 lines
-- Purposeful comments and section headers, include function docs for nontrivial functions
+- Purposeful comments and section headers; include function docs for non-trivial functions
 - Bats for testing when practical. Provide a health check or validation mode for scripts that call external services
-- Use `#!/usr/bin/env bash` or `#!/usr/bin/env zsh` for executables. Match the shell to features used
+- `#!/usr/bin/env bash` or `#!/usr/bin/env zsh` for executables — match the shell to the features used
 - Guard strict mode and umask in the direct execution block when the script can be sourced
 - Error messages to STDERR: `>&2`
-- Function header comments are required. Include Inputs or Arguments, Outputs, Side Effects, and Returns sections when they apply
+- Function header comments are required. Include Inputs, Outputs, Side Effects, and Returns sections when they apply
 - Input validation for all functions
 - Proper error handling with `return` status codes
 
@@ -35,37 +35,37 @@
 
 ### General Practices
 
-- For bash scripts, use bash version 3.2 or greater syntax. For zsh scripts, use zsh 5.0 or greater syntax
-- Use `[[ ... ]]`
+- For bash scripts, use bash 3.2+ syntax. For zsh scripts, use zsh 5.0+ syntax
+- Use `[[ ... ]]` for conditionals
 - Use `$(command)` instead of backticks
 - Use `(( ... ))` for arithmetic
 - Use explicit paths: `rm -v ./*`
-- Use builtins over external commands when reasonable
-- Using `cat` for heredoc blocks is strongly preferred for readability
-- Use array literals for lists. Avoid `declare -a` unless needed
+- Prefer builtins over external commands when reasonable
+- `cat` heredocs are strongly preferred for multi-line output readability
+- Use array literals for lists; avoid `declare -a` unless necessary
 - Always `return` explicit status codes
-- Always leave a newline before a return statement at the end of a function
+- Always leave a blank line before a `return` statement at the end of a function
 - Functions in test scripts do not require comments
-- Functions in invoked scripts do require comments unless they are both obvious and short
+- Functions in invoked scripts require comments unless they are both obvious and short
 - Use `command -v` for dependency checks and return helpful error messages
-- Use `mktemp` with explicit templates and secure temp files with `chmod 0600` when they contain secrets
+- Use `mktemp` with explicit templates; secure temp files with `chmod 0600` when they contain secrets
 
 ## Testing
 
-- Always prefix the test with the function name for direct function testing, such as `@test "function_name:: test description" {`
-- Use proper spacing between any changes or inputs before the run command to show what is being tested, changed, or mocked
-- Never execute actual changes with tests unless that functionality already exists
-- Always use worktrees for bats tests that require any form of git interaction in the test file
-- Use `setup_file` to set up the test environment and source the script for external dependencies
-- Use `setup` to set up the test environment and source the script for external dependencies
+- Always prefix tests with the function name for direct function testing: `@test "function_name:: test description" {`
+- Use proper spacing before the `run` command to clearly show what is being tested, changed, or mocked
+- Never execute actual side-effecting changes in tests unless that functionality is what is under test
+- Always use worktrees for bats tests that require git interaction
+- Use `setup_file` for file-scoped environment setup (e.g., checking external services)
+- Use `setup` for per-test environment setup and sourcing the script under test
 
 ## File Structure Template
 
-All scripts must maintain a consistent organizational structure. Functions should be grouped into logical sections in the following order: usage and help functions at the top, followed by validation and configuration initialization, then helper utilities, core business logic functions, the main entry point, and finally the source handler that enables both direct execution and sourcing.
+All scripts must maintain a consistent organizational structure. Functions should be grouped in the following order: usage and help functions, then validation and configuration, then helper utilities, then core business logic, then the main entry point, and finally the source guard that enables both direct execution and sourcing.
 
-Content inside comment blocks with curly braces are instructions and not intended to be part of the script.
+Content inside comment blocks with curly braces are instructions and are not intended to be part of the script.
 
-````bash
+```bash
 #!/usr/bin/env bash
 #
 # {Description of script purpose}
@@ -113,7 +113,7 @@ helper_function() {
   # fi
   # }
 
-  # {Output lines should include the function name in the pattern of `echo "helper_function:: {content}"`}
+  # {Output lines should include the function name: `echo "helper_function:: {content}"`}
 
   return 0 # {Always return explicit status codes}
 }
@@ -145,12 +145,12 @@ function_name() {
   # fi
   # }
 
-  # {Output lines should include the function name in the pattern of `echo "function_name:: {content}"`}
+  # {Output lines should include the function name: `echo "function_name:: {content}"`}
 
   return 0 # {Always return explicit status codes}
 }
 
-# {Main entry point, can be named anything but "main" is fallback default}
+# {Main entry point — "main" is the default fallback name}
 # {Does not require a function header comment}
 main() {
   while [[ $# -gt 0 ]]; do
@@ -170,10 +170,11 @@ main() {
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
   set -eo pipefail
   umask 077
-  
+
   main "$@"
   exit $?
 fi
+```
 
 ## Variables
 
@@ -189,8 +190,7 @@ echo "PATH=${PATH}, PWD=${PWD}"
 # {Use arrays for lists}
 flags=(--foo --bar='baz')
 mybinary "${flags[@]}"
-
-````
+```
 
 ## Control Flow
 
@@ -255,7 +255,7 @@ create_temp_dir() {
 
 ## Shell Test Structure Template
 
-Test files should be organized with a clear hierarchy: Bats setup hooks (`setup_file` and `setup`) come first to establish the test environment, followed by mock function definitions for external dependencies, then any test helper utilities, function-specific test groups organized by the function being tested, and finally integration tests that exercise the full workflow.
+Test files should be organized with a clear hierarchy: Bats setup hooks (`setup_file` and `setup`) come first to establish the test environment, followed by mock function definitions for external dependencies, then test helper utilities, function-specific test groups organized by the function under test, and finally integration tests that exercise the full workflow.
 
 ```bash
 #!/usr/bin/env bats
@@ -267,20 +267,17 @@ SCRIPT="${GIT_ROOT}/path/to/script.sh"
 [[ ! -f "$SCRIPT" ]] && echo "setup:: Script not found: $SCRIPT" >&2 && return 1
 
 setup_file() {
-  # {If needed check access to API's, databases, etc.}
+  # {If needed, check access to APIs, databases, etc.}
 
   return 0
 }
 
 setup() {
   # {Source the script}
-
   source "$SCRIPT"
 
-  # {Define global variables}
+  # {Define and export global variables}
   VAR_A="test"
-
-  # {Export global variables}
   export VAR_A
 
   return 0
@@ -291,7 +288,6 @@ setup() {
 
 # {Helper functions for test setup, assertions, etc.}
 
-# tests by function
 # {Group tests by function being tested}
 # function_name
 @test "function_name:: script handles unknown options" {
