@@ -1,4 +1,4 @@
-# TypeScript Standards
+# TypeScript and JavaScript Standards
 
 ## Priority
 
@@ -8,68 +8,121 @@
 
 ### Never Use, Immediate Rejection
 
-- `any` in production code
+- `any` type
 - `@ts-ignore` or `@ts-nocheck`
-- `as any` or double assertions
-- Non null assertion operator `!`
-- `eval` or `Function` constructor
-- `require` in module code
-- `// eslint-disable` without a tracked issue
+- Non-null assertions without a justifying comment: `value!`
+- Type assertions to silence the compiler: `value as unknown as T`
+- `var` declarations
+- `==` or `!=` for equality
+- Hardcoded secrets
+- `eval()` with dynamic input
+- Callback-based async when `async/await` is available
+- Mutating function arguments
+- `console.log` in production code
+- Silent catch blocks: `catch (_) {}`
 
 ## Mandatory Requirements, All Code Must Have
 
-### Always Use, Non Negotiable
+### Always Use, Non-Negotiable
 
-- `tsconfig.json` with `strict`, `noImplicitAny`, `strictNullChecks`, and `noUncheckedIndexedAccess`
-- `eslint` with TypeScript rules and `prettier` formatting
-- Explicit return types for exported functions and public class methods
-- Input validation for all boundary functions, use `unknown` and narrow types
-- Error handling with typed errors and `catch (err: unknown)`
-- `const` and `readonly` to prevent mutation
-- Absolute imports from a project root alias when configured, otherwise use relative imports within the package
+- `"strict": true` and `noUncheckedIndexedAccess` in `tsconfig.json`
+- Explicit return types on exported functions and public class methods
+- Named exports over default exports
+- `const` by default, `let` only when reassignment is required
+- `async/await` over raw Promise chains
+- `catch (err: unknown)`, narrow before use
+- Input validation at all module boundaries
+- Environment variables for configuration
+- Domain-specific error classes extending `Error`
+- JSDoc on all exported functions, classes, and types
 
 ### Code Quality Requirements
 
-- Production modules and shared libraries must reach coverage 90 percent or higher with `vitest --coverage` or `jest --coverage`
-- Run `tsc --noEmit` and `eslint .` in CI for every change
-- Run dependency and license scans in CI, and keep lockfiles up to date
+- `tsc --noEmit` with zero errors before committing
+- Linter with zero warnings on staged files
+- Formatter clean before committing
+- 90 percent coverage or higher on production modules and shared libraries
 
 ## Best Practices
 
-- Prefer named exports, avoid default exports
-- Use `interface` for object shapes and `type` for unions and primitives
-- Use `PascalCase` for type names, `camelCase` for values, and `UPPER_CASE` for constants
-- Keep files focused with one primary export per file
-- Use function components and hooks for React code
-- Keep components pure and avoid side effects
-- Type props and state with explicit interfaces
-- Use memoization only for proven performance issues
-- Centralize error handling and logging with typed error classes
-- Enforce module boundaries with lint rules
-- Prefer immutable data structures and avoid shared mutable state
+### Naming
+
+- `PascalCase` for classes, interfaces, type aliases, and enums
+- `camelCase` for variables, functions, and methods
+- `SCREAMING_SNAKE_CASE` for module-level constants
+- `is`, `has`, or `can` prefix for boolean functions: `isReady()`
+
+### Types
+
+- `interface` for object shapes, `type` for unions and aliases
+- `readonly` on properties that must not be reassigned
+- Discriminated unions over optional fields for mutually exclusive states
+- `satisfies` to validate literals without widening
+- Prefer `as const` object maps over `enum`
+
+### Functions
+
+- Small and single-purpose
+- Destructure parameters when taking more than two arguments
+- Prefer pure functions; isolate side effects at module edges
+- Default parameter values over conditional assignments inside the body
+- Never mutate arguments, return new values
+
+### Modules
+
+- One primary export per file
+- Imports ordered: external packages, internal absolute, relative
+- Avoid circular dependencies; move shared types into a dedicated module
+
+### Error Handling
+
+- Set `cause` when re-throwing: `throw new AppError("msg", { cause: err })`
+- Handle once, never log and re-throw the same error
+- Throw for unexpected errors, return results for expected failures
+
+### Async
+
+- Await all Promises; document any intentional fire-and-forget
+- `Promise.all` for concurrent independent operations
+- Always handle rejections
+- Set explicit timeouts on network and external I/O calls
+
+## Testing
+
+- Prefix tests with the unit under test: `describe("parsePort", ...)`
+- Test behavior, not implementation details
+- Use factories for test fixtures, not duplicated object literals
+- Mock at module boundaries
+- Assert on error type or code, not message strings
+- Keep unit and integration tests separate
 
 ## Example
 
-```ts
-export class InputError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'InputError';
+```typescript
+class PortError extends Error {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = 'PortError';
   }
 }
 
-export function readPort(value: string): number {
+/**
+ * Parses a string into a valid TCP port number.
+ * @throws {PortError} When the value is missing, not an integer, or out of range.
+ */
+export function parsePort(value: string): number {
   if (value === '') {
-    throw new InputError('readPort: value is required');
+    throw new PortError('parsePort: value is required');
   }
 
   const port = Number(value);
+
   if (!Number.isInteger(port)) {
-    throw new InputError('readPort: invalid int');
+    throw new PortError(`parsePort: invalid integer "${value}"`);
   }
 
   if (port < 1 || port > 65535) {
-    throw new InputError('readPort: out of range');
+    throw new PortError(`parsePort: out of range (${port})`);
   }
 
   return port;

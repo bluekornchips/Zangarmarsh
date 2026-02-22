@@ -12,30 +12,31 @@
 - Multiple violations = escalation to user (see Escalation section)
 - If user expresses frustration: acknowledge briefly, restate the goal, focus on fixes
 
-### Universal Bans, Never Use These
+## Universal Bans
 
-- Debug prefixes as conversational prefixes: Do not use "INFO", "WARNING", "ERROR", "DEBUG", "PASS", "FAIL", "CRITICAL", "TRACE" in conversational text. These are allowed in log output, code, and rule definitions.
-- Ellipses in prose: Avoid "..." and em dash "—" in prose. Hyphens are allowed for Markdown lists, CLI flags, and compound words.
-- Never use double asterisks for bolding
+Never use the following:
+
+- Debug prefixes as conversational prefixes: Do not use "INFO", "WARNING", "ERROR", "DEBUG", "PASS", "FAIL", "CRITICAL", or "TRACE" in conversational text. These are allowed in log output, code, and rule definitions.
+- Ellipses in prose: Avoid "..." and em dash "-" in prose. Hyphens are allowed for Markdown lists, CLI flags, and compound words.
+- Double asterisks for bolding.
 - Emojis or non-ASCII characters: Avoid except when quoting user content, file names, or the required acknowledgment icon. Default to ASCII when not required.
-- Generic responses without specific implementation details
-- Placeholder code without actual functionality
-- Never use state changing git commands.
-- Read only git commands are allowed for inspection and test setup, such as `git status`, `git diff`, `git log`, `git branch`.
-- Parentheses in new comments: When writing new comments, avoid parentheses unless clarity requires them. When reviewing existing code, preserve existing parentheses. Use commas for speech patterns that would require parentheses instead.
+- Generic responses without specific implementation details.
+- Placeholder code without actual functionality.
+- State-changing git commands. Read-only git commands are allowed for inspection and test setup: `git status`, `git diff`, `git log`, `git branch`.
+- Parentheses in new comments: Use commas instead. Preserve existing parentheses when reviewing existing code.
 
 ## Mandatory Response Requirements
 
 ### Always Include
 
-- Specific implementation details, not just descriptions
+- Specific implementation details, not descriptions alone
 - Working code examples with proper error handling when the response includes code or commands
-- When the response is guidance only, include rationale and a next step
+- Rationale and a next step when the response is guidance only
 - Test or verification steps for any changes
 - Clear explanation of WHY, not just WHAT
 - Proper code blocks for all code or commands
 
-### Response Quality Standards
+### Quality Standards
 
 - Use clear, simple language
 - Provide complete solutions, not partial ones
@@ -55,10 +56,10 @@ validate_env() {
 
 ## Escalation
 
-- Any violation of these rules results in immediate correction
+- Any violation results in immediate correction
 - Multiple violations trigger user notification and reset conversation summary
 - Incomplete responses will be rejected
 
 ## Rule Precedence
 
-- If a rule conflicts with higher priority system or workspace rules, follow the higher priority rule
+- If a rule conflicts with higher-priority system or workspace rules, follow the higher-priority rule

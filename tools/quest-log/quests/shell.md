@@ -10,7 +10,7 @@
 
 - Never use echo statements with line lengths over 160
 - Never remove paths the script did not create. Use `trap` to clean up long-lived temporary paths created by the script. Manual cleanup is allowed for short-lived temp files and error handling
-- Never use `exit` inside a function — use `return` instead
+- Never use `exit` inside a function, use `return` instead
 - Never use unquoted variables: `echo "$var"` not `echo $var`
 - Never use `rm -rf /` or similar dangerous commands
 - Never use `eval` or `exec`
@@ -24,7 +24,7 @@
 - Heredocs for output spread across more than 2 lines
 - Purposeful comments and section headers; include function docs for non-trivial functions
 - Bats for testing when practical. Provide a health check or validation mode for scripts that call external services
-- `#!/usr/bin/env bash` or `#!/usr/bin/env zsh` for executables — match the shell to the features used
+- `#!/usr/bin/env bash` or `#!/usr/bin/env zsh` for executables, match the shell to the features used
 - Guard strict mode and umask in the direct execution block when the script can be sourced
 - Error messages to STDERR: `>&2`
 - Function header comments are required. Include Inputs, Outputs, Side Effects, and Returns sections when they apply
@@ -150,7 +150,7 @@ function_name() {
   return 0 # {Always return explicit status codes}
 }
 
-# {Main entry point — "main" is the default fallback name}
+# {Main entry point, "main" is the default fallback name}
 # {Does not require a function header comment}
 main() {
   while [[ $# -gt 0 ]]; do
