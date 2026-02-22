@@ -107,6 +107,8 @@ Development utilities in `tools/`:
 - Quest Log: AI assistant rules generator for Cursor from JSON schema
 - Trilliax: Development environment cleanup tool that removes generated files and build artifacts
 - Talent Calculator: Development tools installation script for managing CLI tools on workstations
+- Hearthstone: Setup and sync tool that initializes and synchronizes the development environment
+- Ice Block: Dotfile backup tool that copies shell configs and SSH keys to `~/.ice-block/<hostname>/`
 
 See `tools/README.md` for detailed documentation and usage examples.
 

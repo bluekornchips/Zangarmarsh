@@ -36,7 +36,11 @@ load_common_components() {
 		fi
 	done
 }
-load_common_components
+
+if ! load_common_components; then
+	echo "Failed to load common components" >&2
+	return 1
+fi
 
 SHELL_NAME=$(ps -p "$$" -o comm= 2>/dev/null | tail -1)
 [[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "Shell detection: ZSH_VERSION='${ZSH_VERSION:-}', BASH_VERSION='${BASH_VERSION:-}', SHELL_NAME='$SHELL_NAME'" >&2

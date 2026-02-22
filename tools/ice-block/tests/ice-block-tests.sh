@@ -18,9 +18,9 @@ setup() {
 	export HOME="$TEST_DIR"
 
 	mkdir -p "$HOME/.ssh"
-	echo "alias foo='bar'" > "$HOME/.aliases"
-	echo "export PATH=..." > "$HOME/.bashrc"
-	echo "ssh config" > "$HOME/.ssh/config"
+	echo "alias foo='bar'" >"$HOME/.aliases"
+	echo "export PATH=..." >"$HOME/.bashrc"
+	echo "ssh config" >"$HOME/.ssh/config"
 	chmod 400 "$HOME/.ssh/config"
 
 	set +e
@@ -86,7 +86,7 @@ teardown() {
 @test "copy_source:: overwrites a read-only file in the destination" {
 	TARGET_DIR="$TEST_DIR/backup"
 	mkdir -p "$TARGET_DIR/.ssh"
-	echo "old config" > "$TARGET_DIR/.ssh/config"
+	echo "old config" >"$TARGET_DIR/.ssh/config"
 	chmod 400 "$TARGET_DIR/.ssh/config"
 
 	run copy_source "$HOME/.ssh"
