@@ -6,7 +6,7 @@
 # Display usage information
 usage() {
 	cat <<EOF
-Usage: $0 [OPTIONS] [DIRECTORY]
+Usage: $(basename "$0") [OPTIONS] [DIRECTORY]
 
 Generate agentic tool rules and daily-quests for Cursor based on schema.json. Rules
 and daily-quests are installed locally in the project directory.
@@ -18,9 +18,9 @@ OPTIONS:
     -h, --help          Show this help message
 
 EXAMPLES:
-    $0                  # Generate rules and daily-quests in git root (if in git repo) or current directory
-    $0 /path/to/dir     # Generate rules and daily-quests in git root (if in git repo) or specified directory
-    $0 --all            # Generate all rules including warcraft and lotr
+    $(basename "$0")                  # Generate rules and daily-quests in git root (if in git repo) or current directory
+    $(basename "$0") /path/to/dir     # Generate rules and daily-quests in git root (if in git repo) or specified directory
+    $(basename "$0") --all            # Generate all rules including warcraft and lotr
 EOF
 }
 

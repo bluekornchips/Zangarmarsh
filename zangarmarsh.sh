@@ -25,16 +25,23 @@ COMMON_FILES=(
 load_common_components() {
 	local file
 	local file_path
+	local failed=0
 
 	for file in "${COMMON_FILES[@]}"; do
 		file_path="$ZANGARMARSH_ROOT/profile/$file"
 		if [[ -f "$file_path" ]]; then
-
-			source "$file_path" 2>/dev/null || {
+			if ! source "$file_path" 2>/dev/null; then
 				[[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "Failed to source $file_path" >&2
-			}
+				failed=1
+			fi
 		fi
 	done
+
+	if [[ "${failed}" -ge 1 ]]; then
+		return 1
+	fi
+
+	return 0
 }
 
 if ! load_common_components; then

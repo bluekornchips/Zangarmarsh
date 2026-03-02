@@ -334,9 +334,13 @@ run_trilliax() {
 
 	echo "run_trilliax:: Filthy, filthy, FILTHY!"
 	local cleanup_count=0
-	# Convert space-separated string to array for safe iteration
-	local -a targets_array
-	IFS=' ' read -ra targets_array <<<"${ENABLED_TARGETS}"
+	local targets_array
+	targets_array=()
+
+	while IFS= read -r line; do
+		[[ -n "${line}" ]] && targets_array+=("${line}")
+	done <<<"${ENABLED_TARGETS// /$'\n'}"
+
 	local target
 	for target in "${targets_array[@]}"; do
 		case "${target}" in

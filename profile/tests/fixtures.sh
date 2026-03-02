@@ -197,7 +197,7 @@ create_mock_git_repo() {
 
 	cd "$test_dir" || {
 		echo "test_dir does not exist: $test_dir" >&2
-		exit 1
+		return 1
 	}
 
 	git init >/dev/null 2>&1
@@ -214,7 +214,7 @@ create_mock_git_branch() {
 	local branch_name="$2"
 	cd "$test_dir" || {
 		echo "Failed to cd to test_dir: $test_dir" >&2
-		exit 1
+		return 1
 	}
 	git checkout -b "$branch_name" >/dev/null 2>&1
 }
@@ -225,7 +225,7 @@ create_mock_git_tag() {
 	local tag_name="$2"
 	cd "$test_dir" || {
 		echo "Failed to cd to test_dir: $test_dir" >&2
-		exit 1
+		return 1
 	}
 	git tag "$tag_name" >/dev/null 2>&1
 	git checkout "$tag_name" >/dev/null 2>&1
@@ -236,7 +236,7 @@ create_mock_git_detached() {
 	local test_dir="$1"
 	cd "$test_dir" || {
 		echo "Failed to cd to test_dir: $test_dir" >&2
-		exit 1
+		return 1
 	}
 	git checkout --detach HEAD >/dev/null 2>&1
 }

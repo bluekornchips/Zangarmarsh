@@ -172,7 +172,7 @@ teardown() {
 	create_mock_dependency_file "pyproject"
 	run penv
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Found pyproject.toml - installing with pip"
+	echo "$output" | grep -q "Found pyproject.toml. Installing with pip"
 }
 
 @test "penv should install dependencies from requirements.txt" {
@@ -181,7 +181,7 @@ teardown() {
 	create_mock_dependency_file "requirements"
 	run penv
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Found requirements.txt - installing dependencies"
+	echo "$output" | grep -q "Found requirements.txt. Installing dependencies"
 }
 
 @test "penv should handle missing dependency files gracefully" {

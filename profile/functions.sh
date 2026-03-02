@@ -64,7 +64,7 @@ _penv_install_dependencies() {
 	local dependency_installed=false
 
 	if [[ -f "pyproject.toml" ]]; then
-		echo "Found pyproject.toml - installing with pip."
+		echo "penv:: Found pyproject.toml. Installing with pip."
 		if pip install -e ".[dev]" 2>/dev/null; then
 			dependency_installed=true
 		elif pip install -e . 2>/dev/null; then
@@ -73,7 +73,7 @@ _penv_install_dependencies() {
 			echo "pip install failed, you may need to install dependencies manually" >&2
 		fi
 	elif [[ -f "requirements.txt" ]]; then
-		echo "Found requirements.txt - installing dependencies."
+		echo "penv:: Found requirements.txt. Installing dependencies."
 		if pip install -r requirements.txt 2>/dev/null; then
 			dependency_installed=true
 		else
@@ -82,7 +82,7 @@ _penv_install_dependencies() {
 	fi
 
 	if [[ "$dependency_installed" != true ]]; then
-		echo "No dependency files found (pyproject.toml, requirements-dev.txt, requirements.txt)"
+		echo "penv:: No dependency files found: pyproject.toml, requirements-dev.txt, requirements.txt"
 	fi
 
 	return 0
@@ -174,15 +174,15 @@ EOF
 	fi
 
 	# Show Python version info
-	echo "Using Python: $python_version ($(command -v "$python_version"))"
-	echo "Version: $("$python_version" --version 2>/dev/null || echo "Version info unavailable")"
+	echo "penv:: Using Python: $python_version ($(command -v "$python_version"))"
+	echo "penv:: Version: $("$python_version" --version 2>/dev/null || echo "Version info unavailable")"
 
 	# If venv exists and no force recreate, just activate it
 	if [[ -d "$env_name" && "$force_recreate" != true ]]; then
-		echo "Virtual environment exists, activating: $env_name"
+		echo "penv:: Virtual environment exists, activating: $env_name"
 
 		if source "$env_name/bin/activate" >/dev/null 2>&1; then
-			echo "Activated existing environment: $env_name"
+			echo "penv:: Activated existing environment: $env_name"
 			return 0
 		fi
 	fi
@@ -190,7 +190,7 @@ EOF
 	# Clean up existing environment if it exists
 	# Explicit path validation: ensure we're only removing .venv in current directory
 	if [[ -d "$env_name" ]] && [[ "$(realpath "$env_name" 2>/dev/null || echo "$env_name")" == "$(realpath "$(pwd)/$env_name" 2>/dev/null || echo "$(pwd)/$env_name")" ]]; then
-		echo "Removing existing virtual environment: $env_name"
+		echo "penv:: Removing existing virtual environment: $env_name"
 		rm -rf "$env_name" 2>/dev/null || {
 			echo "Failed to remove existing environment" >&2
 			return 1
@@ -199,7 +199,7 @@ EOF
 
 	# Clean up cache files
 	# Explicit path validation: only clean cache files in current directory tree
-	echo "Cleaning up cache files."
+	echo "penv:: Cleaning up cache files."
 	local current_dir
 	current_dir="$(pwd)"
 	if [[ -z "${current_dir}" ]] || [[ ! -d "${current_dir}" ]]; then
@@ -223,7 +223,7 @@ EOF
 	done
 
 	# Create virtual environment
-	echo "Creating virtual environment with $python_version: $env_name"
+	echo "penv:: Creating virtual environment with $python_version: $env_name"
 	if ! "$python_version" -m venv "$env_name" 2>/dev/null; then
 		echo "Failed to create virtual environment" >&2
 		echo "Make sure $python_version has venv module installed" >&2
@@ -270,77 +270,54 @@ elif [[ "${ZANGARMARSH_ENABLE_NVM:-true}" == "true" ]]; then
 	_nvm_load
 fi
 
-# Smart shfmt wrapper that formats shell files recursively
-#
-# Inputs:
-# - Arguments parsed as flags: -v|--verbose, -d|--depth NUM
-#
-# Side Effects:
-# - Modifies .sh files in place with formatting
-shfmt_smart() {
-	local depth=4
-	local verbose=false
+list_changed_files() {
+	local one_line=false
+	local origin_branch
 
 	while [[ $# -gt 0 ]]; do
-		case $1 in
-		-v | --verbose)
-			verbose=true
+		case "$1" in
+		--one-line)
+			one_line=true
 			shift
 			;;
-		-d | --depth)
-			depth="$2"
-			shift 2
+		-*)
+			echo "list_changed_files:: unknown option $1" >&2
+			return 1
 			;;
 		*)
-			if [[ "$1" =~ ^[0-9]+$ ]]; then
-				depth="$1"
-				shift
-			else
-				echo "Unknown option: $1" >&2
-				return 1
-			fi
+			[[ -z "${origin_branch}" ]] && origin_branch="$1"
+			shift
 			;;
 		esac
 	done
 
-	if ! [[ "$depth" =~ ^[0-9]+$ ]] || ((depth < 1)); then
-		echo "depth must be a positive integer" >&2
+	if [[ -z "${origin_branch}" ]]; then
+		echo "list_changed_files:: origin_branch is required" >&2
 		return 1
 	fi
 
-	if ! command -v shfmt >/dev/null 2>&1; then
-		echo "shfmt not found. Please install shfmt first" >&2
-		echo "This version is preferred: https://github.com/mvdan/sh" >&2
+	local git_root
+	local to_format=()
+
+	git_root="$(git rev-parse --show-toplevel 2>/dev/null)"
+	if [[ -z "${git_root}" ]]; then
+		echo "list_changed_files:: not in a git repository" >&2
 		return 1
 	fi
 
-	[[ "$verbose" == true ]] && echo "Searching for .sh files with max depth: $depth"
+	local f
+	while IFS= read -r f; do
+		[[ -n "${f}" ]] && [[ -f "${git_root}/${f}" ]] && to_format+=("${f}")
+	done < <(git -C "${git_root}" diff "${origin_branch}" --name-only 2>/dev/null)
 
-	local -a files
-	mapfile -t files < <(find . -type f -name '*.sh' -maxdepth "${depth}" 2>/dev/null) || true
-
-	if [[ ${#files[@]} -eq 0 ]]; then
-		echo "No .sh files found within depth $depth"
-		return 0
+	if [[ "${one_line}" == true ]]; then
+		(
+			IFS=' '
+			printf '%s\n' "${to_format[*]}"
+		)
+	else
+		printf '%s\n' "${to_format[@]}"
 	fi
-
-	echo "Found ${#files[@]} shell files to format"
-
-	local file
-	local shfmt_args=(-w)
-
-	[[ "$verbose" == true ]] && shfmt_args+=(-d)
-
-	for file in "${files[@]}"; do
-		if [[ -f "$file" ]]; then
-			if [[ "$verbose" == true ]]; then
-				echo "Formatting: $file"
-			fi
-			if ! shfmt "${shfmt_args[@]}" "$file"; then
-				echo "Failed to format $file" >&2
-			fi
-		fi
-	done
 
 	return 0
 }
