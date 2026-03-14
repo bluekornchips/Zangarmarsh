@@ -344,7 +344,7 @@ EOF
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
 	set -eo pipefail
-
+	umask 077
 	run_hearthstone "$@"
 	exit $?
 fi

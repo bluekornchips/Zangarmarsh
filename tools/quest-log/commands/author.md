@@ -1,15 +1,14 @@
 # PR and JIRA Documentation
 
-Create two files when documenting code changes: `pr.md` and `jira.md`.
-
-Use simple language. Avoid fancy words, excessive quotes, parentheses, or dashes.
+Create two files when documenting code changes: `pr.md` (for reviewers, past tense) and `jira.md` (for JIRA, future tense). Use simple words, write clearly and directly, and keep descriptions concise. Avoid jargon, excessive quotes, parentheses, or dashes. Review the diff before writing so the docs match the code.
 
 ## pr.md
 
-A short description of code changes for the included files. This document serves as the primary communication tool for reviewers and stakeholders.
+Short description of code changes for reviewers.
 
 ### Template
 
+```markdown
 ## Issue Information
 
 - Issue Link: [TICKET-NUMBER](link)
@@ -27,13 +26,12 @@ Key highlights:
 
 ## Testing Instructions
 
-```bash
-path/to/script/
+Use a bash code block for commands, e.g. `path/to/script/`.
 ```
 
 ## jira.md
 
-A short description of code changes written in future tense. This ticket describes what the changes accomplish at a high level and serves as the official record for project tracking.
+Short description of changes in future tense for JIRA. Use all sections for larger work; for small changes, Background, Dependencies, and Risk Assessment can be omitted or one line each.
 
 ### Template
 
@@ -44,37 +42,25 @@ High level description of changes and improvements in future tense. Three to fou
 
 Brief context on why these changes are needed. One to two sentences.
 
-## Implementation Approach
-
-Summary of how the changes will be implemented. One to two sentences.
-
 ## Acceptance Criteria
 
 1. Criterion 1 with specific, measurable outcome
 2. Criterion 2 with specific, measurable outcome
 3. Criterion 3 with specific, measurable outcome
-
-## Dependencies
-
-- List any blocking dependencies or prerequisites
-
-## Risk Assessment
-
-- Low/Medium/High risk items and mitigation strategies
 ```
 
 ## Reviewing Changes
 
-Before writing documentation, review the code changes using the GitHub CLI to compare branches:
+Before writing documentation, review the code changes by comparing your branch against the base branch:
 
 ```bash
-gh pr diff <branch-name>..<base-branch>
+git diff main...feature-branch
 ```
 
-For example, to compare your feature branch against main:
+If the PR already exists, use the PR number:
 
 ```bash
-gh pr diff feature-branch..main
+gh pr diff <PR-number>
 ```
 
 This helps ensure accurate documentation by showing exactly what changed in the codebase.

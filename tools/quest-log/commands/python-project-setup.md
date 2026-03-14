@@ -13,8 +13,10 @@ project-name/
 │       └── main.py
 ├── tests/
 │   └── test_main.py
+├── .gitignore
 ├── Makefile
-└── pyproject.toml
+├── pyproject.toml
+└── README.md
 ```
 
 ## Step-by-Step Setup
@@ -98,8 +100,8 @@ This file demonstrates all mandatory requirements:
 
 import logging
 import os
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Any
 
 # Configure logging (never use print for debugging)
 logger = logging.getLogger(__name__)
@@ -110,7 +112,7 @@ logging.basicConfig(
 
 
 @contextmanager
-def example_context_manager() -> Any:
+def example_context_manager() -> Generator[None, None, None]:
     """Example context manager for resource management."""
     logger.info("Entering context")
     try:
@@ -149,11 +151,9 @@ def example_function(items: list[str] | None = None) -> list[str]:
     if items is None:
         items = []
 
-    # Input validation
     if not isinstance(items, list):
         raise ValueError(f"Expected list, got {type(items)}")
 
-    # Specific exception handling
     try:
         result = [item.upper() for item in items]
         logger.info(f"Processed {len(result)} items")
@@ -182,7 +182,6 @@ def main() -> None:
     """Main entry point."""
     logger.info("Application started")
 
-    # Example usage
     with example_context_manager():
         try:
             result = example_function(["hello", "world"])
@@ -273,7 +272,7 @@ def test_validate_input_raises_value_error_for_negative() -> None:
 Create a `Makefile` with targets for virtual environment setup, formatting, import sorting, and testing:
 
 ```makefile
-.PHONY: venv install format lint test all
+.PHONY: venv install format isort lint typecheck test all
 
 VENV = .venv
 PYTHON = $(VENV)/bin/python
@@ -288,14 +287,69 @@ install: venv
 format:
 	$(VENV)/bin/black src/ tests/
 
-lint:
+isort:
 	$(VENV)/bin/isort src/ tests/
+
+lint:
+	$(VENV)/bin/mypy src/
 
 test:
 	$(VENV)/bin/pytest
 
-all: format lint test
+all: format isort lint test
 ```
+
+### 6. Create `.gitignore`
+
+```
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.mypy_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+dist/
+*.egg-info/
+```
+
+### 7. Create `README.md`
+
+````markdown
+# project-name
+
+Brief description of the project.
+
+## Requirements
+
+- Python 3.10 or greater
+
+## Setup
+
+```bash
+make install
+```
+````
+
+## Usage
+
+```bash
+source .venv/bin/activate
+python -m project_name.main
+```
+
+## Development
+
+```bash
+make format   # Format with black
+make isort    # Sort imports
+make lint     # Type check with mypy
+make test     # Run tests with coverage
+make all      # Run all of the above
+```
+
+````
 
 ## Verification Commands
 
@@ -309,17 +363,17 @@ make install
 make format
 
 # Sort imports with isort
+make isort
+
+# Type check with mypy
 make lint
 
 # Run tests with coverage
 make test
 
-# Or run all formatting, linting, and tests
+# Or run all formatting, import sorting, type checking, and tests
 make all
-
-# Type check (requires venv to be activated or use full path)
-.venv/bin/mypy src/
-```
+````
 
 Alternatively, activate the virtual environment and run commands directly:
 

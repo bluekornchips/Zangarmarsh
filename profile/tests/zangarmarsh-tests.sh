@@ -19,7 +19,7 @@ setup() {
 	cd "$test_dir" || exit 1
 
 	# Create a mock git repository for testing using fixtures
-	create_mock_git_repo "$test_dir" || return 1
+	create_mock_git_repo "$test_dir"
 	TEST_DIR="$test_dir"
 	ZANGARMARSH_ROOT="$test_dir"
 	ZANGARMARSH_VERBOSE=true
@@ -84,8 +84,7 @@ teardown() {
 @test "zangarmarsh should exit with error when not in git repository" {
 	local temp_dir
 	temp_dir=$(mktemp -d)
-	trap 'rm -rf "$temp_dir"' EXIT
-	cd "$temp_dir" || return 1
+	cd "$temp_dir"
 
 	cat >test_zangarmarsh.sh <<'EOF'
 #!/usr/bin/env bash
@@ -111,6 +110,8 @@ EOF
 	run source test_zangarmarsh.sh
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "Error: ZANGARMARSH_ROOT is not set"
+
+	rm -rf "$temp_dir"
 }
 
 @test "zangarmarsh should load every time without errors" {

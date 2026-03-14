@@ -109,7 +109,6 @@ main() {
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
 	set -eo pipefail
 	umask 077
-
 	main "$@"
 	exit $?
 fi

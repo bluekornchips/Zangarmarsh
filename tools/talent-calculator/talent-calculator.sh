@@ -5,18 +5,6 @@
 # Installs and manages CLI tools for development workstations
 #
 
-if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
-	set -eo pipefail
-	umask 077
-
-	cleanup() {
-		popd >/dev/null || true
-		return 0
-	}
-
-	trap cleanup EXIT ERR
-fi
-
 CORE_TOOLS=(
 	"jq"                               # https://jqlang.org/download/
 	"yq"                               # https://github.com/mikefarah/yq
@@ -424,6 +412,8 @@ run_talent_calculator() {
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+	set -eo pipefail
+	umask 077
 	run_talent_calculator "$@"
 	exit $?
 fi

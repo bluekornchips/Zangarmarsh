@@ -1,11 +1,20 @@
 #!/usr/bin/env bash
 
-# NVM lazy loading function
-# Loads NVM environment when first called, then delegates to the real nvm command
+# Load NVM environment when first called (lazy load).
+#
+# Inputs:
+# - None (uses PLATFORM, HOMEBREW_PREFIX, NVM_DIR from environment)
+#
+# Side Effects:
+# - Exports NVM_DIR, sources nvm.sh and optional bash_completion
+#
+# Returns:
+# - 0 on success
+# - 1 if NVM script not found or source fails
 _nvm_load() {
 	# Set up NVM environment
 	export NVM_DIR="$HOME/.nvm"
-	nvm_script=""
+	local nvm_script=""
 
 	# Determine NVM script location based on platform
 	case "$PLATFORM" in
@@ -29,14 +38,13 @@ _nvm_load() {
 	if [[ -z "$nvm_script" ]] || [[ ! -s "$nvm_script" ]]; then
 		echo "NVM not found at $nvm_script" >&2
 		echo "Install NVM from: https://github.com/nvm-sh/nvm" >&2
-		return 0
+		return 1
 	fi
 
 	# Source NVM
-
 	if ! source "$nvm_script" 2>/dev/null; then
 		echo "Failed to source NVM script" >&2
-		return 0
+		return 1
 	fi
 
 	# Source bash completion if available
@@ -62,28 +70,33 @@ _nvm_load() {
 # - 1 if installation fails
 _penv_install_dependencies() {
 	local dependency_installed=false
+	local install_failed=false
 
 	if [[ -f "pyproject.toml" ]]; then
-		echo "penv:: Found pyproject.toml. Installing with pip."
+		echo "Found pyproject.toml. Installing with pip."
 		if pip install -e ".[dev]" 2>/dev/null; then
 			dependency_installed=true
 		elif pip install -e . 2>/dev/null; then
 			dependency_installed=true
 		else
 			echo "pip install failed, you may need to install dependencies manually" >&2
+			install_failed=true
 		fi
 	elif [[ -f "requirements.txt" ]]; then
-		echo "penv:: Found requirements.txt. Installing dependencies."
+		echo "Found requirements.txt. Installing dependencies."
 		if pip install -r requirements.txt 2>/dev/null; then
 			dependency_installed=true
 		else
 			echo "Failed to install requirements.txt dependencies" >&2
+			install_failed=true
 		fi
 	fi
 
-	if [[ "$dependency_installed" != true ]]; then
-		echo "penv:: No dependency files found: pyproject.toml, requirements-dev.txt, requirements.txt"
+	if [[ "$dependency_installed" != true ]] && [[ "$install_failed" != true ]]; then
+		echo "No dependency files found (pyproject.toml, requirements-dev.txt, requirements.txt)"
 	fi
+
+	[[ "$install_failed" == true ]] && return 1
 
 	return 0
 }
@@ -112,25 +125,27 @@ gw() {
 
 	# Don't capture output, allow uninterrupted flow
 	git -C "${git_root}" worktree "$@"
-	return $?
 }
 
+# Create or activate a Python virtual environment in the current directory
+#
+# Inputs:
+# - [-d|--delete]: force recreate the environment
+# - [python_version]: Python interpreter to use (default: python3)
+#
+# Side Effects:
+# - Creates/activates .venv in the current directory
+# - Removes existing .venv if -d is passed
+# - Cleans __pycache__, .mypy_cache, .pytest_cache, and .pyc files
+# - Installs dependencies from pyproject.toml or requirements.txt if present
+#
+# Returns:
+# - 0 on success
+# - 1 on failure (bad args, missing Python, venv creation/activation failure)
 penv() {
 	local env_name=".venv"
 	local python_version="python3"
 	local force_recreate=false
-
-	# Input validation
-	if [[ -z "${env_name}" ]]; then
-		echo "penv:: env_name is required" >&2
-		return 1
-	fi
-
-	# Validate env_name is safe (only .venv allowed)
-	if [[ "${env_name}" != ".venv" ]]; then
-		echo "penv:: Invalid env_name. Only .venv is allowed for security." >&2
-		return 1
-	fi
 
 	# Handle flags and Python version specification
 	while [[ $# -gt 0 ]]; do
@@ -174,15 +189,15 @@ EOF
 	fi
 
 	# Show Python version info
-	echo "penv:: Using Python: $python_version ($(command -v "$python_version"))"
-	echo "penv:: Version: $("$python_version" --version 2>/dev/null || echo "Version info unavailable")"
+	echo "Using Python: $python_version ($(command -v "$python_version"))"
+	echo "Version: $("$python_version" --version 2>/dev/null || echo "Version info unavailable")"
 
 	# If venv exists and no force recreate, just activate it
 	if [[ -d "$env_name" && "$force_recreate" != true ]]; then
-		echo "penv:: Virtual environment exists, activating: $env_name"
+		echo "Virtual environment exists, activating: $env_name"
 
 		if source "$env_name/bin/activate" >/dev/null 2>&1; then
-			echo "penv:: Activated existing environment: $env_name"
+			echo "Activated existing environment: $env_name"
 			return 0
 		fi
 	fi
@@ -190,7 +205,7 @@ EOF
 	# Clean up existing environment if it exists
 	# Explicit path validation: ensure we're only removing .venv in current directory
 	if [[ -d "$env_name" ]] && [[ "$(realpath "$env_name" 2>/dev/null || echo "$env_name")" == "$(realpath "$(pwd)/$env_name" 2>/dev/null || echo "$(pwd)/$env_name")" ]]; then
-		echo "penv:: Removing existing virtual environment: $env_name"
+		echo "Removing existing virtual environment: $env_name"
 		rm -rf "$env_name" 2>/dev/null || {
 			echo "Failed to remove existing environment" >&2
 			return 1
@@ -199,7 +214,7 @@ EOF
 
 	# Clean up cache files
 	# Explicit path validation: only clean cache files in current directory tree
-	echo "penv:: Cleaning up cache files."
+	echo "Cleaning up cache files."
 	local current_dir
 	current_dir="$(pwd)"
 	if [[ -z "${current_dir}" ]] || [[ ! -d "${current_dir}" ]]; then
@@ -207,23 +222,25 @@ EOF
 		return 1
 	fi
 
-	CACHE_DIRS=(
+	local cache_dirs
+	cache_dirs=(
 		"__pycache__"
 		".mypy_cache"
 		".pytest_cache"
 	)
 
-	CACHE_FILES=("*.pyc")
-	for cache_dir in "${CACHE_DIRS[@]}"; do
+	local cache_files
+	cache_files=("*.pyc")
+	for cache_dir in "${cache_dirs[@]}"; do
 		find "${current_dir}" -maxdepth 10 -type d -name "${cache_dir}" -exec rm -rf {} + 2>/dev/null || true
 	done
 
-	for cache_file in "${CACHE_FILES[@]}"; do
+	for cache_file in "${cache_files[@]}"; do
 		find "${current_dir}" -maxdepth 10 -type f -name "${cache_file}" -exec rm -f {} + 2>/dev/null || true
 	done
 
 	# Create virtual environment
-	echo "penv:: Creating virtual environment with $python_version: $env_name"
+	echo "Creating virtual environment with $python_version: $env_name"
 	if ! "$python_version" -m venv "$env_name" 2>/dev/null; then
 		echo "Failed to create virtual environment" >&2
 		echo "Make sure $python_version has venv module installed" >&2
@@ -270,16 +287,24 @@ elif [[ "${ZANGARMARSH_ENABLE_NVM:-true}" == "true" ]]; then
 	_nvm_load
 fi
 
+# List changed files between origin_branch and HEAD (added, copied, modified, renamed).
+#
+# Inputs:
+# - origin_branch: branch or ref to compare against (required positional argument)
+#
+# Side Effects:
+# - Reads git state from current repository
+#
+# Outputs:
+# - Full paths of changed files, one per line, to stdout
+#
+# Returns:
+# - 0 on success
+# - 1 if origin_branch missing, not in a git repo, or unknown option
 list_changed_files() {
-	local one_line=false
 	local origin_branch
-
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
-		--one-line)
-			one_line=true
-			shift
-			;;
 		-*)
 			echo "list_changed_files:: unknown option $1" >&2
 			return 1
@@ -297,27 +322,37 @@ list_changed_files() {
 	fi
 
 	local git_root
-	local to_format=()
-
 	git_root="$(git rev-parse --show-toplevel 2>/dev/null)"
 	if [[ -z "${git_root}" ]]; then
 		echo "list_changed_files:: not in a git repository" >&2
 		return 1
 	fi
 
+	local to_format=()
 	local f
 	while IFS= read -r f; do
-		[[ -n "${f}" ]] && [[ -f "${git_root}/${f}" ]] && to_format+=("${f}")
-	done < <(git -C "${git_root}" diff "${origin_branch}" --name-only 2>/dev/null)
+		[[ -n "${f}" ]] && [[ -f "${git_root}/${f}" ]] && to_format+=("${git_root}/${f}")
+	done < <(git -C "${git_root}" diff "${origin_branch}" --name-only --diff-filter=ACMR 2>/dev/null)
 
-	if [[ "${one_line}" == true ]]; then
-		(
-			IFS=' '
-			printf '%s\n' "${to_format[*]}"
-		)
-	else
-		printf '%s\n' "${to_format[@]}"
-	fi
+	printf '%s\n' "${to_format[@]}"
 
 	return 0
+}
+
+# Run a command with integration tests enabled
+#
+# Inputs:
+# - $@: command and arguments to execute
+#
+# Side Effects:
+# - Sets RUN_INTEGRATION_TESTS=true in a subshell before executing the command
+#
+# Returns:
+# - Exit code of the executed command
+runint() {
+	(
+		RUN_INTEGRATION_TESTS="true"
+		export RUN_INTEGRATION_TESTS
+		"$@"
+	)
 }

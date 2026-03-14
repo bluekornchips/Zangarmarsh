@@ -87,6 +87,7 @@ Items marked with `[TS]` apply only to TypeScript projects.
 
 ## Build, Release, and Dependency Management
 
+- [ ] _Node version declared_: `"engines": { "node": ">=X" }` in `package.json` documents the required runtime
 - [ ] _Reproducible builds_: Lockfiles are present and respected
 - [ ] _SBOM generated_: Software bill of materials produced in CI
 - [ ] _Dependency updates_: Automated patch updates with review gates
@@ -128,6 +129,7 @@ Items marked with `[TS]` apply only to TypeScript projects.
 ## Repository Structure
 
 - [ ] _Logical layout_: Code organized into `src/`, `tests/`, `scripts/`
+- [ ] _README_: README with usage, examples, and requirements
 - [ ] _LICENSE_: License file present
 - [ ] _.gitignore_: Build output and secrets excluded
 - [ ] _Code owners_: Ownership and review paths defined

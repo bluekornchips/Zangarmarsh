@@ -13,7 +13,7 @@ create_mock_git_repo() {
 	local test_dir="$1"
 	cd "$test_dir" || {
 		echo "test_dir does not exist: $test_dir" >&2
-		return 1
+		exit 1
 	}
 	git init >/dev/null 2>&1
 	git config user.name "Test User" >/dev/null 2>&1
@@ -26,7 +26,7 @@ create_mock_git_repo() {
 setup() {
 	local test_dir
 	test_dir=$(mktemp -d)
-	cd "$test_dir" || return 1
+	cd "$test_dir" || exit 1
 
 	source "$SCRIPT"
 
@@ -44,7 +44,7 @@ teardown() {
 }
 
 @test "gw:: runs worktree list from repository root" {
-	create_mock_git_repo "$TEST_DIR" || return 1
+	create_mock_git_repo "$TEST_DIR"
 
 	run gw list
 	[[ "$status" -eq 0 ]]
@@ -52,9 +52,9 @@ teardown() {
 }
 
 @test "gw:: runs worktree list from subdirectory" {
-	create_mock_git_repo "$TEST_DIR" || return 1
+	create_mock_git_repo "$TEST_DIR"
 	mkdir -p "$TEST_DIR/subdir"
-	cd "$TEST_DIR/subdir" || return 1
+	cd "$TEST_DIR/subdir" || exit 1
 
 	run gw list
 	[[ "$status" -eq 0 ]]
@@ -62,7 +62,7 @@ teardown() {
 }
 
 @test "gw:: passes arguments through to git worktree" {
-	create_mock_git_repo "$TEST_DIR" || return 1
+	create_mock_git_repo "$TEST_DIR"
 
 	run gw list --porcelain
 	[[ "$status" -eq 0 ]]
@@ -70,7 +70,7 @@ teardown() {
 }
 
 @test "gw:: fails with invalid worktree subcommand" {
-	create_mock_git_repo "$TEST_DIR" || return 1
+	create_mock_git_repo "$TEST_DIR"
 
 	run gw invalid-subcommand
 	[[ "$status" -ne 0 ]]

@@ -75,7 +75,7 @@ Pragmatic review criteria for bash/shell script repositories. Focus on security,
 ## Documentation
 
 - [ ] _README accuracy_: README matches actual implementation
-- [ ] _Usage examples_: README includes minimalworking examples
+- [ ] _Usage examples_: README includes minimal working examples
 - [ ] _Prerequisites_: Dependencies clearly documented
 - [ ] _Function headers_: Functions have header comments (except obvious/short ones)
 - [ ] _Minimal comments_: Comments explain "why", not "what"

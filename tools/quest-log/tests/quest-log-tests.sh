@@ -73,7 +73,6 @@ setup() {
 	create_test_quest_file "$TEST_QUEST_FILE" "$quest_name" "$icon" "$description" "$keywords" "$always_apply"
 
 	export TEST_TEMP_DIR
-	export TEST_QUEST_FILE
 	export GIT_ROOT
 	export FORCE
 
@@ -104,10 +103,6 @@ teardown() {
 		if ! rm -rf "${TEST_TEMP_DIR}"; then
 			echo "Failed to cleanup test directory: ${TEST_TEMP_DIR}" >&2
 		fi
-	fi
-
-	if [[ -n "${TEST_QUEST_FILE}" ]] && [[ -f "${TEST_QUEST_FILE}" ]]; then
-		rm -f "${TEST_QUEST_FILE}"
 	fi
 
 	# Reset statistics
