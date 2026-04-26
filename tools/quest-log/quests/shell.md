@@ -44,7 +44,7 @@
 - `cat` heredocs are strongly preferred for multi-line output readability
 - Use array literals for lists; avoid `declare -a` unless necessary
 - Always `return` explicit status codes
-- Always leave a blank line before a `return` statement at the end of a function
+- Always leave a blank line before a `return` statement for the final two lines of a function, except for main()
 - Functions in test scripts do not require comments
 - Functions in invoked scripts require comments unless they are both obvious and short
 - Use `command -v` for dependency checks and return helpful error messages
@@ -226,7 +226,6 @@ function_name() {
 
   if ! mv "${file_list[@]}" "${dest_dir}/"; then
     echo "function_name:: Unable to move ${file_list[*]} to ${dest_dir}" >&2
-
     return 1
   fi
 
@@ -267,7 +266,6 @@ SCRIPT="${GIT_ROOT}/path/to/script.sh"
 
 setup_file() {
   # {If needed, check access to APIs, databases, etc.}
-
   return 0
 }
 

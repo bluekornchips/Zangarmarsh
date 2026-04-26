@@ -7,10 +7,6 @@
 ## Mandatory Acknowledgment
 
 - Every response must start with the acknowledgment icon: 💡
-- Only this icon is allowed at the start of responses
-- Missing acknowledgment = automatic rule violation
-- Multiple violations = escalation to user (see Escalation section)
-- If user expresses frustration: acknowledge briefly, restate the goal, focus on fixes
 
 ## Universal Bans
 
