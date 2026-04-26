@@ -101,11 +101,11 @@ CLEANUP OPERATIONS:
   - Empty directories (recursively removes all empty directories up to $DEFAULT_MAX_DEPTH levels deep)
 
 EXAMPLES:
-  $(basename "$0")                    # Clean current directory
-  $(basename "$0") /path/to/project   # Clean specific directory
-  $(basename "$0") --dry-run          # Show what would be cleaned
-  $(basename "$0") --dry-run /path/to/project  # Preview cleanup for specific directory
-  $(basename "$0") --help             # Show this help
+  $(basename "$0") --all                    # Clean all targets in current directory
+  $(basename "$0") --all /path/to/project   # Clean all targets in specific directory
+  $(basename "$0") --targets cursor,python  # Clean selected targets
+  $(basename "$0") --dry-run --all          # Show what would be cleaned
+  $(basename "$0") --help                   # Show this help
 
 EOF
 }

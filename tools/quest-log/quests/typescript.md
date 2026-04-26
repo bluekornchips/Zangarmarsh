@@ -1,100 +1,46 @@
 # TypeScript and JavaScript Standards
 
+## Purpose
+
+Keep TypeScript strict at the edges so mistakes surface early and types stay honest.
+
 ## Priority
 
 - Level 1 of 2
 
-## Critical Violations, Code Will Be Rejected
+## Standards
 
-### Never Use, Immediate Rejection
+- Enable `"strict": true` and `noUncheckedIndexedAccess` in `tsconfig.json` when the project uses TypeScript.
+- Named exports for library code. Explicit return types on exported functions, public class methods, and shared types.
+- `const` by default, `let` only when reassignment is needed. Use `===` and `!==`.
+- `async` and `await` instead of raw `Promise` chains when both are available.
+- In `catch`, use `unknown` and narrow before use. Set `cause` on re-throw when the runtime supports it.
+- Validate untrusted input at module boundaries. Read config from environment variables or injected config, not literals.
+- Run `tsc --noEmit` with zero errors before merge when TypeScript is in use. Keep formatter and linter clean on touched files when the repo defines them.
 
-- `any` type
-- `@ts-ignore` or `@ts-nocheck`
-- Non-null assertions without a justifying comment: `value!`
-- Type assertions to silence the compiler: `value as unknown as T`
-- `var` declarations
-- `==` or `!=` for equality
-- Hardcoded secrets
-- `eval()` with dynamic input
-- Callback-based async when `async/await` is available
-- Mutating function arguments
-- `console.log` in production code
-- Silent catch blocks: `catch (_) {}`
+## Usage
 
-## Mandatory Requirements, All Code Must Have
+### Allowed
 
-### Always Use, Non-Negotiable
+- `interface` for object shapes, `type` for unions and aliases when both read well.
+- `readonly` on fields that must not change after construction.
+- Discriminated unions instead of large optional bags for mutually exclusive states.
+- `satisfies` and `as const` when they tighten inference without widening.
+- JSDoc or TSDoc on exports when contracts, errors, or units are not obvious.
+- `Promise.all` for independent concurrent work with rejection handling on work you start.
 
-- `"strict": true` and `noUncheckedIndexedAccess` in `tsconfig.json`
-- Explicit return types on exported functions and public class methods
-- Named exports over default exports
-- `const` by default, `let` only when reassignment is required
-- `async/await` over raw Promise chains
-- `catch (err: unknown)`, narrow before use
-- Input validation at all module boundaries
-- Environment variables for configuration
-- Domain-specific error classes extending `Error`
-- JSDoc on all exported functions, classes, and types
+### Denied
 
-### Code Quality Requirements
-
-- `tsc --noEmit` with zero errors before committing
-- Linter with zero warnings on staged files
-- Formatter clean before committing
-- 90 percent coverage or higher on production modules and shared libraries
-
-## Best Practices
-
-### Naming
-
-- `PascalCase` for classes, interfaces, type aliases, and enums
-- `camelCase` for variables, functions, and methods
-- `SCREAMING_SNAKE_CASE` for module-level constants
-- `is`, `has`, or `can` prefix for boolean functions: `isReady()`
-
-### Types
-
-- `interface` for object shapes, `type` for unions and aliases
-- `readonly` on properties that must not be reassigned
-- Discriminated unions over optional fields for mutually exclusive states
-- `satisfies` to validate literals without widening
-- Prefer `as const` object maps over `enum`
-
-### Functions
-
-- Small and single-purpose
-- Destructure parameters when taking more than two arguments
-- Prefer pure functions; isolate side effects at module edges
-- Default parameter values over conditional assignments inside the body
-- Never mutate arguments, return new values
-
-### Modules
-
-- One primary export per file
-- Imports ordered: external packages, internal absolute, relative
-- Avoid circular dependencies; move shared types into a dedicated module
-
-### Error Handling
-
-- Set `cause` when re-throwing: `throw new AppError("msg", { cause: err })`
-- Handle once, never log and re-throw the same error
-- Throw for unexpected errors, return results for expected failures
-
-### Async
-
-- Await all Promises; document any intentional fire-and-forget
-- `Promise.all` for concurrent independent operations
-- Always handle rejections
-- Set explicit timeouts on network and external I/O calls
-
-## Testing
-
-- Prefix tests with the unit under test: `describe("parsePort", ...)`
-- Test behavior, not implementation details
-- Use factories for test fixtures, not duplicated object literals
-- Mock at module boundaries
-- Assert on error type or code, not message strings
-- Keep unit and integration tests separate
+- The `any` type.
+- `@ts-ignore` or `@ts-nocheck`.
+- Non-null `value!` without a short nearby comment that states the invariant.
+- Type assertions such as `value as unknown as T` to silence the compiler.
+- `var`.
+- Hardcoded secrets.
+- `eval` on dynamic input.
+- Mutating function parameters.
+- `console.log` on production paths.
+- Silent catches such as `catch (_) {}`.
 
 ## Example
 

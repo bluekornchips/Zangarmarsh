@@ -30,16 +30,16 @@ source /path/to/zangarmarsh/zangarmarsh.sh
 
 ```bash
 # Clean current directory (all targets)
-./tools/trilliax/trilliax.sh
+./tools/trilliax/trilliax.sh --all
 
 # Clean specific directory
-./tools/trilliax/trilliax.sh /path/to/project
+./tools/trilliax/trilliax.sh --all /path/to/project
 
 # Preview what would be cleaned (dry-run mode)
-./tools/trilliax/trilliax.sh --dry-run
+./tools/trilliax/trilliax.sh --dry-run --all
 
 # Clean only specific targets
-./tools/trilliax/trilliax.sh --targets=cursor,python
+./tools/trilliax/trilliax.sh --targets cursor,python
 
 # Clean all targets explicitly
 ./tools/trilliax/trilliax.sh --all
@@ -59,13 +59,17 @@ source /path/to/zangarmarsh/zangarmarsh.sh
 
 - Virtual environments (`venv/`, `.venv/`, `env/`)
 - Python cache files (`__pycache__/`, `*.pyc`, `*.pyo`)
-- Build directories (`build/`, `dist/`, `*.egg-info/`)
-- Pytest cache (`.pytest_cache/`)
 
 ### Node Target
 
 - `node_modules/` directories
-- NPM cache directories
+- NPM and Yarn cache directories (`.npm/`, `.yarn/`)
+- Yarn config (`.yarnrc.yml`)
+- NPM and Yarn debug logs
+
+### Filesystem Target
+
+- Empty directories up to 10 levels deep
 
 ## Environment Variables
 
@@ -75,7 +79,7 @@ source /path/to/zangarmarsh/zangarmarsh.sh
 
 - Dry-run mode shows what would be cleaned without making changes
 - Intelligent filtering to preserve important files
-- Confirmation prompts for destructive operations
+- Explicit target selection is required with `--all` or `--targets`
 - Detailed logging of cleanup operations
 
 ## Testing

@@ -13,26 +13,21 @@ and daily-quests are installed locally in the project directory.
 Baseline quests include always, python, shell, and typescript.
 
 OPTIONS:
-    -a, --all           Include all rules (including warcraft and lotr)
     -f, --force         Force operations (replace existing VSCode settings)
     -h, --help          Show this help message
 
 EXAMPLES:
     $0                  # Generate rules and daily-quests in git root (if in git repo) or current directory
     $0 /path/to/dir     # Generate rules and daily-quests in git root (if in git repo) or specified directory
-    $0 --all            # Generate all rules including warcraft and lotr
 EOF
 }
 
-DEFAULT_INCLUDE_ALL=false
 DEFAULT_FORCE=false
-SKIPPED_RULES=("warcraft" "lotr")
 
 # Statistics tracking
 STATS_CREATED=0
 STATS_UPDATED=0
 STATS_UNCHANGED=0
-STATS_SKIPPED=0
 STATS_ERRORS=0
 STATS_TOTAL_LINES=0
 STATS_WARNINGS=0
@@ -127,212 +122,6 @@ validate_rule() {
 	return 0
 }
 
-# Validate MDC frontmatter syntax
-#
-# Inputs:
-# - $1, name, the name of the rule
-# - $2, frontmatter_content, the frontmatter YAML content (without --- delimiters)
-#
-# Returns:
-# - 0 if validation passes
-# - 1 if validation fails
-# - Sets STATS_WARNINGS and STATS_ERRORS accordingly
-validate_mdc_frontmatter() {
-	local name="$1"
-	local frontmatter_content="$2"
-	local validation_failed=false
-
-	# Check for required fields
-	if ! echo "${frontmatter_content}" | grep -q "^description:"; then
-		echo "validate_mdc_frontmatter:: Error: Rule '${name}' frontmatter missing required field 'description'" >&2
-		STATS_ERRORS=$((STATS_ERRORS + 1))
-		validation_failed=true
-	fi
-
-	if ! echo "${frontmatter_content}" | grep -q "^globs:"; then
-		echo "validate_mdc_frontmatter:: Error: Rule '${name}' frontmatter missing required field 'globs'" >&2
-		STATS_ERRORS=$((STATS_ERRORS + 1))
-		validation_failed=true
-	fi
-
-	if ! echo "${frontmatter_content}" | grep -q "^alwaysApply:"; then
-		echo "validate_mdc_frontmatter:: Error: Rule '${name}' frontmatter missing required field 'alwaysApply'" >&2
-		STATS_ERRORS=$((STATS_ERRORS + 1))
-		validation_failed=true
-	fi
-
-	# Validate YAML-like structure (basic check for colon-separated key-value pairs)
-	local line_count
-	line_count=$(echo "${frontmatter_content}" | wc -l | tr -d ' ')
-	if ((line_count == 0)); then
-		echo "validate_mdc_frontmatter:: Error: Rule '${name}' has empty frontmatter" >&2
-		STATS_ERRORS=$((STATS_ERRORS + 1))
-		validation_failed=true
-	fi
-
-	if [[ "${validation_failed}" == "true" ]]; then
-		return 1
-	fi
-
-	return 0
-}
-
-# Create a cursor rule file with the provided content
-#
-# Inputs:
-# - $1, name, the name of the rule
-# - $2, description, the description of the rule
-# - $3, cursor_always_apply, whether the rule should always apply
-# - $4, file_content, the content of the rule file
-# - $5, globs, optional array of glob patterns for file matching
-create_cursor_rule_file() {
-	local name="$1"
-	local description="$2"
-	local cursor_always_apply="$3"
-	local file_content="$4"
-	local globs="$5"
-
-	if [[ -z "${name}" ]]; then
-		echo "create_cursor_rule_file:: Name is required" >&2
-		return 1
-	fi
-
-	if [[ -z "${description}" ]]; then
-		echo "create_cursor_rule_file:: Description is required" >&2
-		return 1
-	fi
-
-	if [[ -z "${cursor_always_apply}" ]]; then
-		echo "create_cursor_rule_file:: Cursor always apply is required" >&2
-		return 1
-	fi
-
-	if [[ -z "${file_content}" ]]; then
-		echo "create_cursor_rule_file:: File content is required" >&2
-		return 1
-	fi
-
-	# Validate rule before creating
-	if ! validate_rule "${name}" "${file_content}" "${globs}" "${description}" "${cursor_always_apply}"; then
-		echo "create_cursor_rule_file:: Validation failed for rule '${name}'" >&2
-		return 1
-	fi
-
-	if [[ ! -d "${CURSOR_RULES_DIR}" ]]; then
-		if ! mkdir -p "${CURSOR_RULES_DIR}"; then
-			echo "create_cursor_rule_file:: Failed to create directory: ${CURSOR_RULES_DIR}" >&2
-			return 1
-		fi
-	fi
-
-	if [[ ! -d "${AGENT_RULES_DIR}" ]]; then
-		if ! mkdir -p "${AGENT_RULES_DIR}"; then
-			echo "create_cursor_rule_file:: Failed to create directory: ${AGENT_RULES_DIR}" >&2
-			return 1
-		fi
-	fi
-
-	local cursor_rule_file="${CURSOR_RULES_DIR}/rules-${name}.mdc"
-	local cursor_rule_file_abs
-	cursor_rule_file_abs=$(realpath "${cursor_rule_file}" 2>/dev/null || echo "${cursor_rule_file}")
-
-	local agent_rule_file="${AGENT_RULES_DIR}/rules-${name}.md"
-	local agent_rule_file_abs
-	agent_rule_file_abs=$(realpath "${agent_rule_file}" 2>/dev/null || echo "${agent_rule_file}")
-
-	# Check if files exist and read existing content
-	local cursor_existing_content=""
-	if [[ -f "${cursor_rule_file}" ]]; then
-		cursor_existing_content=$(cat "${cursor_rule_file}" 2>/dev/null || true)
-	fi
-
-	local agent_existing_content=""
-	if [[ -f "${agent_rule_file}" ]]; then
-		agent_existing_content=$(cat "${agent_rule_file}" 2>/dev/null || true)
-	fi
-
-	# Format globs for MDC frontmatter
-	local globs_formatted
-	local glob_count
-	glob_count=$(echo "${globs}" | jq 'length' 2>/dev/null || echo "0")
-	if ((glob_count > 0)); then
-		globs_formatted=$(jq -r '.[]' <<<"${globs}" 2>/dev/null | sed 's/^/  - "/' | sed 's/$/"/' || echo "")
-		globs_formatted="
-${globs_formatted}"
-	else
-		globs_formatted=" []"
-	fi
-
-	local frontmatter_content
-	frontmatter_content=$(
-		cat <<EOF
-description: $description
-globs:${globs_formatted}
-alwaysApply: $cursor_always_apply
-EOF
-	)
-
-	# Validate MDC frontmatter syntax
-	if ! validate_mdc_frontmatter "${name}" "${frontmatter_content}"; then
-		echo "create_cursor_rule_file:: MDC frontmatter validation failed for rule '${name}'" >&2
-		return 1
-	fi
-
-	local new_content
-	new_content=$(
-		cat <<EOF
----
-${frontmatter_content}
----
-
-$file_content
-EOF
-	)
-
-	# Check and update Cursor rule file
-	if [[ "${cursor_existing_content}" == "${new_content}" ]]; then
-		echo "No changes: ${cursor_rule_file_abs}"
-		STATS_UNCHANGED=$((STATS_UNCHANGED + 1))
-	else
-		show_diff "${cursor_rule_file}" "${new_content}"
-		echo "${new_content}" >"${cursor_rule_file}"
-		if [[ -f "${cursor_rule_file}" ]]; then
-			if [[ -n "${cursor_existing_content}" ]]; then
-				echo "Updated: ${cursor_rule_file_abs}"
-				STATS_UPDATED=$((STATS_UPDATED + 1))
-			else
-				echo "Created: ${cursor_rule_file_abs}"
-				STATS_CREATED=$((STATS_CREATED + 1))
-			fi
-		else
-			echo "create_cursor_rule_file:: Error: Failed to write rule file: ${cursor_rule_file_abs}" >&2
-			STATS_ERRORS=$((STATS_ERRORS + 1))
-			return 1
-		fi
-	fi
-
-	# Check and update Agent rule file
-	if [[ "${agent_existing_content}" == "${new_content}" ]]; then
-		echo "No changes: ${agent_rule_file_abs}"
-	else
-		show_diff "${agent_rule_file}" "${new_content}"
-		echo "${new_content}" >"${agent_rule_file}"
-		if [[ -f "${agent_rule_file}" ]]; then
-			if [[ -n "${agent_existing_content}" ]]; then
-				echo "Updated: ${agent_rule_file_abs}"
-			else
-				echo "Created: ${agent_rule_file_abs}"
-			fi
-		else
-			echo "create_cursor_rule_file:: Error: Failed to write rule file: ${agent_rule_file_abs}" >&2
-			STATS_ERRORS=$((STATS_ERRORS + 1))
-			return 1
-		fi
-	fi
-
-	return 0
-}
-
 # Show diff between current file and incoming changes
 #
 # Inputs:
@@ -367,6 +156,228 @@ show_diff() {
 	return 0
 }
 
+# Ensure a directory exists
+#
+# Inputs:
+# - $1, dir_path, directory to create
+# - $2, label, prefix for error messages
+#
+# Returns:
+# - 0 on success
+# - 1 on failure
+ensure_dir() {
+	local dir_path="$1"
+	local label="${2:-ensure_dir}"
+
+	if [[ ! -d "${dir_path}" ]] && ! mkdir -p "${dir_path}"; then
+		echo "${label}:: Failed to create directory: ${dir_path}" >&2
+		return 1
+	fi
+
+	return 0
+}
+
+# Read file contents or empty string
+#
+# Inputs:
+# - $1, file_path, path to read
+#
+# Outputs:
+# - file contents to stdout
+read_file_or_empty() {
+	local file_path="$1"
+
+	if [[ -f "${file_path}" ]]; then
+		cat "${file_path}" 2>/dev/null || printf ''
+	fi
+
+	return 0
+}
+
+# Write content if it differs from the file on disk
+#
+# Inputs:
+# - $1, file_path, destination path
+# - $2, new_content, full new file body
+# - $3, stats_mode, rule to update STATS for Cursor rules, none for Agent rules and commands
+# - $4, error_label, prefix for write failure messages
+#
+# Returns:
+# - 0 on success
+# - 1 on write failure
+write_if_changed() {
+	local file_path="$1"
+	local new_content="$2"
+	local stats_mode="${3:-none}"
+	local error_label="${4:-write_if_changed}"
+
+	local display_path
+	display_path=$(realpath "${file_path}" 2>/dev/null || echo "${file_path}")
+
+	local existing_content
+	existing_content=$(read_file_or_empty "${file_path}")
+
+	if [[ "${existing_content}" == "${new_content}" ]]; then
+		echo "No changes: ${display_path}"
+		if [[ "${stats_mode}" == "rule" ]]; then
+			STATS_UNCHANGED=$((STATS_UNCHANGED + 1))
+		fi
+		return 0
+	fi
+
+	show_diff "${file_path}" "${new_content}"
+	echo "${new_content}" >"${file_path}"
+	if [[ ! -f "${file_path}" ]]; then
+		echo "${error_label}:: Failed to write file: ${display_path}" >&2
+		STATS_ERRORS=$((STATS_ERRORS + 1))
+		return 1
+	fi
+
+	if [[ "${stats_mode}" == "rule" ]]; then
+		if [[ -n "${existing_content}" ]]; then
+			echo "Updated: ${display_path}"
+			STATS_UPDATED=$((STATS_UPDATED + 1))
+		else
+			echo "Created: ${display_path}"
+			STATS_CREATED=$((STATS_CREATED + 1))
+		fi
+	else
+		if [[ -n "${existing_content}" ]]; then
+			echo "Updated: ${file_path}"
+		else
+			echo "Created: ${file_path}"
+		fi
+	fi
+
+	return 0
+}
+
+# Format globs JSON array for YAML frontmatter list
+#
+# Inputs:
+# - $1, globs, JSON array string
+#
+# Outputs:
+# - formatted block starting with newline and list items, or space plus [] when empty
+format_globs_yaml() {
+	local globs="$1"
+	local glob_count
+	glob_count=$(echo "${globs}" | jq 'length' 2>/dev/null || echo "0")
+
+	if ((glob_count > 0)); then
+		local lines
+		lines=$(jq -r '.[]' <<<"${globs}" 2>/dev/null | sed 's/^/  - "/' | sed 's/$/"/' || echo "")
+		printf '\n%s' "${lines}"
+	else
+		printf ' []'
+	fi
+
+	return 0
+}
+
+# Build YAML frontmatter lines for a rule without outer delimiters
+#
+# Inputs:
+# - $1, description
+# - $2, globs JSON array
+# - $3, cursor_always_apply
+build_rule_frontmatter() {
+	local description="$1"
+	local globs="$2"
+	local cursor_always_apply="$3"
+	local globs_formatted
+
+	globs_formatted=$(format_globs_yaml "${globs}") || return 1
+
+	cat <<EOF
+description: ${description}
+globs:${globs_formatted}
+alwaysApply: ${cursor_always_apply}
+EOF
+
+	return 0
+}
+
+# Create Cursor and Agent rule files with the provided content
+#
+# Inputs:
+# - $1, name, the name of the rule
+# - $2, description, the description of the rule
+# - $3, cursor_always_apply, whether the rule should always apply
+# - $4, file_content, the body after frontmatter
+# - $5, globs, JSON array for Cursor globs
+create_cursor_rule_file() {
+	local name="$1"
+	local description="$2"
+	local cursor_always_apply="$3"
+	local file_content="$4"
+	local globs="$5"
+
+	if [[ -z "${name}" ]]; then
+		echo "create_cursor_rule_file:: Name is required" >&2
+		return 1
+	fi
+
+	if [[ -z "${description}" ]]; then
+		echo "create_cursor_rule_file:: Description is required" >&2
+		return 1
+	fi
+
+	if [[ -z "${cursor_always_apply}" ]]; then
+		echo "create_cursor_rule_file:: Cursor always apply is required" >&2
+		return 1
+	fi
+
+	if [[ -z "${file_content}" ]]; then
+		echo "create_cursor_rule_file:: File content is required" >&2
+		return 1
+	fi
+
+	# Validate rule before creating
+	if ! validate_rule "${name}" "${file_content}" "${globs}" "${description}" "${cursor_always_apply}"; then
+		echo "create_cursor_rule_file:: Validation failed for rule '${name}'" >&2
+		return 1
+	fi
+
+	if ! ensure_dir "${CURSOR_RULES_DIR}" "create_cursor_rule_file"; then
+		return 1
+	fi
+
+	if ! ensure_dir "${AGENT_RULES_DIR}" "create_cursor_rule_file"; then
+		return 1
+	fi
+
+	local frontmatter
+	if ! frontmatter=$(build_rule_frontmatter "${description}" "${globs}" "${cursor_always_apply}"); then
+		echo "create_cursor_rule_file:: Failed to build frontmatter for rule '${name}'" >&2
+		return 1
+	fi
+
+	local new_content
+	new_content=$(
+		cat <<EOF
+---
+${frontmatter}
+---
+
+${file_content}
+EOF
+	)
+
+	local cursor_rule_file="${CURSOR_RULES_DIR}/rules-${name}.mdc"
+	local agent_rule_file="${AGENT_RULES_DIR}/rules-${name}.md"
+
+	if ! write_if_changed "${cursor_rule_file}" "${new_content}" "rule" "create_cursor_rule_file"; then
+		return 1
+	fi
+
+	if ! write_if_changed "${agent_rule_file}" "${new_content}" "none" "create_cursor_rule_file"; then
+		return 1
+	fi
+
+	return 0
+}
+
 # Create all rule files from the quest schema
 #
 # Inputs:
@@ -390,67 +401,44 @@ fill_quest_log() {
 		return 1
 	fi
 
-	if [[ ! -d "${CURSOR_RULES_DIR}" ]]; then
-		if ! mkdir -p "${CURSOR_RULES_DIR}"; then
-			echo "fill_quest_log:: Failed to create directory: ${CURSOR_RULES_DIR}" >&2
-			return 1
-		fi
+	if ! ensure_dir "${CURSOR_RULES_DIR}" "fill_quest_log"; then
+		return 1
 	fi
 
+	local quest
+	local name
+	local file
+	local icon
+	local description
+	local keywords
+	local cursor_always_apply
+	local cursor_globs
+	local file_content
+
 	while IFS= read -r quest; do
-		if ! name=$(jq -r '.name // ""' <<<"${quest}"); then
-			echo "fill_quest_log:: Failed to parse quest name from JSON" >&2
-			return 1
-		fi
-
-		# Skip warcraft and lotr rules unless INCLUDE_ALL is true
-		if [[ "${INCLUDE_ALL}" != "true" ]] && [[ "${SKIPPED_RULES[*]}" =~ ${name} ]]; then
-			STATS_SKIPPED=$((STATS_SKIPPED + 1))
-			continue
-		fi
-
-		if ! file=$(jq -r '.file // ""' <<<"${quest}"); then
-			echo "fill_quest_log:: Failed to parse quest file from JSON" >&2
-			return 1
-		fi
-
-		if ! icon=$(jq -r '.icon // ""' <<<"${quest}"); then
-			echo "fill_quest_log:: Failed to parse quest icon from JSON" >&2
-			return 1
-		fi
-
-		if ! description=$(jq -r '.description // ""' <<<"${quest}"); then
-			echo "fill_quest_log:: Failed to parse quest description from JSON" >&2
-			return 1
-		fi
-
-		if ! keywords=$(jq -r '.keywords // []' <<<"${quest}"); then
-			echo "fill_quest_log:: Failed to parse quest keywords from JSON" >&2
-			return 1
-		fi
-
-		# Cursor Specific
-		if ! cursor=$(jq -r '.cursor // {}' <<<"${quest}"); then
-			echo "fill_quest_log:: Failed to parse quest cursor data from JSON" >&2
-			return 1
-		fi
-
-		if ! cursor_always_apply=$(jq -r '.cursor.alwaysApply // false' <<<"${quest}"); then
-			echo "fill_quest_log:: Failed to parse quest cursor alwaysApply from JSON" >&2
-			return 1
-		fi
-
-		if ! cursor_globs=$(jq -r '.cursor.globs // []' <<<"${quest}"); then
-			echo "fill_quest_log:: Failed to parse quest cursor globs from JSON" >&2
-			return 1
-		fi
+		name=$(jq -r '.name // ""' <<<"${quest}")
+		file=$(jq -r '.file // ""' <<<"${quest}")
+		icon=$(jq -r '.icon // ""' <<<"${quest}")
+		description=$(jq -r '.description // ""' <<<"${quest}")
+		keywords=$(jq -c '.keywords // []' <<<"${quest}")
+		cursor_always_apply=$(jq -r '.cursor.alwaysApply // false' <<<"${quest}")
+		cursor_globs=$(jq -c '.cursor.globs // []' <<<"${quest}")
 
 		[[ "${name}" == "null" || -z "${name}" ]] && echo "fill_quest_log:: Quest name is required" >&2 && return 1
 		[[ "${file}" == "null" || -z "${file}" ]] && echo "fill_quest_log:: Quest file is required" >&2 && return 1
 		[[ "${icon}" == "null" || -z "${icon}" ]] && echo "fill_quest_log:: Quest icon is required" >&2 && return 1
 		[[ "${description}" == "null" || -z "${description}" ]] && echo "fill_quest_log:: Quest description is required" >&2 && return 1
 		[[ "${keywords}" == "null" || "${keywords}" == "[]" ]] && echo "fill_quest_log:: Quest keywords are required" >&2 && return 1
-		[[ "${cursor}" == "null" || "${cursor}" == "{}" ]] && echo "fill_quest_log:: Quest cursor is required" >&2 && return 1
+
+		if [[ "$(jq -r '.cursor | type' <<<"${quest}")" != "object" ]]; then
+			echo "fill_quest_log:: Quest cursor is required" >&2
+			return 1
+		fi
+
+		if [[ ! -r "${QUEST_DIR}/${file}" ]]; then
+			echo "fill_quest_log:: Quest template not found: ${QUEST_DIR}/${file}" >&2
+			return 1
+		fi
 
 		file_content=$(
 			cat <<EOF
@@ -463,10 +451,11 @@ $(cat "${QUEST_DIR}/${file}")
 EOF
 		)
 
-		create_cursor_rule_file "${name}" "${description}" "${cursor_always_apply}" "${file_content}" "${cursor_globs}"
+		if ! create_cursor_rule_file "${name}" "${description}" "${cursor_always_apply}" "${file_content}" "${cursor_globs}"; then
+			return 1
+		fi
 
-	done \
-		<<<"$(jq -c '.[]' <<<"${schema_contents}")"
+	done <<<"$(jq -c '.[]' <<<"${schema_contents}")"
 
 	echo "fill_quest_log: complete"
 	return 0
@@ -496,11 +485,8 @@ generate_commands() {
 
 	echo "generate_commands: running"
 
-	if [[ ! -d "${cursor_commands_dir}" ]]; then
-		if ! mkdir -p "${cursor_commands_dir}"; then
-			echo "generate_commands:: Failed to create daily-quests directory: ${cursor_commands_dir}" >&2
-			return 1
-		fi
+	if ! ensure_dir "${cursor_commands_dir}" "generate_commands"; then
+		return 1
 	fi
 
 	local command_file
@@ -513,22 +499,8 @@ generate_commands() {
 
 		local cursor_command_file="${cursor_commands_dir}/${command_name}.md"
 
-		# Check if content changed
-		local existing_content=""
-		if [[ -f "${cursor_command_file}" ]]; then
-			existing_content=$(cat "${cursor_command_file}" 2>/dev/null || true)
-		fi
-
-		if [[ "$existing_content" == "$command_content" ]]; then
-			echo "No changes: ${cursor_command_file}"
-		else
-			show_diff "${cursor_command_file}" "${command_content}"
-			echo "${command_content}" >"${cursor_command_file}"
-			if [[ -f "${cursor_command_file}" ]]; then
-				echo "Updated: ${cursor_command_file}"
-			else
-				echo "Created: ${cursor_command_file}"
-			fi
+		if ! write_if_changed "${cursor_command_file}" "${command_content}" "none" "generate_commands"; then
+			return 1
 		fi
 	done < <(find "${commands_dir}" -maxdepth 1 -name "*.md" -type f -print0 2>/dev/null || true)
 
@@ -560,11 +532,8 @@ generate_workflows() {
 
 	echo "generate_workflows: running"
 
-	if [[ ! -d "${agent_workflows_dir}" ]]; then
-		if ! mkdir -p "${agent_workflows_dir}"; then
-			echo "generate_workflows:: Failed to create workflows directory: ${agent_workflows_dir}" >&2
-			return 1
-		fi
+	if ! ensure_dir "${agent_workflows_dir}" "generate_workflows"; then
+		return 1
 	fi
 
 	local command_file
@@ -591,22 +560,8 @@ EOF
 
 		local agent_workflow_file="${agent_workflows_dir}/${command_name}.md"
 
-		# Check if content changed
-		local existing_content=""
-		if [[ -f "${agent_workflow_file}" ]]; then
-			existing_content=$(cat "${agent_workflow_file}" 2>/dev/null || true)
-		fi
-
-		if [[ "$existing_content" == "$workflow_content" ]]; then
-			echo "No changes: ${agent_workflow_file}"
-		else
-			show_diff "${agent_workflow_file}" "${workflow_content}"
-			echo "${workflow_content}" >"${agent_workflow_file}"
-			if [[ -f "${agent_workflow_file}" ]]; then
-				echo "Updated: ${agent_workflow_file}"
-			else
-				echo "Created: ${agent_workflow_file}"
-			fi
+		if ! write_if_changed "${agent_workflow_file}" "${workflow_content}" "none" "generate_workflows"; then
+			return 1
 		fi
 	done < <(find "${commands_dir}" -maxdepth 1 -name "*.md" -type f -print0 2>/dev/null || true)
 
@@ -640,8 +595,9 @@ install_rules() {
 	fi
 
 	# Set target directory
-	readonly CURSOR_RULES_DIR="${cursor_rules_dir}"
-	readonly AGENT_RULES_DIR="${agent_rules_dir}"
+	CURSOR_RULES_DIR="${cursor_rules_dir}"
+	AGENT_RULES_DIR="${agent_rules_dir}"
+	export CURSOR_RULES_DIR AGENT_RULES_DIR
 
 	# Generate rules
 	fill_quest_log "${TARGET_DIR}"
@@ -708,9 +664,8 @@ vscodeoverride() {
 # Side Effects:
 # - Displays summary report to stdout
 print_summary() {
-	if ((STATS_ERRORS > 0 || STATS_WARNINGS > 0)); then
-		return 1
-	fi
+	local total_processed=0
+	total_processed=$((STATS_CREATED + STATS_UPDATED + STATS_UNCHANGED))
 
 	cat <<EOF
 
@@ -721,23 +676,25 @@ EOF
 	[[ ${STATS_CREATED} -gt 0 ]] && echo "Created: ${STATS_CREATED}"
 	[[ ${STATS_UPDATED} -gt 0 ]] && echo "Updated: ${STATS_UPDATED}"
 	[[ ${STATS_UNCHANGED} -gt 0 ]] && echo "Unchanged: ${STATS_UNCHANGED}"
-	[[ ${STATS_SKIPPED} -gt 0 ]] && echo "Skipped: ${STATS_SKIPPED}"
 	[[ ${STATS_ERRORS} -gt 0 ]] && echo "Errors: ${STATS_ERRORS}"
 	[[ ${STATS_WARNINGS} -gt 0 ]] && echo "Warnings: ${STATS_WARNINGS}"
 	[[ ${STATS_TOTAL_LINES} -gt 0 ]] && echo "Total lines: ${STATS_TOTAL_LINES}"
+	echo "Total processed: ${total_processed}"
 
 	echo ""
 
 	if ((STATS_ERRORS > 0)); then
 		echo "print_summary:: Some rules failed validation. Please review errors above." >&2
 		return 1
-	elif ((STATS_WARNINGS > 0)); then
+	fi
+
+	if ((STATS_WARNINGS > 0)); then
 		echo "print_summary:: Some warnings were generated. Please review warnings above."
 		return 0
-	else
-		echo "print_summary:: All rules processed successfully."
-		return 0
 	fi
+
+	echo "print_summary:: All rules processed successfully."
+	return 0
 }
 
 # Determine the target directory for rule generation
@@ -781,20 +738,16 @@ run_quest_log() {
 	QUEST_LOG_ROOT="${SCRIPT_DIR}"
 	export SCRIPT_DIR
 
-	readonly QUEST_DIR="${SCRIPT_DIR}/quests"
+	QUEST_DIR="${SCRIPT_DIR}/quests"
+	export QUEST_DIR
 
 	# Environment variables with defaults
 	SCHEMA_FILE=${SCHEMA_FILE:-"${SCRIPT_DIR}/schema.json"}
-	INCLUDE_ALL=${INCLUDE_ALL:-"${DEFAULT_INCLUDE_ALL}"}
 	FORCE=${FORCE:-${DEFAULT_FORCE}}
 	TARGET_DIR=${TARGET_DIR:-${PWD}}
 
 	while [[ $# -gt 0 ]]; do
 		case $1 in
-		-a | --all)
-			INCLUDE_ALL=true
-			shift
-			;;
 		-f | --force)
 			FORCE=true
 			shift

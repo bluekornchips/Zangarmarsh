@@ -2,12 +2,12 @@
 
 ## Overview
 
-Generate AI assistant rules for Cursor based on project-specific rule templates. Quest Log reads from a JSON schema configuration and creates standardized rule files. Rules are installed locally in the project directory.
+Generate AI assistant rules for Cursor from JSON metadata and Markdown quest templates in this directory. Rules are written under the target project.
 
 ## Prerequisites
 
 - Bash 3.2 or greater
-- `jq` (JSON processor)
+- `jq` for JSON parsing
 
 ## Install
 
@@ -21,25 +21,20 @@ questlog
 
 ## Features
 
-- Creates Cursor rules locally (.cursor/rules/)
-- Creates Agent rules locally (.agent/rules/)
-- Generates daily-quests (Cursor commands) from markdown files (.cursor/commands/)
-- Generates Agent workflows from markdown files (.agent/workflows/)
-- Template-based rule generation system
-- Configurable rule categories and content
-- Automatic file organization and naming
+- Creates Cursor rules under `.cursor/rules/user/`
+- Creates Agent rules under `.agent/rules/`
+- Generates Cursor commands from `tools/quest-log/commands/` into `.cursor/commands/user/`
+- Generates Agent workflows into `.agent/workflows/`
+- Template-based rule generation driven by `schema.json`
 
 ## Usage
 
 ```bash
-# Generate rules in current directory
+# Generate rules in the current git repository root
 questlog
 
-# Generate rules in specified directory
+# Generate rules for a specific directory tree
 questlog /path/to/project
-
-# Generate all rules including warcraft and lotr
-questlog --all
 
 # Show help
 questlog --help
@@ -47,58 +42,57 @@ questlog --help
 
 ## Configuration
 
-The tool reads from `tools/quest-log/schema.json` and quest templates in `tools/quest-log/quests/`:
+The tool reads [tools/quest-log/schema.json](schema.json) and Markdown bodies from [tools/quest-log/quests/](quests/). Each quest file uses `Purpose`, `Priority`, `Standards`, `Usage`, and optional `Example` headings, with `Allowed` and `Denied` nested under `Usage`.
 
-- `always.md`: Core development rules applied to every request
-- `lotr.md`: Lord of the Rings themed test data
-- `python.md`: Python coding standards and best practices
-- `shell.md`: Shell scripting standards and conventions
-- `warcraft.md`: World of Warcraft themed test data
+| Template        | Role                                                        |
+| --------------- | ----------------------------------------------------------- |
+| `always.md`     | Universal assistant behavior, safety, and response quality  |
+| `python.md`     | Python typing, errors, imports, tests, and tooling          |
+| `shell.md`      | Bash and zsh scripting, structure, and Bats testing         |
+| `typescript.md` | TypeScript and JavaScript typing, modules, async, and tests |
 
 ## Daily Quests
 
-Quest Log generates daily-quests (Cursor commands) from markdown files in `tools/quest-log/commands/`. Daily-quests are reusable workflows that can be triggered with a `/` prefix in the Cursor chat input.
+Quest Log copies Markdown from `tools/quest-log/commands/` into `.cursor/commands/user/`. In Cursor chat you can invoke them with `/` plus the file stem, for example `/bash-review`.
 
-For more information about Cursor commands, see the [Cursor Commands documentation](https://cursor.com/docs/agent/chat/commands).
+See the [Cursor Commands documentation](https://cursor.com/docs/agent/chat/commands) for how commands work in the product.
 
 ### Available Daily Quests
 
-- `bash-review.md`: Comprehensive bash repository review checklist
-- `author.md`: Documentation templates for PRs, Jira tickets, README files, and technical specs
-
-Daily-quests are automatically copied to `.cursor/commands/` when you run `questlog`. You can then use them in Cursor by typing `/` followed by the command name (e.g., `/bash-review` or `/author`).
+- `bash-review.md`: Bash repository review checklist
+- `author.md`: Documentation templates for PRs, tickets, README files, and specs
+- `python-project-setup.md`: Python project bootstrap notes
+- `typescript-review.md`: TypeScript review checklist
 
 ## Files Created
 
-- `.cursor/rules/`: Local Cursor rules directory in project
-  - Rule files are named based on the quest template names (e.g., `rules-python.mdc`)
-- .agent/rules/: Local Agent rules directory in project
-  - Rule files are named based on the quest template names (e.g., rules-python.md)
-- .cursor/commands/: Local Cursor daily-quests directory in project
-  - Daily-quest files are generated from tools/quest-log/commands/\*.md
-  - Daily-quests can be invoked in Cursor chat with /command-name
-  - See Cursor Commands documentation for details
-- .agent/workflows/: Local Agent workflows directory in project
-  - Workflow files are generated from tools/quest-log/commands/\*.md
+- `.cursor/rules/user/`: Cursor rule files named `rules-<quest>.mdc`
+- `.agent/rules/`: Agent rule files named `rules-<quest>.md`
+- `.cursor/commands/user/`: Cursor command Markdown from `commands/*.md`
+- `.agent/workflows/`: Agent workflow Markdown derived from the same command sources
 
 ## Schema Format
 
-The `schema.json` file defines:
+Each object in `schema.json` defines:
 
-- Rule metadata (name, description, keywords)
-- Cursor-specific settings (always_apply flag)
-- Content source (quest template file)
+- `name`: stem for output filenames
+- `file`: Markdown template under `quests/`
+- `icon`: leading acknowledgement line in generated rules
+- `description` and `keywords`: Cursor metadata for rule selection
+- `cursor.alwaysApply` and `cursor.globs`: Cursor application mode
 
 ## Testing
 
+Install a Bats package so the `bats` binary is on your `PATH`, then run:
+
 ```bash
-# Run quest-log tests
 bats tools/quest-log/tests/quest-log-tests.sh
 ```
 
+You can also run `bash -n tools/quest-log/quest-log.sh` and `jq empty tools/quest-log/schema.json` for quick checks without Bats.
+
 ## Verification Steps
 
-- [ ] Rules are generated in `.cursor/rules/` directory
-- [ ] Daily-quests are generated in `.cursor/commands/` directory (if commands directory exists)
-- [ ] All quest templates are processed correctly
-- [ ] `--all` flag includes warcraft and lotr rules
+- [ ] Rules appear under `.cursor/rules/user/` after `questlog`
+- [ ] Commands appear under `.cursor/commands/user/` when `commands/` exists
+- [ ] All schema entries generate matching Cursor and Agent rule files

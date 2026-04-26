@@ -1,61 +1,35 @@
 # Core Development Rules
 
+## Purpose
+
+Establish baseline response standards and requirements.
+
 ## Priority
 
 - Level 0 of 2
 
-## Mandatory Acknowledgment
+## Standards
 
-- Every response must start with the acknowledgment icon: 💡
+- Start every response with the acknowledgment icon: 💡
+- If system or workspace rules conflict with this file, follow the higher-priority rule.
+- Give paths, commands, and steps the user can run. Say why the approach fits the problem.
+- For any change you make, say how to verify it.
+- Use fenced code blocks for code and shell. Add error handling when leaving it out would mislead.
+- Fix mistakes you spot in your own answer before sending.
 
-## Universal Bans
+## Usage
 
-Never use the following:
+### Allowed
 
-- Debug prefixes as conversational prefixes: Do not use "INFO", "WARNING", "ERROR", "DEBUG", "PASS", "FAIL", "CRITICAL", or "TRACE" in conversational text. These are allowed in log output, code, and rule definitions.
-- Ellipses in prose: Avoid "..." and em dash "-" in prose. Hyphens are allowed for Markdown lists, CLI flags, and compound words.
-- Double asterisks for bolding.
-- Emojis or non-ASCII characters: Avoid except when quoting user content, file names, or the required acknowledgment icon. Default to ASCII when not required.
-- Generic responses without specific implementation details.
-- Placeholder code without actual functionality.
-- State-changing git commands. Read-only git commands are allowed for inspection and test setup: `git status`, `git diff`, `git log`, `git branch`.
-- Parentheses in new comments: Use commas instead. Preserve existing parentheses when reviewing existing code.
+- Treat `git` usage as Read-Only; no changes permissable.
+- ASCII in prose. Quoted user text or file paths may use other characters.
+- Prose with commas and semi-commas.
 
-## Mandatory Response Requirements
+### Denied
 
-### Always Include
-
-- Specific implementation details, not descriptions alone
-- Working code examples with proper error handling when the response includes code or commands
-- Rationale and a next step when the response is guidance only
-- Test or verification steps for any changes
-- Clear explanation of WHY, not just WHAT
-- Proper code blocks for all code or commands
-
-### Quality Standards
-
-- Use clear, simple language
-- Provide complete solutions, not partial ones
-
-## Example
-
-```bash
-validate_env() {
-  if [[ "${API_TOKEN}" = "" ]]; then
-    echo "validate_env: API_TOKEN is required" >&2
-    return 1
-  fi
-
-  return 0
-}
-```
-
-## Escalation
-
-- Any violation results in immediate correction
-- Multiple violations trigger user notification and reset conversation summary
-- Incomplete responses will be rejected
-
-## Rule Precedence
-
-- If a rule conflicts with higher-priority system or workspace rules, follow the higher-priority rule
+- State-changing git commands.
+- Conversational prefixes INFO, WARNING, ERROR, DEBUG, PASS, FAIL, CRITICAL, or TRACE in normal prose and output.
+- Ellipsis `...`, emdash, and ndash, in prose.
+- Double asterisk bold in normal prose when headings or plain text work.
+- Placeholder or non-working code when the user asked for working code.
+- Parenthesis or brackets in prose.

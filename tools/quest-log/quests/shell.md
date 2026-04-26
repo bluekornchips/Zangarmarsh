@@ -1,168 +1,178 @@
 # Shell Standards
 
+## Purpose
+
+Keep bash and zsh scripts safe to run, easy to read, and consistent about errors and cleanup.
+
 ## Priority
 
 - Level 2 of 2
 
-## Critical Violations, Scripts Will Be Rejected
+## Standards
 
-### Never Use, Immediate Rejection
+- Use `#!/usr/bin/env bash` or `#!/usr/bin/env zsh` for executables, and match the shell to the features used.
+- For bash scripts, stay compatible with bash 3.2+. For zsh scripts, stay compatible with zsh 5.0+.
+- In the direct-run entry block only, enable strict mode when it fits, for example `set -euo pipefail` or `set -eo pipefail`. Set `umask 077` when the script handles sensitive files.
+- Quote every expansion: `"${var}"` not bare `$var`.
+- Send errors to stderr with `>&2`.
+- Return explicit integer status codes from functions. Use `return`, not `exit`, inside functions.
+- Validate inputs at boundaries. Add function comments for invoked scripts unless the function is obvious and short.
+- For complex helpers, include Inputs, Outputs, Side Effects, and Returns when they clarify behavior.
+- Group scripts as usage, validation and config, helpers, core logic, `main`, then the source guard.
 
-- Never use echo statements with line lengths over 160
-- Never remove paths the script did not create. Use `trap` to clean up long-lived temporary paths created by the script. Manual cleanup is allowed for short-lived temp files and error handling
-- Never use `exit` inside a function, use `return` instead
-- Never use unquoted variables: `echo "$var"` not `echo $var`
-- Never use `rm -rf /` or similar dangerous commands
-- Never use `eval` or `exec`
-- Never use `sudo`
-- Never use `declare -a` for array assignment
+## Usage
 
-## Mandatory Requirements, All Scripts Must Have
+### Allowed
 
-### Always Use, Non-Negotiable
+- `[[ ... ]]` in bash, `$(command)` instead of backticks, `(( ... ))` for integers.
+- Heredocs with `cat <<EOF` for user-visible text longer than two lines.
+- `trap` to remove temp dirs the script created. Short-lived temp files may use `rm` in the same scope.
+- Explicit paths for destructive commands, for example `rm -v ./*`.
+- Builtins instead of external commands when they keep the script clear.
+- `command -v` for dependency checks with a clear stderr message when something is missing.
+- `mktemp` or `mktemp -d` with a template. `chmod 0600` on temp files that may hold secrets.
+- Array literals for lists, for example `flags=(--foo --bar='baz')`.
+- Separate define, assign, and export steps when that makes variable intent clearer.
+- Function-name prefixes in helper error output, for example `load_config:: file is missing`.
+- A blank line before the final `return` in a function, except in `main`.
+- Bats for non-trivial shell. Use `@test "name:: description" {` for direct function tests. Use `setup_file` and `setup` as the project already does.
+- Worktrees for Bats tests that require git interaction. Avoid real side effects unless that behavior is under test.
+- Spacing before `run` in Bats tests to show what is being changed, mocked, or asserted.
 
-- Heredocs for output spread across more than 2 lines
-- Purposeful comments and section headers; include function docs for non-trivial functions
-- Bats for testing when practical. Provide a health check or validation mode for scripts that call external services
-- `#!/usr/bin/env bash` or `#!/usr/bin/env zsh` for executables, match the shell to the features used
-- Guard strict mode and umask in the direct execution block when the script can be sourced
-- Error messages to STDERR: `>&2`
-- Function header comments are required. Include Inputs, Outputs, Side Effects, and Returns sections when they apply
-- Input validation for all functions
-- Proper error handling with `return` status codes
+### Denied
 
-## Best Practices
+- `echo` lines longer than 160 characters. Use a heredoc or a loop instead.
+- Removing paths the script did not create.
+- `rm -rf /`, `eval`, `exec`, or `sudo`.
+- `declare -a` for simple array assignment. Use `name=(a b)` and `"${name[@]}"`.
+- Required function comments in test scripts when names and setup are already clear.
 
-### General Practices
+## Example
 
-- For bash scripts, use bash 3.2+ syntax. For zsh scripts, use zsh 5.0+ syntax
-- Use `[[ ... ]]` for conditionals
-- Use `$(command)` instead of backticks
-- Use `(( ... ))` for arithmetic
-- Use explicit paths: `rm -v ./*`
-- Prefer builtins over external commands when reasonable
-- `cat` heredocs are strongly preferred for multi-line output readability
-- Use array literals for lists; avoid `declare -a` unless necessary
-- Always `return` explicit status codes
-- Always leave a blank line before a `return` statement for the final two lines of a function, except for main()
-- Functions in test scripts do not require comments
-- Functions in invoked scripts require comments unless they are both obvious and short
-- Use `command -v` for dependency checks and return helpful error messages
-- Use `mktemp` with explicit templates; secure temp files with `chmod 0600` when they contain secrets
-
-## Testing
-
-- Always prefix tests with the function name for direct function testing: `@test "function_name:: test description" {`
-- Use proper spacing before the `run` command to clearly show what is being tested, changed, or mocked
-- Never execute actual side-effecting changes in tests unless that functionality is what is under test
-- Always use worktrees for bats tests that require git interaction
-- Use `setup_file` for file-scoped environment setup (e.g., checking external services)
-- Use `setup` for per-test environment setup and sourcing the script under test
-
-## File Structure Template
-
-All scripts must maintain a consistent organizational structure. Functions should be grouped in the following order: usage and help functions, then validation and configuration, then helper utilities, then core business logic, then the main entry point, and finally the source guard that enables both direct execution and sourcing.
-
-Content inside comment blocks with curly braces are instructions and are not intended to be part of the script.
+### Script
 
 ```bash
 #!/usr/bin/env bash
 #
-# {Description of script purpose}
+# Validate local dependencies and an optional API token.
 #
+
+########################################################
+# Defaults
+########################################################
+REQUIRED_COMMANDS=("jq" "curl")
 
 usage() {
   cat <<EOF
 Usage: $(basename "$0") [OPTIONS]
 
-{Description of script purpose}
-
 Options:
-  -h, --help  {Description of the help option}
-
+  -h, --help      Show help
+  --health-check  Validate local dependencies and token setup
 EOF
+
+  return 0
 }
 
-# {Validation functions and configuration setup}
-# {Check dependencies, validate inputs, set up configuration}
-
-# {Helper functions used by main functionality}
-# {Description of the helper function}
-#
-# {Reference documentation if needed}
-# Inputs:
-# - $1 {argument name}, {description. Not needed for environment variables}
+# Check for required external commands
 #
 # Side Effects:
-# - {description}
-#
-# Outputs:
-# - {description}
+# - Writes missing dependency messages to stderr
 #
 # Returns:
-# - 0 on success
-# - 1 on failure
-helper_function() {
-  # {input args defined as locals}
-  # {check required values are set}
+# - 0 when all commands exist
+# - 1 when any command is missing
+check_dependencies() {
+  local missing=()
+  local cmd
 
-  # {
-  # if [[ -z "${some_var}" ]]; then
-  #   echo "helper_function:: some_var is not set" >&2
-  #   return 1
-  # fi
-  # }
+  for cmd in "${REQUIRED_COMMANDS[@]}"; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+      missing+=("$cmd")
+    fi
+  done
 
-  # {Output lines should include the function name: `echo "helper_function:: {content}"`}
+  if [[ "${#missing[@]}" -gt 0 ]]; then
+    echo "check_dependencies:: missing dependencies: ${missing[*]}" >&2
+    return 1
+  fi
 
-  return 0 # {Always return explicit status codes}
+  return 0
 }
 
-# {Core logic functions}
-# {Description of the function}
+# Validate API token configuration when present
 #
-# {Reference documentation if needed}
-# Inputs:
-# - $1 {argument name}, {description}
-#
-# Side Effects:
-# - {description}
+# Reads environment:
+# - API_TOKEN
 #
 # Outputs:
-# - {description}
+# - One status line to stdout
 #
 # Returns:
-# - 0 on success
-# - 1 on failure
-function_name() {
-  # {input args defined as locals}
-  # {check required values are set}
+# - 0 when token setup is acceptable
+validate_token() {
+  if [[ -z "${API_TOKEN:-}" ]]; then
+    echo "validate_token:: API_TOKEN not set, skipping API check"
+    return 0
+  fi
 
-  # {
-  # if [[ -z "${some_var}" ]]; then
-  #   echo "function_name:: some_var is not set" >&2
-  #   return 1
-  # fi
-  # }
+  if [[ "${#API_TOKEN}" -lt 8 ]]; then
+    echo "validate_token:: API_TOKEN is too short" >&2
+    return 1
+  fi
 
-  # {Output lines should include the function name: `echo "function_name:: {content}"`}
+  echo "validate_token:: API token is configured"
 
-  return 0 # {Always return explicit status codes}
+  return 0
 }
 
-# {Main entry point, "main" is the default fallback name}
-# {Does not require a function header comment}
+########################################################
+# Core
+########################################################
+health_check() {
+  local errors=0
+
+  if ! check_dependencies; then
+    errors=$((errors + 1))
+  fi
+
+  if ! validate_token; then
+    errors=$((errors + 1))
+  fi
+
+  if [[ "${errors}" -eq 0 ]]; then
+    echo "health_check:: passed"
+    return 0
+  fi
+
+  echo "health_check:: failed with ${errors} error(s)" >&2
+
+  return 1
+}
+
 main() {
   while [[ $# -gt 0 ]]; do
-    case $1 in
-      -h | --help) usage && return 0 ;;
+    case "$1" in
+      -h | --help)
+        usage
+
+        return 0
+        ;;
+      --health-check)
+        health_check
+
+        return $?
+        ;;
       *)
-        echo "Unknown option '$1'" >&2
-        echo "Use '$(basename "$0") --help' for usage information" >&2
+        echo "main:: unknown option '$1'" >&2
+        echo "main:: use '$(basename "$0") --help' for usage" >&2
+
         return 1
         ;;
     esac
   done
+
+  usage
 
   return 0
 }
@@ -175,132 +185,60 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
 fi
 ```
 
-## Variables
-
-```bash
-# {Define, assign, export separately}
-local name
-name="John"
-export name
-
-# {Always quote variables}
-echo "PATH=${PATH}, PWD=${PWD}"
-
-# {Use arrays for lists}
-flags=(--foo --bar='baz')
-mybinary "${flags[@]}"
-```
-
-## Control Flow
-
-```bash
-# {Test strings with [[ ]]}
-if [[ "${my_var}" == "some_string" ]]; then
-  do_something
-fi
-
-# {Test empty strings}
-if [[ -z "${my_var}" ]]; then
-  do_something
-fi
-
-# {Arithmetic with (())}
-local a
-local b
-a=5
-b=10
-if (( a < b )); then
-  echo "a is less than b"
-fi
-```
-
-## Error Handling
-
-```bash
-# {Check return values}
-function_name() {
-  local file_list
-  local dest_dir
-  file_list=("file1.txt" "file2.txt")
-  dest_dir="/tmp"
-
-  if ! mv "${file_list[@]}" "${dest_dir}/"; then
-    echo "function_name:: Unable to move ${file_list[*]} to ${dest_dir}" >&2
-    return 1
-  fi
-
-  return 0
-}
-```
-
-## Example
-
-```bash
-create_temp_dir() {
-  local temp_dir
-  temp_dir="$(mktemp -d)"
-
-  if [[ "${temp_dir}" = "" ]]; then
-    echo "create_temp_dir: mktemp failed" >&2
-    return 1
-  fi
-
-  trap 'rm -rf "$temp_dir"' EXIT
-
-  return 0
-}
-```
-
-## Shell Test Structure Template
-
-Test files should be organized with a clear hierarchy: Bats setup hooks (`setup_file` and `setup`) come first to establish the test environment, followed by mock function definitions for external dependencies, then test helper utilities, function-specific test groups organized by the function under test, and finally integration tests that exercise the full workflow.
+### Bats
 
 ```bash
 #!/usr/bin/env bats
 #
-# {Brief description of the test file}
+# Tests for bin/example-health-check.sh
 #
-GIT_ROOT="$(git rev-parse --show-toplevel || echo "")"
-SCRIPT="${GIT_ROOT}/path/to/script.sh"
-[[ ! -f "$SCRIPT" ]] && echo "setup:: Script not found: $SCRIPT" >&2 && return 1
 
 setup_file() {
-  # {If needed, check access to APIs, databases, etc.}
+  GIT_ROOT="$(git rev-parse --show-toplevel || echo "")"
+  if [[ -z "${GIT_ROOT}" ]]; then
+    fail "Failed to get git root"
+  fi
+
+  SCRIPT="${GIT_ROOT}/bin/example-health-check.sh"
+  if [[ ! -f "${SCRIPT}" ]]; then
+    fail "Script not found: ${SCRIPT}"
+  fi
+
+  export GIT_ROOT
+  export SCRIPT
+
   return 0
 }
 
 setup() {
-  # {Source the script}
-  source "$SCRIPT"
-
-  # {Define and export global variables}
-  VAR_A="test"
-  export VAR_A
+  source "${SCRIPT}"
+  unset API_TOKEN
 
   return 0
 }
 
-# {Mock functions for external dependencies}
-# {Mock API calls, file operations, etc.}
+@test "health_check:: passes when dependencies are available" {
+  local mock_bin
+  mock_bin="${BATS_TEST_TMPDIR}/example-health-check-bin"
+  mkdir -p "${mock_bin}"
 
-# {Helper functions for test setup, assertions, etc.}
+  printf '#!/usr/bin/env bash\nexit 0\n' >"${mock_bin}/jq"
+  printf '#!/usr/bin/env bash\nexit 0\n' >"${mock_bin}/curl"
+  chmod +x "${mock_bin}/jq" "${mock_bin}/curl"
 
-# {Group tests by function being tested}
-# function_name
-@test "function_name:: script handles unknown options" {
-  local var
-  local script_path
-  var="test"
-  script_path="$HOME/scripts/bin/script.sh"
+  PATH="${mock_bin}:${PATH}"
+  export PATH
 
-  run "$script_path" "$var"
-  [[ "$status" -eq 1 ]]
-
-  echo "$output" | grep -q "Unknown option"
+  run health_check
+  [[ "${status}" -eq 0 ]]
+  echo "${output}" | grep -q "health_check:: passed"
 }
 
-# {End-to-end integration tests}
-@test "integration:: full workflow test" {
-  # {Integration test implementation}
+@test "main:: --health-check returns dependency failures" {
+  REQUIRED_COMMANDS=("missing-jq" "missing-curl")
+
+  run main --health-check
+  [[ "${status}" -eq 1 ]]
+  echo "${output}" | grep -q "check_dependencies:: missing dependencies"
 }
 ```

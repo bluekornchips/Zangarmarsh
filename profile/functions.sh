@@ -104,27 +104,72 @@ _penv_install_dependencies() {
 # Run git worktree from the git root
 #
 # Encapsulates git worktree so it always runs relative to the repository root,
-# regardless of the current working directory.
+# regardless of the current working directory. When the first argument is not
+# add or remove, creates a sibling worktree with a branch of the same name.
 #
 # Inputs:
-# - $@: arguments passed to git worktree
+# - $1: optional new branch and folder name, or add or remove
+# - $2: optional base branch for shortcut creation
+# - $@: arguments passed to git worktree when using add or remove
 #
 # Side Effects:
 # - Invokes git worktree in the repository root
+# - Creates a sibling worktree when using the shortcut form
 #
 # Returns:
 # - 0 on success
 # - 1 if not in a git repository or git worktree fails
 gw() {
 	local git_root
+	local worktree_name
+	local base_branch
+	local worktree_path
+
 	git_root="$(git rev-parse --show-toplevel 2>/dev/null)"
 	if [[ -z "${git_root}" ]]; then
 		echo "gw:: not in a git repository" >&2
 		return 1
 	fi
 
-	# Don't capture output, allow uninterrupted flow
-	git -C "${git_root}" worktree "$@"
+	case "${1:-}" in
+	add | remove)
+		# Don't capture output, allow uninterrupted flow
+		git -C "${git_root}" worktree "$@"
+		return $?
+		;;
+	esac
+
+	if [[ -z "${1:-}" ]]; then
+		echo "gw:: name is required unless using add or remove" >&2
+		return 1
+	fi
+
+	if (($# > 2)); then
+		echo "gw:: shortcut accepts at most two arguments: name and base branch" >&2
+		return 1
+	fi
+
+	worktree_name="$1"
+	base_branch="${2:-}"
+
+	if [[ -z "${base_branch}" ]]; then
+		base_branch="$(git -C "${git_root}" symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null)"
+	fi
+
+	if [[ -z "${base_branch}" ]]; then
+		base_branch="$(git -C "${git_root}" symbolic-ref --quiet --short HEAD 2>/dev/null)"
+	fi
+
+	if [[ -z "${base_branch}" ]]; then
+		echo "gw:: unable to determine default base branch" >&2
+		return 1
+	fi
+
+	worktree_path="${git_root}/../${worktree_name}"
+
+	git -C "${git_root}" worktree add -b "${worktree_name}" "${worktree_path}" "${base_branch}"
+
+	return $?
 }
 
 # Create or activate a Python virtual environment in the current directory

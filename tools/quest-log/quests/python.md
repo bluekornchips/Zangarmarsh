@@ -1,42 +1,38 @@
 # Python Standards
 
+## Purpose
+
+Base level structure for Python for types, failures, and boundaries.
+
 ## Priority
 
 - Level 1 of 2
 
-## Critical Violations, Code Will Be Rejected
+## Standards
 
-### Never Use, Immediate Rejection
+- Catch specific exception types. Re-raise or wrap when callers need a higher-level error.
+- Use `logging` with `logger = logging.getLogger(__name__)` instead of `print` for runtime messages.
+- Use context managers for files, sockets, locks, and other scoped resources.
+- Type hints on public functions and at module boundaries. Add docstrings when names and types are not enough.
+- Read secrets and environment-specific values from environment variables or injected config, not literals in source.
 
-- Broad exceptions: `except Exception as e:`
-- Hardcoded secrets: `api_key = "sk-abc123"`
-- Wildcard imports: `from .utils import *`
-- Print debugging: `print("Debug info")`
-- Production assertions: `assert False`
-- Bare `except:` clauses
-- `eval()` or `exec()` with user input
-- Mutable default arguments: `def func(items=[]):`
-- Global variables for state management
-- `__init__.py` files
+## Usage
 
-## Mandatory Requirements, All Code Must Have
+### Allowed
 
-### Always Use, Non-Negotiable
+- Absolute imports from the project root when the tree supports them. Relative imports inside one package when they reduce cycles.
+- `pytest --cov=src --cov-fail-under=90` and `mypy src/ --strict` on production code under `src/` when the project already uses them.
+- Targeted tests and lighter typing on small scripts when the repo does not require full package rigor.
 
-- Specific exceptions: `except ValueError as e:`
-- Environment variables: `api_key = os.getenv("API_KEY")`
-- Absolute imports from project root when available, otherwise use relative imports within the package
-- Proper logging: `logger.info("Process started")`
-- Type hints and docstrings
-- Input validation for all functions
-- Proper error handling with specific exceptions
-- Context managers for resource management
+### Denied
 
-### Code Quality Requirements
-
-- Production modules and shared libraries must reach coverage 90 percent or higher with `pytest --cov=src --cov-fail-under=90`
-- Run `mypy src/ --strict` on production modules and shared libraries
-- For scripts, add type hints and targeted tests when practical
+- Broad `except Exception`, bare `except:`, or `assert` for control flow in production paths.
+- `eval` or `exec` on untrusted input.
+- Wildcard imports such as `from module import *`.
+- Hardcoded secrets or API tokens.
+- Mutable default arguments such as `def f(x=[]):`.
+- Global mutable state as the main application state store.
+- New `__init__.py` files unless the repo already documents that layout.
 
 ## Example
 
@@ -44,6 +40,7 @@
 import logging
 
 logger = logging.getLogger(__name__)
+
 
 def read_port(value: str) -> int:
     if value == "":

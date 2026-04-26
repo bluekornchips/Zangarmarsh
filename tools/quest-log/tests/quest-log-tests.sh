@@ -5,7 +5,7 @@ QUEST_LOG_ROOT="$GIT_ROOT/tools/quest-log"
 SCRIPT="$QUEST_LOG_ROOT/quest-log.sh"
 SCHEMA_FILE="$QUEST_LOG_ROOT/schema.json"
 
-CURSOR_RULES_DIR=".cursor/rules"
+CURSOR_RULES_DIR=".cursor/rules/user"
 
 # Create a test quest file
 # Writes json to the given quest file path. Allows for input of custom info.
@@ -57,8 +57,12 @@ setup() {
 	# shellcheck disable=SC2164
 	cd "$TEST_TEMP_DIR"
 
-	mkdir -p "./$CURSOR_RULES_DIR"
-	mkdir -p "./.agent/rules"
+	mkdir -p "${TEST_TEMP_DIR}/.cursor/rules/user" "${TEST_TEMP_DIR}/.agent/rules"
+
+	export CURSOR_RULES_DIR="${TEST_TEMP_DIR}/.cursor/rules/user"
+	export AGENT_RULES_DIR="${TEST_TEMP_DIR}/.agent/rules"
+	export QUEST_DIR="${QUEST_LOG_ROOT}/quests"
+	export SCHEMA_FILE="$SCHEMA_FILE"
 
 	quest_name="test-quest"
 	icon="🧪"
@@ -89,7 +93,6 @@ setup() {
 	STATS_CREATED=0
 	STATS_UPDATED=0
 	STATS_UNCHANGED=0
-	STATS_SKIPPED=0
 	STATS_ERRORS=0
 	STATS_WARNINGS=0
 	STATS_TOTAL_LINES=0
@@ -109,7 +112,6 @@ teardown() {
 	STATS_CREATED=0
 	STATS_UPDATED=0
 	STATS_UNCHANGED=0
-	STATS_SKIPPED=0
 	STATS_ERRORS=0
 	STATS_WARNINGS=0
 	STATS_TOTAL_LINES=0
@@ -184,7 +186,7 @@ mock_git_not_in_repo() {
 
 	run determine_target_directory
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Git repository detected"
+	echo "$output" | grep -q "git_root: ${TEST_TEMP_DIR}"
 }
 
 @test 'determine_target_directory:: uses current directory when not in git repo' {
@@ -194,7 +196,7 @@ mock_git_not_in_repo() {
 	run determine_target_directory
 	[[ "$status" -eq 0 ]]
 	[[ "$TARGET_DIR" == "$TEST_TEMP_DIR" ]]
-	echo "$output" | grep -q "Not in a git repository"
+	echo "$output" | grep -q "git_root: none"
 }
 
 @test 'determine_target_directory:: uses PWD when TARGET_DIR not set and not in git repo' {
@@ -203,7 +205,7 @@ mock_git_not_in_repo() {
 
 	run determine_target_directory
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Not in a git repository"
+	echo "$output" | grep -q "git_root: none"
 }
 
 ########################################################
@@ -384,28 +386,28 @@ mock_git_not_in_repo() {
 ########################################################
 
 @test 'create_cursor_rule_file:: creates rule files with correct content' {
-	rm -f "./$CURSOR_RULES_DIR/rules-$quest_name.mdc"
+	rm -f "${CURSOR_RULES_DIR}/rules-$quest_name.mdc"
 	rm -f "./.agent/rules/rules-$quest_name.md"
 
 	run create_cursor_rule_file "$quest_name" "$description" "$always_apply" "$content" "[]"
 	[[ "$status" -eq 0 ]]
-	[[ -f "./$CURSOR_RULES_DIR/rules-$quest_name.mdc" ]]
+	[[ -f "${CURSOR_RULES_DIR}/rules-$quest_name.mdc" ]]
 	[[ -f "./.agent/rules/rules-$quest_name.md" ]]
-	grep -q "description: $description" "./$CURSOR_RULES_DIR/rules-$quest_name.mdc"
+	grep -q "description: $description" "${CURSOR_RULES_DIR}/rules-$quest_name.mdc"
 	grep -q "description: $description" "./.agent/rules/rules-$quest_name.md"
-	grep -q "alwaysApply: $always_apply" "./$CURSOR_RULES_DIR/rules-$quest_name.mdc"
+	grep -q "alwaysApply: $always_apply" "${CURSOR_RULES_DIR}/rules-$quest_name.mdc"
 	grep -q "alwaysApply: $always_apply" "./.agent/rules/rules-$quest_name.md"
-	grep -q "Test Content" "./$CURSOR_RULES_DIR/rules-$quest_name.mdc"
+	grep -q "Test Content" "${CURSOR_RULES_DIR}/rules-$quest_name.mdc"
 	grep -q "Test Content" "./.agent/rules/rules-$quest_name.md"
 }
 
 @test 'create_cursor_rule_file:: updates existing rule file with different content' {
-	echo "initial content" >"./$CURSOR_RULES_DIR/rules-$quest_name.mdc"
+	echo "initial content" >"${CURSOR_RULES_DIR}/rules-$quest_name.mdc"
 
 	run create_cursor_rule_file "$quest_name" "$description" "$always_apply" "$content" "[]"
 	[[ "$status" -eq 0 ]]
-	[[ -f "./$CURSOR_RULES_DIR/rules-$quest_name.mdc" ]]
-	grep -q "description: $description" "./$CURSOR_RULES_DIR/rules-$quest_name.mdc"
+	[[ -f "${CURSOR_RULES_DIR}/rules-$quest_name.mdc" ]]
+	grep -q "description: $description" "${CURSOR_RULES_DIR}/rules-$quest_name.mdc"
 }
 
 @test 'create_cursor_rule_file:: shows no changes when content is identical' {
@@ -414,23 +416,23 @@ mock_git_not_in_repo() {
 		cat <<EOF
 ---
 description: $description
-globs:
+globs: []
 alwaysApply: $always_apply
 ---
 
 $content
 EOF
 	)
-	echo "${test_content}" >"./$CURSOR_RULES_DIR/rules-$quest_name.mdc"
+	echo "${test_content}" >"${CURSOR_RULES_DIR}/rules-$quest_name.mdc"
 
 	run create_cursor_rule_file "$quest_name" "$description" "$always_apply" "$content" "[]"
 	[[ "$status" -eq 0 ]]
-	[[ -f "./$CURSOR_RULES_DIR/rules-$quest_name.mdc" ]]
+	[[ -f "${CURSOR_RULES_DIR}/rules-$quest_name.mdc" ]]
 	echo "$output" | grep -q "No changes:"
 }
 
 @test 'create_cursor_rule_file:: tracks created statistics' {
-	rm -f "./$CURSOR_RULES_DIR/rules-test-stats.mdc"
+	rm -f "${CURSOR_RULES_DIR}/rules-test-stats.mdc"
 
 	STATS_CREATED=0
 	STATS_UPDATED=0
@@ -444,7 +446,7 @@ EOF
 }
 
 @test 'create_cursor_rule_file:: tracks updated statistics' {
-	echo "old content" >"./$CURSOR_RULES_DIR/rules-test-stats.mdc"
+	echo "old content" >"${CURSOR_RULES_DIR}/rules-test-stats.mdc"
 
 	STATS_CREATED=0
 	STATS_UPDATED=0
@@ -463,14 +465,14 @@ EOF
 		cat <<EOF
 ---
 description: Test Description
-globs:
+globs: []
 alwaysApply: false
 ---
 
 Test content
 EOF
 	)
-	echo "${test_content}" >"./$CURSOR_RULES_DIR/rules-test-stats.mdc"
+	echo "${test_content}" >"${CURSOR_RULES_DIR}/rules-test-stats.mdc"
 
 	STATS_CREATED=0
 	STATS_UPDATED=0
@@ -502,7 +504,7 @@ EOF
 	run show_diff "$test_file" "$new_content"
 	[[ "$status" -eq 0 ]]
 
-	grep -qF "File does not exist" <<<"$output"
+	[[ -z "$output" ]]
 }
 
 @test 'show_diff:: shows diff for existing file with changes' {
@@ -538,7 +540,7 @@ Line 3"
 	run show_diff "$test_file" "$new_content"
 	[[ "$status" -eq 0 ]]
 
-	grep -qF "File does not exist" <<<"$output"
+	[[ -z "$output" ]]
 }
 
 @test 'show_diff:: cleans up temporary files' {
@@ -558,37 +560,17 @@ Line 3"
 @test 'fill_quest_log:: generates core rule files by default' {
 	run run_quest_log
 	[[ "$status" -eq 0 ]]
-	[[ -f "./$CURSOR_RULES_DIR/rules-always.mdc" ]]
-	[[ -f "./$CURSOR_RULES_DIR/rules-author.mdc" ]]
-	[[ -f "./$CURSOR_RULES_DIR/rules-python.mdc" ]]
-	[[ -f "./$CURSOR_RULES_DIR/rules-shell.mdc" ]]
-}
-
-@test 'fill_quest_log:: skips warcraft and lotr by default' {
-	run run_quest_log
-	[[ "$status" -eq 0 ]]
-	[[ ! -f "./$CURSOR_RULES_DIR/rules-lotr.mdc" ]]
-	[[ ! -f "./$CURSOR_RULES_DIR/rules-warcraft.mdc" ]]
-	echo "$output" | grep -q "fill_quest_log:: Skipping warcraft"
-	echo "$output" | grep -q "fill_quest_log:: Skipping lotr"
-}
-
-@test 'fill_quest_log:: generates all rule files with --all flag' {
-	run run_quest_log --all
-	[[ "$status" -eq 0 ]]
-	[[ -f "./$CURSOR_RULES_DIR/rules-always.mdc" ]]
-	[[ -f "./$CURSOR_RULES_DIR/rules-author.mdc" ]]
-	[[ -f "./$CURSOR_RULES_DIR/rules-python.mdc" ]]
-	[[ -f "./$CURSOR_RULES_DIR/rules-shell.mdc" ]]
-	[[ -f "./$CURSOR_RULES_DIR/rules-lotr.mdc" ]]
-	[[ -f "./$CURSOR_RULES_DIR/rules-warcraft.mdc" ]]
+	[[ -f "${CURSOR_RULES_DIR}/rules-always.mdc" ]]
+	[[ -f "${CURSOR_RULES_DIR}/rules-typescript.mdc" ]]
+	[[ -f "${CURSOR_RULES_DIR}/rules-python.mdc" ]]
+	[[ -f "${CURSOR_RULES_DIR}/rules-shell.mdc" ]]
 }
 
 @test 'fill_quest_log:: generates non-empty files' {
 	run run_quest_log
 	[[ "$status" -eq 0 ]]
 
-	for file in "./$CURSOR_RULES_DIR"/*.mdc; do
+	for file in "${CURSOR_RULES_DIR}"/*.mdc; do
 		if [[ ! -s "$file" ]]; then
 			echo "File $file is empty"
 			return 1
@@ -600,7 +582,7 @@ Line 3"
 	run run_quest_log
 	[[ "$status" -eq 0 ]]
 
-	for file in "./$CURSOR_RULES_DIR"/*.mdc; do
+	for file in "${CURSOR_RULES_DIR}"/*.mdc; do
 		if ! grep -q "RULE APPLIED:" "$file"; then
 			echo "File $file does not contain RULE APPLIED header"
 			return 1
@@ -612,22 +594,12 @@ Line 3"
 	run run_quest_log
 	[[ "$status" -eq 0 ]]
 
-	for file in "./$CURSOR_RULES_DIR"/*.mdc; do
+	for file in "${CURSOR_RULES_DIR}"/*.mdc; do
 		if ! grep -q "^RULE APPLIED:" "$file"; then
 			echo "File $file does not have proper RULE APPLIED header"
 			return 1
 		fi
 	done
-}
-
-@test 'fill_quest_log:: tracks skipped statistics' {
-	STATS_SKIPPED=0
-
-	run fill_quest_log "${TEST_TEMP_DIR}"
-	[[ "$status" -eq 0 ]]
-	[[ "$STATS_SKIPPED" -eq 2 ]]
-	echo "$output" | grep -q "fill_quest_log:: Skipping warcraft"
-	echo "$output" | grep -q "fill_quest_log:: Skipping lotr"
 }
 
 ########################################################
@@ -638,7 +610,6 @@ Line 3"
 	STATS_CREATED=2
 	STATS_UPDATED=3
 	STATS_UNCHANGED=1
-	STATS_SKIPPED=2
 	STATS_ERRORS=0
 	STATS_WARNINGS=0
 	STATS_TOTAL_LINES=100
@@ -649,10 +620,9 @@ Line 3"
 	echo "$output" | grep -q "Created: 2"
 	echo "$output" | grep -q "Updated: 3"
 	echo "$output" | grep -q "Unchanged: 1"
-	echo "$output" | grep -q "Skipped: 2"
 	echo "$output" | grep -q "Errors: 0"
 	echo "$output" | grep -q "Warnings: 0"
-	echo "$output" | grep -q "Total processed: 8"
+	echo "$output" | grep -q "Total processed: 6"
 	echo "$output" | grep -q "Total lines: 100"
 	echo "$output" | grep -q "print_summary:: All rules processed successfully"
 }
@@ -661,7 +631,6 @@ Line 3"
 	STATS_CREATED=1
 	STATS_UPDATED=0
 	STATS_UNCHANGED=0
-	STATS_SKIPPED=0
 	STATS_ERRORS=1
 	STATS_WARNINGS=0
 	STATS_TOTAL_LINES=50
@@ -676,7 +645,6 @@ Line 3"
 	STATS_CREATED=1
 	STATS_UPDATED=0
 	STATS_UNCHANGED=0
-	STATS_SKIPPED=0
 	STATS_ERRORS=0
 	STATS_WARNINGS=1
 	STATS_TOTAL_LINES=50
@@ -697,54 +665,49 @@ Line 3"
 	mkdir -p "${test_git_root}/.vscode"
 	echo '{"test": "settings"}' >"${test_git_root}/.vscode/settings.json"
 
-	GIT_ROOT="${test_git_root}"
-	FORCE=false
+	export GIT_ROOT="${test_git_root}"
+	export FORCE=false
 
 	run vscodeoverride
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "vscodeoverride:: VSCode settings synced"
-	[[ -d "${TEST_TEMP_DIR}/.vscode" ]]
-	[[ -f "${TEST_TEMP_DIR}/.vscode/settings.json" ]]
+	echo "$output" | grep -q "vscodeoverride: complete"
+	[[ -d "${GIT_ROOT}/.vscode" ]]
+	[[ -f "${GIT_ROOT}/.vscode/settings.json" ]]
 }
 
 @test 'vscodeoverride:: skips when directory exists and FORCE is false' {
 	local test_git_root
 	test_git_root="$(mktemp -d)"
 	mkdir -p "${test_git_root}/.vscode"
-	echo '{"test": "settings"}' >"${test_git_root}/.vscode/settings.json"
+	echo "existing" >"${test_git_root}/.vscode/settings.json"
 
-	GIT_ROOT="${test_git_root}"
-	FORCE=false
-
-	mkdir -p "${TEST_TEMP_DIR}/.vscode"
-	echo "existing" >"${TEST_TEMP_DIR}/.vscode/settings.json"
+	export GIT_ROOT="${test_git_root}"
+	export FORCE=false
 
 	run vscodeoverride
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "vscodeoverride:: VSCode settings already exist"
-	echo "$output" | grep -q "use --force to replace"
+	echo "$output" | grep -q "vscodeoverride: complete"
+	[[ "$(cat "${GIT_ROOT}/.vscode/settings.json")" == "existing" ]]
 }
 
 @test 'vscodeoverride:: replaces when FORCE is true' {
 	local test_git_root
 	test_git_root="$(mktemp -d)"
 	mkdir -p "${test_git_root}/.vscode"
-	echo '{"test": "settings"}' >"${test_git_root}/.vscode/settings.json"
+	echo "existing" >"${test_git_root}/.vscode/settings.json"
 
-	GIT_ROOT="${test_git_root}"
-	FORCE=true
-
-	mkdir -p "${TEST_TEMP_DIR}/.vscode"
-	echo "existing" >"${TEST_TEMP_DIR}/.vscode/settings.json"
+	export GIT_ROOT="${test_git_root}"
+	export FORCE=true
 
 	run vscodeoverride
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "vscodeoverride:: VSCode settings synced (replaced existing)"
+	echo "$output" | grep -q "vscodeoverride: complete"
+	[[ -f "${GIT_ROOT}/.vscode/settings.json" ]]
 }
 
 @test 'vscodeoverride:: fails when GIT_ROOT is not set' {
 	unset GIT_ROOT
-	FORCE=false
+	export FORCE=false
 
 	run vscodeoverride
 	[[ "$status" -eq 1 ]]
@@ -755,8 +718,8 @@ Line 3"
 	local test_git_root
 	test_git_root="$(mktemp -d)"
 
-	GIT_ROOT="${test_git_root}"
-	FORCE=false
+	export GIT_ROOT="${test_git_root}"
+	export FORCE=false
 
 	run vscodeoverride
 	[[ "$status" -eq 1 ]]
@@ -795,7 +758,6 @@ Line 3"
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Generate agentic tool rules for Cursor"
 	echo "$output" | grep -q "git"
-	echo "$output" | grep -q "all"
 	echo "$output" | grep -q "force"
 }
 
@@ -822,8 +784,7 @@ Line 3"
 
 	run run_quest_log
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Git repository detected"
-	echo "$output" | grep -q "using git root: $TEST_TEMP_DIR"
+	echo "$output" | grep -q "git_root: ${TEST_TEMP_DIR}"
 }
 
 @test 'run_quest_log:: uses specified directory when not in git repository' {
@@ -831,7 +792,7 @@ Line 3"
 
 	run run_quest_log
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Not in a git repository"
+	echo "$output" | grep -q "git_root: none"
 }
 
 @test 'run_quest_log:: creates files in git root directory when in git repo' {
@@ -839,28 +800,12 @@ Line 3"
 
 	run run_quest_log
 	[[ "$status" -eq 0 ]]
-	[[ -f "$TEST_TEMP_DIR/.cursor/rules/rules-always.mdc" ]]
-	[[ -f "$TEST_TEMP_DIR/.cursor/rules/rules-author.mdc" ]]
+	[[ -f "$TEST_TEMP_DIR/.cursor/rules/user/rules-always.mdc" ]]
+	[[ -f "$TEST_TEMP_DIR/.cursor/rules/user/rules-typescript.mdc" ]]
 	[[ -f "$TEST_TEMP_DIR/.agent/rules/rules-always.md" ]]
-	[[ -f "$TEST_TEMP_DIR/.agent/rules/rules-author.md" ]]
+	[[ -f "$TEST_TEMP_DIR/.agent/rules/rules-typescript.md" ]]
 	[[ -f "$TEST_TEMP_DIR/.cursor/commands/user/author.md" ]]
 	[[ -f "$TEST_TEMP_DIR/.agent/workflows/author.md" ]]
-}
-
-@test 'run_quest_log:: handles --all flag' {
-	run run_quest_log --all
-	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -v "fill_quest_log:: Skipping warcraft"
-	echo "$output" | grep -v "fill_quest_log:: Skipping lotr"
-	[[ -f "./$CURSOR_RULES_DIR/rules-warcraft.mdc" ]]
-	[[ -f "./$CURSOR_RULES_DIR/rules-lotr.mdc" ]]
-}
-
-@test 'run_quest_log:: handles -a short flag' {
-	run run_quest_log -a
-	[[ "$status" -eq 0 ]]
-	[[ -f "./$CURSOR_RULES_DIR/rules-warcraft.mdc" ]]
-	[[ -f "./$CURSOR_RULES_DIR/rules-lotr.mdc" ]]
 }
 
 @test 'run_quest_log:: displays summary at end of execution' {
@@ -910,9 +855,9 @@ EOF
 
 	echo "$output" | grep -q "Summary"
 	echo "$output" | grep -q "Created:"
-	echo "$output" | grep -q "Skipped: 2"
-	[[ -f "./$CURSOR_RULES_DIR/rules-always.mdc" ]]
-	[[ -f "./$CURSOR_RULES_DIR/rules-python.mdc" ]]
+	echo "$output" | grep -q "Total processed:"
+	[[ -f "${CURSOR_RULES_DIR}/rules-always.mdc" ]]
+	[[ -f "${CURSOR_RULES_DIR}/rules-python.mdc" ]]
 }
 
 @test 'run_quest_log:: handles force flag' {
@@ -925,11 +870,11 @@ EOF
 @test 'run_quest_log:: accepts force flag' {
 	run run_quest_log --force
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Running"
+	echo "$output" | grep -q "quest-log: running"
 }
 
 @test 'run_quest_log:: accepts short force flag' {
 	run run_quest_log -f
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Running"
+	echo "$output" | grep -q "quest-log: running"
 }

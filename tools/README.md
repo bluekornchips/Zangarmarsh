@@ -18,8 +18,8 @@ AI assistant rules generator for Cursor from JSON schema.
 Development environment cleanup tool for generated files and build artifacts.
 
 ```bash
-./tools/trilliax/trilliax.sh
-./tools/trilliax/trilliax.sh --dry-run
+./tools/trilliax/trilliax.sh --all
+./tools/trilliax/trilliax.sh --dry-run --all
 ```
 
 ### Talent Calculator

@@ -38,40 +38,106 @@ teardown() {
 }
 
 @test "gw:: returns 1 when not in a git repository" {
-	run gw list
+	run gw feature-one
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "gw:: not in a git repository"
 }
 
-@test "gw:: runs worktree list from repository root" {
-	create_mock_git_repo "$TEST_DIR"
+@test "gw:: passes add through from repository root" {
+	local repo_dir
+	local worktree_dir
+	repo_dir="$TEST_DIR/repo"
+	worktree_dir="$TEST_DIR/add-root"
 
-	run gw list
+	mkdir -p "$repo_dir"
+	create_mock_git_repo "$repo_dir"
+
+	run gw add "$worktree_dir" HEAD
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "$TEST_DIR"
+	[[ -d "$worktree_dir" ]]
 }
 
-@test "gw:: runs worktree list from subdirectory" {
-	create_mock_git_repo "$TEST_DIR"
-	mkdir -p "$TEST_DIR/subdir"
-	cd "$TEST_DIR/subdir" || exit 1
+@test "gw:: passes add through from subdirectory" {
+	local repo_dir
+	local worktree_dir
+	repo_dir="$TEST_DIR/repo"
+	worktree_dir="$TEST_DIR/add-subdir"
 
-	run gw list
+	mkdir -p "$repo_dir"
+	create_mock_git_repo "$repo_dir"
+	mkdir -p "$repo_dir/subdir"
+	cd "$repo_dir/subdir" || exit 1
+
+	run gw add "$worktree_dir" HEAD
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "$TEST_DIR"
+	[[ -d "$worktree_dir" ]]
 }
 
-@test "gw:: passes arguments through to git worktree" {
-	create_mock_git_repo "$TEST_DIR"
+@test "gw:: passes remove through to git worktree" {
+	local repo_dir
+	local worktree_dir
+	repo_dir="$TEST_DIR/repo"
+	worktree_dir="$TEST_DIR/remove-me"
 
-	run gw list --porcelain
+	mkdir -p "$repo_dir"
+	create_mock_git_repo "$repo_dir"
+	git -C "$repo_dir" worktree add "$worktree_dir" HEAD >/dev/null 2>&1
+
+	run gw remove "$worktree_dir"
 	[[ "$status" -eq 0 ]]
-	echo "$output" | head -1 | grep -q "worktree"
+	[[ ! -d "$worktree_dir" ]]
 }
 
-@test "gw:: fails with invalid worktree subcommand" {
+@test "gw:: creates worktree from current branch when base is omitted" {
+	local repo_dir
+	local worktree_dir
+	local current_branch
+	repo_dir="$TEST_DIR/repo"
+	worktree_dir="$TEST_DIR/feature-one"
+
+	mkdir -p "$repo_dir"
+	create_mock_git_repo "$repo_dir"
+	current_branch="$(git -C "$repo_dir" branch --show-current)"
+
+	run gw feature-one
+	[[ "$status" -eq 0 ]]
+	[[ -d "$worktree_dir" ]]
+	[[ "$(git -C "$worktree_dir" branch --show-current)" == "feature-one" ]]
+	[[ "$(git -C "$worktree_dir" merge-base feature-one "$current_branch")" == "$(git -C "$repo_dir" rev-parse "$current_branch")" ]]
+}
+
+@test "gw:: creates worktree from explicit base branch" {
+	local repo_dir
+	local worktree_dir
+	repo_dir="$TEST_DIR/repo"
+	worktree_dir="$TEST_DIR/feature-two"
+
+	mkdir -p "$repo_dir"
+	create_mock_git_repo "$repo_dir"
+	git -C "$repo_dir" checkout -b base-branch >/dev/null 2>&1
+	echo "base content" >"$repo_dir/base_file"
+	git -C "$repo_dir" add base_file >/dev/null 2>&1
+	git -C "$repo_dir" commit -m "Base commit" >/dev/null 2>&1
+
+	run gw feature-two base-branch
+	[[ "$status" -eq 0 ]]
+	[[ -d "$worktree_dir" ]]
+	[[ -f "$worktree_dir/base_file" ]]
+	[[ "$(git -C "$worktree_dir" branch --show-current)" == "feature-two" ]]
+}
+
+@test "gw:: fails when shortcut receives too many arguments" {
 	create_mock_git_repo "$TEST_DIR"
 
-	run gw invalid-subcommand
+	run gw feature-three base-branch extra-arg
 	[[ "$status" -ne 0 ]]
+	[[ "$output" == *"gw:: shortcut accepts at most two arguments"* ]]
+}
+
+@test "gw:: fails when no shortcut name is provided" {
+	create_mock_git_repo "$TEST_DIR"
+
+	run gw
+	[[ "$status" -ne 0 ]]
+	[[ "$output" == *"gw:: name is required unless using add or remove"* ]]
 }
