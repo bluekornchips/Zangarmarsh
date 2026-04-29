@@ -38,6 +38,7 @@ Keep bash and zsh scripts safe to run, easy to read, and consistent about errors
 - Bats for non-trivial shell. Use `@test "name:: description" {` for direct function tests. Use `setup_file` and `setup` as the project already does.
 - Worktrees for Bats tests that require git interaction. Avoid real side effects unless that behavior is under test.
 - Spacing before `run` in Bats tests to show what is being changed, mocked, or asserted.
+- Single line conditional checks, `some_command || return 1`
 
 ### Denied
 

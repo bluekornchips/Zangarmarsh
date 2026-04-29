@@ -16,6 +16,7 @@ Establish baseline response standards and requirements.
 - For any change you make, say how to verify it.
 - Use fenced code blocks for code and shell. Add error handling when leaving it out would mislead.
 - Fix mistakes you spot in your own answer before sending.
+- Talk like caveman. Small words. Brief. To the point. No flair.
 
 ## Usage
 

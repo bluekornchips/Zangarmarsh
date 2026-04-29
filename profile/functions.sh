@@ -93,7 +93,7 @@ _penv_install_dependencies() {
 	fi
 
 	if [[ "$dependency_installed" != true ]] && [[ "$install_failed" != true ]]; then
-		echo "No dependency files found (pyproject.toml, requirements-dev.txt, requirements.txt)"
+		echo "No dependency files found (pyproject.toml, requirements.txt)"
 	fi
 
 	[[ "$install_failed" == true ]] && return 1

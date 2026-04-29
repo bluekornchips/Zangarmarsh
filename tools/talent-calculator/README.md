@@ -1,79 +1,56 @@
 # Talent Calculator
 
-## Overview
-
-Development tools installation script for managing CLI tools on development workstations. Talent Calculator automates the installation of essential development tools via Homebrew and other installation methods, supporting both macOS and Linux platforms.
+Installs and checks CLI tools on a workstation. Supported platforms: `darwin-arm64` and `linux-amd64` only.
 
 ## Prerequisites
 
-- Bash 3.2 or greater
-- `curl` (required for downloads)
-- `brew` (Homebrew, will be installed automatically if missing)
+- Bash 3.2+
+- `curl` for Homebrew install
+- Homebrew is installed by the script when missing, before other tools
 
-## Install
+## After sourcing Zangarmarsh
 
 ```bash
-# Source the main script
 source /path/to/zangarmarsh/zangarmarsh.sh
-
-# Talent Calculator will be available as an alias
+# alias
 talents
 ```
 
-## Features
+## Behavior
 
-- Automated installation of core development tools
-- Platform detection (darwin-arm64, linux-amd64)
-- Dry-run mode for previewing changes
-- Reset mode for clean reinstallation
-- Modular tool installation system
-- Comprehensive error handling
-
-## Usage
+- Default with no mode flags: **check only**. Prints what is installed and what is missing. No installs.
+- `--spec`: install missing tools.
+- `--respec`: remove then reinstall where the installers support that flow.
+- `-r` or `--dry-run`: print actions without changing the system. Combine with `--spec` or `--respec` for a preview.
 
 ```bash
-# Install all tools
 talents
-
-# Preview what would be installed (dry-run)
 talents --dry-run
-
-# Reset and reinstall all tools
-talents --reset-talents
-
-# Show help
+talents --spec --dry-run
+talents --spec
+talents --respec --dry-run
+talents --respec
 talents --help
 ```
 
-## Installation Order
+## Tool lists
 
-### Core Tools
+Values match [talent-calculator.sh](talent-calculator.sh).
 
-Installed first, essential for development:
+**Core, Homebrew packages**
 
-- `jq` - JSON processor
-- `yq` - YAML processor
-- `bats-core` - Bash Automated Testing System
-- `kubectl` - Kubernetes command-line tool
+- `jq`, `yq`, `bats` from package `bats-core`, `kubectl` from package `kubernetes-cli`
 
-### Brew Tools
+**Additional Homebrew**
 
-Installed via Homebrew after core tools:
+- `shfmt`, `aws` from package `awscli`, `infracost`, `k9s` from tap `derailed/k9s/k9s`, `localstack` from tap `localstack/tap/localstack-cli`, `minikube`, `stern`, `tfenv`
 
-- `shfmt` - Shell formatter
-- `awscli` - AWS Command Line Interface
-- `infracost` - Cloud cost estimation
-- `k9s` - Kubernetes cluster management
-- `localstack` - Local AWS cloud stack
-- `minikube` - Local Kubernetes cluster
-- `stern` - Multi pod log tailing
-- `tfenv` - Terraform version manager
+**Other installers**
 
-### Other Tools
+- `aws-sso-util`, `bun`, `helm`, `docker` via bundled install helpers in `tools/talent-calculator/tools/`
 
-Installed via non-brew methods:
+## Testing
 
-- `aws-sso-util` - AWS SSO utilities (via pipx)
-- `bun` - JavaScript runtime (via install script)
-- `helm` - Kubernetes package manager (via install script)
-- `docker` + `colima` - Container runtime (via brew, colima started automatically)
+```bash
+bats tools/talent-calculator/tests/talent-calculator-tests.sh
+```

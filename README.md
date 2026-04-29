@@ -19,16 +19,13 @@ Zangarmarsh is a zone in World of Warcraft overwhelmed by blue ambiance, dampnes
 
 ## What it does
 
-Zangarmarsh automatically configures your shell environment with:
+After you `source zangarmarsh.sh`, both shells load shared files under `profile/`:
 
-- Cross-shell compatibility for Bash & Zsh
-- Prompts with Git branch & Kubernetes context
-- Platform detection for macOS/Linux/WSL
-- Path management with deduplication
-- Development tools (Homebrew, NVM, SSH agent, VS Code)
-- SSH key management and agent setup
-- Python virtual environment helpers (`penv`)
-- Node.js version management (`nvm`)
+- `aliases.sh` and `functions.sh`: tool aliases, `penv`, `nvm` lazy load when enabled, `gw`, `list_changed_files`, `runint`, and related helpers
+
+Zsh also loads `profile/zsh/profile.sh`, which pulls in Oh My Zsh, `profile/zsh/platform.sh` for macOS, Linux, and WSL PATH and aliases, and `profile/zsh/prompt.sh` for the customizable prompt with Git branch and kubectl context.
+
+Bash loads `profile/bash/profile.sh` for history and readline options only. It does not load the Zsh prompt or platform module.
 
 ## Install
 
@@ -48,79 +45,73 @@ echo 'source /path/to/zangarmarsh/zangarmarsh.sh' >> ~/.zshrc
 ## Quick Start
 
 ```bash
-# Test all components
+# Run all Bats tests
 make test
 
-# Reload configuration
-source ~/.bashrc  # or ~/.zshrc
-
-# Quick reload alias (available after sourcing)
-zngr
+# Reload configuration after editing profile files
+source zangarmarsh.sh
 ```
 
 ## Configuration
 
 Zangarmarsh loads configuration from:
 
-- `profile/`: Shared functionality and shell components
-- `profile/zsh/`: Zsh-specific settings
-- `tools/`: Additional utilities and tools
+- `profile/`: Shared aliases and functions for Bash and Zsh
+- `profile/bash/`: Bash-only history and options
+- `profile/zsh/`: Zsh-only Oh My Zsh, platform PATH, prompt, completion
+- `tools/`: Optional CLI utilities documented in [tools/README.md](tools/README.md)
 
 ### Environment Variables
 
-#### Core Configuration
+#### Core
 
-- `ZANGARMARSH_ROOT`: Project root directory (auto-detected, usually not needed)
-- `ZANGARMARSH_VERBOSE=true`: Enable debug output for troubleshooting
-- `ZANGARMARSH_LAZY_LOADING=true`: Enable lazy loading for expensive operations like NVM (default: `true`)
-- `ZANGARMARSH_ENABLE_NVM=true`: Enable NVM lazy loading (default: `true`)
-- `ZANGARMARSH_ENABLE_SSH=true`: Enable SSH agent setup (default: `true`)
+- `ZANGARMARSH_ROOT`: Project root directory, set by `zangarmarsh.sh`, usually not set by hand
+- `ZANGARMARSH_VERBOSE=true`: Print loader and platform debug lines to stderr
+- `ZANGARMARSH_LAZY_LOADING=true`: Lazy-load NVM on first `nvm` call when NVM is enabled, default `true`
+- `ZANGARMARSH_ENABLE_NVM=true`: Register NVM loader, default `true`
 
-#### Prompt Configuration
+#### Prompt, Zsh only
 
-- `ZANGARMARSH_PROMPT_CACHE_TTL=2`: Prompt cache time-to-live in seconds (default: `2`)
-- `ZANGARMARSH_GIT_PROMPT=true`: Show git branch in prompt (default: `true`)
-- `ZANGARMARSH_KUBE_PROMPT=true`: Show kubectl context in prompt (default: `true`)
-- `ZANGARMARSH_SHOW_USER=true`: Show username in prompt (default: `true`)
-- `ZANGARMARSH_SHOW_HOST=true`: Show hostname in prompt (default: `true`)
-- `ZANGARMARSH_SHORTEN_NAMES=true`: Shorten username/hostname to single character (default: `true`)
-- `ZANGARMARSH_PROMPT_SYMBOL=🌻`: Custom prompt symbol (default: `🌻`)
+These apply when `profile/zsh/prompt.sh` runs:
+
+- `ZANGARMARSH_PROMPT_CACHE_TTL=2`: Prompt cache TTL in seconds, default `2`
+- `ZANGARMARSH_GIT_PROMPT=true`: Show git branch in prompt, default `true`
+- `ZANGARMARSH_KUBE_PROMPT=true`: Show kubectl context in prompt, default `true`
+- `ZANGARMARSH_SHOW_USER=true`: Show username in prompt, default `true`
+- `ZANGARMARSH_SHOW_HOST=true`: Show hostname in prompt, default `true`
+- `ZANGARMARSH_SHORTEN_NAMES=true`: Shorten user and host to one character, default `true`
+- `ZANGARMARSH_PROMPT_SYMBOL=🌻`: Trailing symbol, default sunflower
 
 ## Features
 
-| Feature                | Bash | Zsh |
-| ---------------------- | ---- | --- |
-| Git branch display     | Yes  | Yes |
-| Kubernetes context     | Yes  | Yes |
-| Platform detection     | Yes  | Yes |
-| Platform-specific PATH | Yes  | Yes |
-| SSH agent setup        | Yes  | Yes |
-| Python venv helpers    | Yes  | Yes |
-| Node.js management     | Yes  | Yes |
-| Oh My Zsh integration  | No   | Yes |
-| Basic completion       | No   | Yes |
+| Feature                            | Bash | Zsh |
+| ---------------------------------- | ---- | --- |
+| Shared aliases and tools           | Yes  | Yes |
+| Git branch in prompt               | No   | Yes |
+| Kubernetes context in prompt       | No   | Yes |
+| Platform PATH and brew integration | No   | Yes |
+| Python venv helpers                | Yes  | Yes |
+| Node.js via NVM                    | Yes  | Yes |
+| Oh My Zsh integration              | No   | Yes |
+| Basic completion                   | No   | Yes |
 
 ## Tools
 
-Development utilities in `tools/`:
+Scripts under `tools/` with per-tool README files:
 
-- Quest Log: AI assistant rules generator for Cursor from JSON schema
-- Trilliax: Development environment cleanup tool that removes generated files and build artifacts
-- Talent Calculator: Development tools installation script for managing CLI tools on workstations
-- Hearthstone: Setup and sync tool that initializes and synchronizes the development environment
-- Ice Block: Dotfile backup tool that copies shell configs and SSH keys to `~/.ice-block/<hostname>/`
+- Quest Log: Cursor rules from JSON schema, see [tools/quest-log/README.md](tools/quest-log/README.md)
+- Trilliax: cleanup for caches and artifacts, see [tools/trilliax/README.md](tools/trilliax/README.md)
+- Talent Calculator: workstation CLI installs, see [tools/talent-calculator/README.md](tools/talent-calculator/README.md)
+- Hearthstone: sync VS Code settings, quest log, Gandalf, optional Trilliax, see [tools/hearthstone/README.md](tools/hearthstone/README.md)
+- Ice Block: dotfile backup to `~/.ice-block/<hostname>/`, see [tools/ice-block/README.md](tools/ice-block/README.md)
+- Auras: AppImage `.desktop` launchers, see [tools/auras/README.md](tools/auras/README.md)
 
-See `tools/README.md` for detailed documentation and usage examples.
+Index and one-line commands: [tools/README.md](tools/README.md).
 
 ## Development
 
-### Quick Commands
-
 ```bash
-# Run all tests
 make test
-
-# Run specific test suites
 bats profile/tests/
 bats tools/trilliax/tests/trilliax-tests.sh
 ```
@@ -128,9 +119,9 @@ bats tools/trilliax/tests/trilliax-tests.sh
 ## Requirements
 
 - Bash 4.0+ or Zsh 5.0+
-- Git (for repository detection)
-- Standard Unix tools (grep, sed, awk, etc.)
-- Optional: Oh My Zsh (for enhanced Zsh features)
+- Git for helpers that inspect the repository
+- Standard Unix tools such as grep, sed, and awk
+- Optional: Oh My Zsh and zsh-autosuggestions for the full Zsh stack described in [profile/zsh/profile.sh](profile/zsh/profile.sh)
 
 ## License
 

@@ -1,69 +1,46 @@
 # Hearthstone
 
-Hearthstone setup and sync tool. Runs a series of setup and sync commands to initialize and synchronize the development environment.
+Runs a fixed sequence to sync a development machine with this repo: ensure `jq`, generate Cursor rules, copy VS Code settings from Zangarmarsh into the current git root, then run Gandalf install. Optional cleanup runs only with `--force`.
 
 ## Requirements
 
-- Must be run from within a git repository
-- Must be run from the top level of the git repository
-- Requires the following commands to be available:
-  - `trilliax`
-  - `questlog`
-  - `vscodeoverride`
-  - `gdlf`
+- Run from a git checkout of Zangarmarsh so `GIT_ROOT` contains `tools/`
+- External commands used by the script or your shell: `questlog` and `gdlf` are normally provided by Zangarmarsh aliases, see [profile/aliases.sh](../../profile/aliases.sh). `trilliax` is invoked only when `--force` is set.
+- `vscodeoverride` is a **function** inside [hearthstone.sh](hearthstone.sh), not a separate binary.
 
-## Operations
+## Operations order
 
-Hearthstone executes the following operations in order:
-
-1. `build_deck` - Install required dependencies (jq)
-2. `trilliax --all` - Clean generated files and directories (with --force)
-3. `questlog` - Generate agentic tool rules for Cursor
-4. `vscodeoverride` - Sync VSCode settings
-5. `gdlf --install -f` - Force install Gandalf MCP server (with --force)
+1. `build_deck` — ensure `jq` is available, see `install_jq` in the script
+2. `trilliax --all` — **only when `--force`** — runs before rule generation so cleanup hits the tree first
+3. `questlog` — generate rules via `tools/quest-log/quest-log.sh`
+4. `vscodeoverride` — copy `Zangarmarsh/.vscode/` into the target repo `.vscode/`, replace when `--force`
+5. `gdlf -i` — Gandalf MCP install. With `--force`, adds `-f` to gdlf. With `--yes`, adds `-y` so gdlf can skip its own prompts
 
 ## Usage
 
-Run with confirmation prompt:
-
 ```bash
 hearthstone
-```
-
-Skip confirmation prompt:
-
-```bash
 hearthstone --yes
-```
-
-Combine options:
-
-```bash
 hearthstone --yes --force
+hearthstone --help
 ```
 
 ## Options
 
-- `-y, --yes` - Skip confirmation prompt and proceed immediately
-- `-f, --force` - Force operations (replace existing VSCode settings, run trilliax, pass force to gdlf)
-- `-h, --help` - Show help message
+- `-y`, `--yes` — skip Hearthstone confirmation, forward `-y` to `gdlf` when applicable
+- `-f`, `--force` — replace VS Code settings if present, run `trilliax --all`, pass `-f` to `gdlf`
+- `-h`, `--help` — print usage
 
 ## Confirmation
 
-Since this script performs destructive operations, it will prompt for confirmation before proceeding unless the `-y` flag is provided. Enter `y` or `yes` to confirm, any other input will cancel the operation.
+Without `--yes`, the script prints the planned steps and waits for `y` or `yes`. Anything else cancels.
 
 ## Testing
-
-Run the test suite:
 
 ```bash
 bats tools/hearthstone/tests/hearthstone-tests.sh
 ```
 
-## Error Handling
+## Error handling
 
-The script will fail if:
-
-- Not run from within a git repository
-- Not run from the git repository root
-- Any of the operations fail
+Exits non-zero when the Zangarmarsh tree is invalid, any step fails, or you cancel at the prompt.
