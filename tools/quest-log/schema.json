@@ -50,6 +50,17 @@
     }
   },
   {
+    "name": "lua",
+    "file": "lua.md",
+    "icon": "🌙",
+    "description": "Lua standards from the LuaRocks style guide for modules, locals, errors, LDoc, tables, luacheck, and tests.",
+    "keywords": ["lua", "luajit", "luarocks", "rockspec", "luacheck", "busted"],
+    "cursor": {
+      "alwaysApply": false,
+      "globs": ["**/*.lua", "**/*.rockspec"]
+    }
+  },
+  {
     "name": "typescript",
     "file": "typescript.md",
     "icon": "🟦",

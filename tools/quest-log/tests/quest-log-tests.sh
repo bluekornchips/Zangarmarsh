@@ -564,6 +564,7 @@ Line 3"
 	[[ -f "${CURSOR_RULES_DIR}/rules-typescript.mdc" ]]
 	[[ -f "${CURSOR_RULES_DIR}/rules-python.mdc" ]]
 	[[ -f "${CURSOR_RULES_DIR}/rules-shell.mdc" ]]
+	[[ -f "${CURSOR_RULES_DIR}/rules-lua.mdc" ]]
 }
 
 @test 'fill_quest_log:: generates non-empty files' {
@@ -757,6 +758,7 @@ Line 3"
 	run run_quest_log --help
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Generate agentic tool rules for Cursor"
+	echo "$output" | grep -q "lua"
 	echo "$output" | grep -q "git"
 	echo "$output" | grep -q "force"
 }
@@ -802,10 +804,14 @@ Line 3"
 	[[ "$status" -eq 0 ]]
 	[[ -f "$TEST_TEMP_DIR/.cursor/rules/user/rules-always.mdc" ]]
 	[[ -f "$TEST_TEMP_DIR/.cursor/rules/user/rules-typescript.mdc" ]]
+	[[ -f "$TEST_TEMP_DIR/.cursor/rules/user/rules-lua.mdc" ]]
 	[[ -f "$TEST_TEMP_DIR/.agent/rules/rules-always.md" ]]
 	[[ -f "$TEST_TEMP_DIR/.agent/rules/rules-typescript.md" ]]
+	[[ -f "$TEST_TEMP_DIR/.agent/rules/rules-lua.md" ]]
 	[[ -f "$TEST_TEMP_DIR/.cursor/commands/user/author.md" ]]
+	[[ -f "$TEST_TEMP_DIR/.cursor/commands/user/lua-review.md" ]]
 	[[ -f "$TEST_TEMP_DIR/.agent/workflows/author.md" ]]
+	[[ -f "$TEST_TEMP_DIR/.agent/workflows/lua-review.md" ]]
 }
 
 @test 'run_quest_log:: displays summary at end of execution' {
