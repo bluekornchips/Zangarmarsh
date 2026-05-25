@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Platform detection and configuration for Zsh
-# Detects macOS, Linux, and WSL environments
+# Detects macOS and Linux environments
 
 # Detect platform with architecture
 #
@@ -10,24 +10,20 @@
 # - Returns platform identifier in format: os_arch (e.g., macos_arm64, linux_x86_64)
 #
 # Inputs:
-# - None (uses environment variables OSTYPE and /proc/version)
+# - None (uses OSTYPE and uname)
 #
 # Side Effects:
 # - None (pure function)
 #
 # Returns:
 # - 0 on success
-# - Outputs platform string to stdout (e.g., "macos_arm64", "linux_x86_64", "wsl_x86_64")
+# - Outputs platform string to stdout (e.g., "macos_arm64", "linux_x86_64")
 detect_platform() {
 	local os_type="unknown"
 	local arch
 
 	if [[ "$OSTYPE" == "darwin"* ]]; then
 		os_type="macos"
-		arch=$(uname -m)
-		echo "${os_type}_${arch}"
-	elif [[ -f /proc/version ]] && grep -q Microsoft /proc/version; then
-		os_type="wsl"
 		arch=$(uname -m)
 		echo "${os_type}_${arch}"
 	else
@@ -39,6 +35,16 @@ detect_platform() {
 
 # Set platform variable
 export PLATFORM="${PLATFORM:-$(detect_platform)}"
+
+# OS family for profile helpers that expect macos or linux
+case "${PLATFORM}" in
+macos*)
+	export PLATFORM_OS="${PLATFORM_OS:-macos}"
+	;;
+*)
+	export PLATFORM_OS="${PLATFORM_OS:-linux}"
+	;;
+esac
 
 # Platform-specific configurations
 case "$PLATFORM" in
@@ -77,25 +83,6 @@ linux_*)
 	if [[ -x /usr/bin/dircolors ]]; then
 		alias ls='ls --color=auto'
 		alias grep='grep --color=auto'
-	fi
-	;;
-wsl_*)
-	# WSL specific settings
-	export PATH="/usr/local/bin:/usr/local/sbin:$PATH"
-
-	# WSL-specific aliases and functions
-	alias explorer="explorer.exe"
-	alias code="code.exe"
-
-	# Enable color support
-	if [[ -x /usr/bin/dircolors ]]; then
-		alias ls='ls --color=auto'
-		alias grep='grep --color=auto'
-	fi
-
-	# WSL2 networking improvements
-	if command -v wslview >/dev/null 2>&1; then
-		alias open="wslview"
 	fi
 	;;
 esac

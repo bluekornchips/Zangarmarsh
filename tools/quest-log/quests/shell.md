@@ -43,7 +43,15 @@ Keep bash and zsh scripts safe to run, easy to read, and consistent about errors
 ### Denied
 
 - `echo` lines longer than 160 characters. Use a heredoc or a loop instead.
-- Removing paths the script did not create.
+- Removing paths the script did not create, except for the cleanup tools listed below.
+
+### Cleanup tool exception
+
+These named tools may delete paths they did not create in the current run. All other scripts must still use `trap` for script-created temp dirs only.
+
+- `tools/trilliax/trilliax.sh` may remove dev artifacts such as `.cursor`, caches, `node_modules`, and Python virtual environments.
+- `penv()` in `profile/functions.sh` may remove Python caches and `.venv` when recreating an environment.
+- `tools/hearthstone/hearthstone.sh` may invoke trilliax with `--force` as part of orchestrated setup.
 - `rm -rf /`, `eval`, `exec`, or `sudo`.
 - `declare -a` for simple array assignment. Use `name=(a b)` and `"${name[@]}"`.
 - Required function comments in test scripts when names and setup are already clear.

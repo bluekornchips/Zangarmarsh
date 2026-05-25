@@ -1,20 +1,18 @@
 # Hearthstone
 
-Runs a fixed sequence to sync a development machine with this repo: ensure `jq`, generate Cursor rules, copy VS Code settings from Zangarmarsh into the current git root, then run Gandalf install. Optional cleanup runs only with `--force`.
+Runs a fixed sequence to sync a development machine with this repo: ensure `jq`, generate Cursor rules, copy VS Code settings from Zangarmarsh into the current git root. Optional cleanup runs only with `--force`.
 
 ## Requirements
 
 - Run from a git checkout of Zangarmarsh so `GIT_ROOT` contains `tools/`
-- External commands used by the script or your shell: `questlog` and `gdlf` are normally provided by Zangarmarsh aliases, see [profile/aliases.sh](../../profile/aliases.sh). `trilliax` is invoked only when `--force` is set.
-- `vscodeoverride` is a **function** inside [hearthstone.sh](hearthstone.sh), not a separate binary.
+- External commands used by the script or your shell: `questlog` is normally provided by Zangarmarsh aliases, see [profile/aliases.sh](../../profile/aliases.sh). `trilliax` is invoked only when `--force` is set.
+- VS Code settings sync runs inside `questlog` via [tools/lib/vscodeoverride.sh](../lib/vscodeoverride.sh).
 
 ## Operations order
 
 1. `build_deck` — ensure `jq` is available, see `install_jq` in the script
 2. `trilliax --all` — **only when `--force`** — runs before rule generation so cleanup hits the tree first
-3. `questlog` — generate rules via `tools/quest-log/quest-log.sh`
-4. `vscodeoverride` — copy `Zangarmarsh/.vscode/` into the target repo `.vscode/`, replace when `--force`
-5. `gdlf -i` — Gandalf MCP install. With `--force`, adds `-f` to gdlf. With `--yes`, adds `-y` so gdlf can skip its own prompts
+3. `questlog` — generate rules and sync `.vscode/` into the target repo via `tools/quest-log/quest-log.sh`
 
 ## Usage
 
@@ -27,8 +25,8 @@ hearthstone --help
 
 ## Options
 
-- `-y`, `--yes` — skip Hearthstone confirmation, forward `-y` to `gdlf` when applicable
-- `-f`, `--force` — replace VS Code settings if present, run `trilliax --all`, pass `-f` to `gdlf`
+- `-y`, `--yes` — skip Hearthstone confirmation
+- `-f`, `--force` — replace VS Code settings if present, run `trilliax --all`
 - `-h`, `--help` — print usage
 
 ## Confirmation

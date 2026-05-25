@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Creates and removes user .desktop entries for explicitly provided AppImage files
+# Creates and removes user .desktop entries and bin symlinks for AppImage files
 #
 
 AURAS_DESKTOP_VERSION="1"
@@ -9,13 +9,14 @@ AURAS_VERSION_KEY="X-Auras-Version=${AURAS_DESKTOP_VERSION}"
 
 usage() {
 	cat <<EOF
-Usage: $(basename "$0") -b|--buff APPIMAGE NAME | -d|--debuff NAME | -h|--help
+Usage: $(basename "$0") -b|--buff NAME -a|--appimage PATH | -d|--debuff NAME | -h|--help
 
-Creates or refreshes a user .desktop launcher for one AppImage path.
+Creates or refreshes a user .desktop launcher and a ~/.local/bin symlink for one
+AppImage. Debuff removes both when they were created by this script.
 
-Buff requires a path to an AppImage and an explicit NAME. Relative AppImage
-directories are resolved from the current working directory. NAME is used for
-both the desktop file stem and the desktop entry Name= value.
+Buff requires NAME and --appimage PATH. Relative AppImage directories are resolved
+from the current working directory. NAME is the desktop file stem, desktop Name=,
+and the command name under ~/.local/bin.
 
 Existing launchers are overwritten only when they were created by this script
 and include the current Auras management marker.
@@ -25,9 +26,9 @@ If your launcher cache is stale after buff or debuff, run:
 
 Options:
   -h, --help             Show this help message
-  -b, --buff APPIMAGE NAME
-                         Write \$HOME/.local/share/applications/NAME.desktop
-  -d, --debuff NAME      Remove managed NAME.desktop
+  -b, --buff NAME        Install managed launcher and bin symlink for NAME
+  -a, --appimage PATH    AppImage path, required with --buff
+  -d, --debuff NAME      Remove managed NAME.desktop and matching bin symlink
 
 EOF
 
@@ -181,21 +182,157 @@ validate_appimage_path() {
 	return 0
 }
 
-# Resolve user applications directory, always under HOME .local share
+# Resolve and validate one AppImage path
+#
+# Inputs:
+# - $1 raw_appimage_path, user-supplied AppImage path
+# - $2 context label for error messages
 #
 # Outputs:
-# - Path to applications directory on stdout
+# - Absolute validated AppImage path on stdout
+#
+# Returns:
+# - 0 on success
+# - 1 on resolve or validation failure
+prepare_appimage_path() {
+	local raw_appimage_path
+	local ctx
+	local resolved_appimage_path
+
+	raw_appimage_path="$1"
+	ctx="${2:-prepare_appimage_path}"
+
+	if ! resolved_appimage_path="$(resolve_appimage_path "${raw_appimage_path}" "${ctx}")"; then
+		return 1
+	fi
+
+	if ! validate_appimage_path "${resolved_appimage_path}" "${ctx}"; then
+		return 1
+	fi
+
+	echo "${resolved_appimage_path}"
+
+	return 0
+}
+
+# Resolve a path under ~/.local for one suffix
+#
+# Inputs:
+# - $1 suffix, path segment under ~/.local
+# - $2 context label for error messages
+#
+# Outputs:
+# - Absolute directory path on stdout
 #
 # Returns:
 # - 0 on success
 # - 1 if HOME is unset or empty
-applications_dir() {
+local_user_dir() {
+	local suffix
+	local ctx
+
+	suffix="$1"
+	ctx="$2"
+
 	if [[ -z "${HOME}" ]]; then
-		echo "applications_dir:: HOME is not set" >&2
+		echo "${ctx}:: HOME is not set" >&2
 		return 1
 	fi
 
-	echo "${HOME}/.local/share/applications"
+	echo "${HOME}/.local/${suffix}"
+
+	return 0
+}
+
+applications_dir() {
+	local_user_dir "share/applications" "applications_dir"
+}
+
+bin_link_dir() {
+	local_user_dir "bin" "bin_link_dir"
+}
+
+# Build the bin symlink path for one application stem
+#
+# Inputs:
+# - $1 app_stem, command name without path segments
+#
+# Outputs:
+# - Absolute bin symlink path on stdout
+#
+# Returns:
+# - 0 on success
+# - 1 if HOME is unset or stem validation fails
+bin_link_path() {
+	local app_stem
+	local bin_root
+
+	app_stem="$1"
+
+	if ! validate_app_name_segment "${app_stem}" "bin_link_path"; then
+		return 1
+	fi
+
+	if ! bin_root="$(bin_link_dir)"; then
+		return 1
+	fi
+
+	echo "${bin_root}/${app_stem}"
+
+	return 0
+}
+
+# Resolve the desktop file path for one application stem
+#
+# Inputs:
+# - $1 app_stem, desktop file stem without extension
+#
+# Outputs:
+# - Absolute desktop file path on stdout
+#
+# Returns:
+# - 0 on success
+# - 1 when HOME is unset or stem validation fails
+desktop_path_for_stem() {
+	local app_stem="$1"
+	local apps_root
+
+	if ! validate_app_name_segment "${app_stem}" "desktop_path_for_stem"; then
+		return 1
+	fi
+
+	if ! apps_root="$(applications_dir)"; then
+		return 1
+	fi
+
+	echo "${apps_root}/${app_stem}.desktop"
+
+	return 0
+}
+
+# Return whether Auras owns the desktop entry for one application stem
+#
+# Inputs:
+# - $1 app_stem, desktop file stem without extension
+#
+# Returns:
+# - 0 when a managed desktop entry exists for the stem
+# - 1 otherwise
+auras_manages_app_stem() {
+	local app_stem="$1"
+	local desktop_path
+
+	if ! desktop_path="$(desktop_path_for_stem "${app_stem}")"; then
+		return 1
+	fi
+
+	if [[ ! -f "${desktop_path}" ]]; then
+		return 1
+	fi
+
+	if ! desktop_entry_is_auras_managed "${desktop_path}"; then
+		return 1
+	fi
 
 	return 0
 }
@@ -228,205 +365,62 @@ desktop_entry_is_auras_managed() {
 	return 0
 }
 
-# Ensure a desktop file may be written without clobbering an unmanaged entry
+# Read Exec= target from a desktop file
 #
 # Inputs:
-# - $1 desktop_path, path that will be written
+# - $1 desktop_path, desktop file to read
+#
+# Outputs:
+# - AppImage path from Exec= on stdout
 #
 # Returns:
-# - 0 when no file exists or the file is current Auras-managed
-# - 1 when a file exists without current Auras markers
-ensure_desktop_entry_writable() {
+# - 0 on success
+# - 1 when Exec= is missing or empty
+desktop_entry_exec_path() {
 	local desktop_path
+	local exec_line
+	local exec_path
 
 	desktop_path="$1"
 
-	if [[ -z "${desktop_path}" ]]; then
-		echo "ensure_desktop_entry_writable:: desktop_path is required" >&2
+	if [[ -z "${desktop_path}" || ! -f "${desktop_path}" ]]; then
+		echo "desktop_entry_exec_path:: desktop_path is required" >&2
 		return 1
 	fi
 
-	if [[ ! -e "${desktop_path}" ]]; then
-		return 0
-	fi
+	exec_line="$(grep -E '^Exec=' "${desktop_path}" | head -n1)"
 
-	if desktop_entry_is_auras_managed "${desktop_path}"; then
-		return 0
-	fi
-
-	echo "ensure_desktop_entry_writable:: refusing to overwrite unmanaged desktop file: ${desktop_path}" >&2
-
-	return 1
-}
-
-# Write or overwrite a managed .desktop file for an AppImage
-#
-# Inputs:
-# - $1 app_stem, basename for the .desktop file without extension
-# - $2 appimage_path, path to the AppImage
-# - $3 display_name, value for the Name= field
-#
-# Side Effects:
-# - Creates applications directory if needed
-# - Writes desktop_path when it is absent or Auras-managed
-#
-# Returns:
-# - 0 on success
-# - 1 on validation, safety, or write failure
-write_application_desktop() {
-	local app_stem
-	local appimage_path
-	local resolved_appimage_path
-	local display_name
-	local apps_root
-	local desktop_path
-
-	app_stem="$1"
-	appimage_path="$2"
-	display_name="$3"
-
-	if [[ -z "${app_stem}" || -z "${appimage_path}" || -z "${display_name}" ]]; then
-		echo "write_application_desktop:: app_stem, appimage_path, and display_name are required" >&2
+	if [[ -z "${exec_line}" ]]; then
+		echo "desktop_entry_exec_path:: Exec= is missing in ${desktop_path}" >&2
 		return 1
 	fi
 
-	if ! validate_app_name_segment "${app_stem}" "write_application_desktop"; then
+	exec_path="${exec_line#Exec=}"
+	exec_path="${exec_path#\"}"
+	exec_path="${exec_path%\"}"
+	exec_path="${exec_path%% %u}"
+	exec_path="${exec_path%% %U}"
+	exec_path="${exec_path#\"}"
+	exec_path="${exec_path%\"}"
+
+	if [[ -z "${exec_path}" ]]; then
+		echo "desktop_entry_exec_path:: Exec= path is empty in ${desktop_path}" >&2
 		return 1
 	fi
 
-	if ! resolved_appimage_path="$(resolve_appimage_path "${appimage_path}" "write_application_desktop")"; then
+	if [[ "${exec_path}" == *" "* || "${exec_path}" == *$'\t'* ]]; then
+		echo "desktop_entry_exec_path:: could not parse Exec= in ${desktop_path}" >&2
 		return 1
 	fi
 
-	if ! validate_appimage_path "${resolved_appimage_path}" "write_application_desktop"; then
-		return 1
-	fi
-
-	if ! apps_root="$(applications_dir)"; then
-		return 1
-	fi
-
-	if ! mkdir -p "${apps_root}"; then
-		echo "write_application_desktop:: could not create ${apps_root}" >&2
-		return 1
-	fi
-
-	desktop_path="${apps_root}/${app_stem}.desktop"
-
-	if ! ensure_desktop_entry_writable "${desktop_path}"; then
-		return 1
-	fi
-
-	if ! cat <<EOF >"${desktop_path}"; then
-[Desktop Entry]
-Type=Application
-Name=${display_name}
-Exec="${resolved_appimage_path}" %u
-Terminal=false
-${AURAS_MANAGED_KEY}
-${AURAS_VERSION_KEY}
-EOF
-		echo "write_application_desktop:: failed to write desktop file: ${desktop_path}" >&2
-		return 1
-	fi
-
-	echo "write_application_desktop:: wrote ${desktop_path}"
+	echo "${exec_path}"
 
 	return 0
 }
 
-# Remove a managed user .desktop entry by application stem
-#
-# Inputs:
-# - $1 app_stem, name without .desktop extension
-#
-# Side Effects:
-# - Removes desktop file when it is current Auras-managed
-#
-# Returns:
-# - 0 on success
-# - 1 if name missing, HOME unset, file missing, or file is unmanaged
-debuff_appimage() {
-	local app_stem
-	local apps_root
-	local desktop_path
-
-	app_stem="$1"
-
-	if [[ -z "${app_stem}" ]]; then
-		echo "debuff_appimage:: app_stem is required" >&2
-		return 1
-	fi
-
-	if ! validate_app_name_segment "${app_stem}" "debuff_appimage"; then
-		return 1
-	fi
-
-	if ! apps_root="$(applications_dir)"; then
-		return 1
-	fi
-
-	desktop_path="${apps_root}/${app_stem}.desktop"
-
-	if [[ ! -f "${desktop_path}" ]]; then
-		echo "debuff_appimage:: no desktop file: ${desktop_path}" >&2
-		return 1
-	fi
-
-	if ! desktop_entry_is_auras_managed "${desktop_path}"; then
-		echo "debuff_appimage:: refusing to remove unmanaged desktop file: ${desktop_path}" >&2
-		return 1
-	fi
-
-	if ! rm -f "${desktop_path}"; then
-		echo "debuff_appimage:: could not remove ${desktop_path}" >&2
-		return 1
-	fi
-
-	echo "debuff_appimage:: removed ${desktop_path}"
-
-	return 0
-}
-
-# Create or refresh a managed launcher for one explicit AppImage path
-#
-# Inputs:
-# - $1 appimage_path, path to AppImage
-# - $2 app_stem, desktop stem and display name
-#
-# Side Effects:
-# - Writes or overwrites a managed desktop entry under HOME .local share applications
-#
-# Returns:
-# - 0 on success
-# - 1 on validation or desktop write failure
-buff_appimage() {
-	local appimage_path
-	local resolved_appimage_path
-	local app_stem
-
-	appimage_path="$1"
-	app_stem="$2"
-
-	if ! validate_app_name_segment "${app_stem}" "buff_appimage"; then
-		return 1
-	fi
-
-	if ! resolved_appimage_path="$(resolve_appimage_path "${appimage_path}" "buff_appimage")"; then
-		return 1
-	fi
-
-	if ! validate_appimage_path "${resolved_appimage_path}" "buff_appimage"; then
-		return 1
-	fi
-
-	if ! write_application_desktop "${app_stem}" "${resolved_appimage_path}" "${app_stem}"; then
-		echo "buff_appimage:: failed to write desktop for ${resolved_appimage_path}" >&2
-		return 1
-	fi
-
-	return 0
-}
+AURAS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${AURAS_DIR}/buff.sh"
+source "${AURAS_DIR}/debuff.sh"
 
 main() {
 	local mode=""
@@ -434,40 +428,42 @@ main() {
 	local app_stem=""
 
 	while [[ $# -gt 0 ]]; do
-		case $1 in
+		case "$1" in
 		-h | --help)
 			usage
 			return 0
 			;;
-		-b | --buff)
-			if [[ -n "${mode}" ]]; then
-				echo "main:: use only one of --buff or --debuff" >&2
-				return 1
-			fi
-
-			if [[ $# -lt 3 ]]; then
-				echo "main:: --buff requires APPIMAGE and NAME" >&2
-				return 1
-			fi
-
-			mode="buff"
-			appimage_path="$2"
-			app_stem="$3"
-			shift 3
-			;;
-		-d | --debuff)
+		-b | --buff | -d | --debuff)
 			if [[ -n "${mode}" ]]; then
 				echo "main:: use only one of --buff or --debuff" >&2
 				return 1
 			fi
 
 			if [[ $# -lt 2 ]]; then
-				echo "main:: --debuff requires NAME" >&2
+				if [[ "$1" == "-b" || "$1" == "--buff" ]]; then
+					echo "main:: --buff requires NAME" >&2
+				else
+					echo "main:: --debuff requires NAME" >&2
+				fi
 				return 1
 			fi
 
-			mode="debuff"
+			if [[ "$1" == "-b" || "$1" == "--buff" ]]; then
+				mode="buff"
+			else
+				mode="debuff"
+			fi
+
 			app_stem="$2"
+			shift 2
+			;;
+		-a | --appimage)
+			if [[ $# -lt 2 ]]; then
+				echo "main:: --appimage requires PATH" >&2
+				return 1
+			fi
+
+			appimage_path="$2"
 			shift 2
 			;;
 		*)
@@ -483,14 +479,16 @@ main() {
 		return 1
 	fi
 
-	if [[ "${mode}" == "buff" ]]; then
-		buff_appimage "${appimage_path}" "${app_stem}"
+	case "${mode}" in
+	buff)
+		buff_main "${app_stem}" "${appimage_path}"
 		return $?
-	fi
-
-	debuff_appimage "${app_stem}"
-
-	return $?
+		;;
+	debuff)
+		debuff_main "${app_stem}" "${appimage_path}"
+		return $?
+		;;
+	esac
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then

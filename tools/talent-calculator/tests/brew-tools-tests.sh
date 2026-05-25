@@ -24,8 +24,10 @@ setup_file() {
 }
 
 setup() {
+	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
+
+	TEST_DIR="$(mktemp -d "${base}/brew-tools-test.XXXXXX")"
 	export TEST_DIR
-	TEST_DIR="$(mktemp -d)"
 
 	DRY_RUN="false"
 	TALENT_MODE="check"

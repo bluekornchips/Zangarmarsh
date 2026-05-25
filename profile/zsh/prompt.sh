@@ -66,11 +66,7 @@ shorten() {
 
 # Get hostname based on platform
 get_hostname() {
-	if [[ "$PLATFORM" == "wsl" ]]; then
-		echo "${HOSTNAME:-$(hostname 2>/dev/null || echo 'wsl')}"
-	else
-		echo "${HOSTNAME:-$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo 'localhost')}"
-	fi
+	echo "${HOSTNAME:-$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo 'localhost')}"
 }
 
 # Build the complete prompt string with caching

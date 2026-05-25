@@ -5,7 +5,7 @@
 <div align="center">
 
 ![Shell Compatibility](https://img.shields.io/badge/shell-bash%20%7C%20zsh-blue)
-![Platform Support](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20WSL-green)
+![Platform Support](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-green)
 ![Testing](https://img.shields.io/badge/tests-bats-orange)
 ![License](https://img.shields.io/badge/license-GPL%203.0-green)
 
@@ -21,9 +21,9 @@ Zangarmarsh is a zone in World of Warcraft overwhelmed by blue ambiance, dampnes
 
 After you `source zangarmarsh.sh`, both shells load shared files under `profile/`:
 
-- `aliases.sh` and `functions.sh`: tool aliases, `penv`, `nvm` lazy load when enabled, `gw`, `list_changed_files`, `runint`, and related helpers
+- `aliases.sh` and `functions.sh`: tool aliases, `penv`, `nvm` lazy load when enabled, `gw`, `list_changed_files`, and related helpers
 
-Zsh also loads `profile/zsh/profile.sh`, which pulls in Oh My Zsh, `profile/zsh/platform.sh` for macOS, Linux, and WSL PATH and aliases, and `profile/zsh/prompt.sh` for the customizable prompt with Git branch and kubectl context.
+Zsh also loads `profile/zsh/profile.sh`, which pulls in Oh My Zsh, `profile/zsh/platform.sh` for macOS and Linux PATH and aliases, and `profile/zsh/prompt.sh` for the customizable prompt with Git branch and kubectl context.
 
 Bash loads `profile/bash/profile.sh` for history and readline options only. It does not load the Zsh prompt or platform module.
 
@@ -102,9 +102,9 @@ Scripts under `tools/` with per-tool README files:
 - Quest Log: Cursor rules from JSON schema, see [tools/quest-log/README.md](tools/quest-log/README.md)
 - Trilliax: cleanup for caches and artifacts, see [tools/trilliax/README.md](tools/trilliax/README.md)
 - Talent Calculator: workstation CLI installs, see [tools/talent-calculator/README.md](tools/talent-calculator/README.md)
-- Hearthstone: sync VS Code settings, quest log, Gandalf, optional Trilliax, see [tools/hearthstone/README.md](tools/hearthstone/README.md)
+- Hearthstone: sync VS Code settings and quest log, optional Trilliax, see [tools/hearthstone/README.md](tools/hearthstone/README.md)
 - Ice Block: dotfile backup to `~/.ice-block/<hostname>/`, see [tools/ice-block/README.md](tools/ice-block/README.md)
-- Auras: AppImage `.desktop` launchers, see [tools/auras/README.md](tools/auras/README.md)
+- Auras: AppImage `.desktop` launchers and `~/.local/bin` commands, see [tools/auras/README.md](tools/auras/README.md)
 
 Index and one-line commands: [tools/README.md](tools/README.md).
 
@@ -118,7 +118,7 @@ bats tools/trilliax/tests/trilliax-tests.sh
 
 ## Requirements
 
-- Bash 4.0+ or Zsh 5.0+
+- Bash 3.2+ or Zsh 5.0+
 - Git for helpers that inspect the repository
 - Standard Unix tools such as grep, sed, and awk
 - Optional: Oh My Zsh and zsh-autosuggestions for the full Zsh stack described in [profile/zsh/profile.sh](profile/zsh/profile.sh)

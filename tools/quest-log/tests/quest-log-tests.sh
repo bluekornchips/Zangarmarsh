@@ -4,6 +4,7 @@ GIT_ROOT=$(git rev-parse --show-toplevel)
 QUEST_LOG_ROOT="$GIT_ROOT/tools/quest-log"
 SCRIPT="$QUEST_LOG_ROOT/quest-log.sh"
 SCHEMA_FILE="$QUEST_LOG_ROOT/schema.json"
+ZANGARMARSH_VSCODE_DIR="${GIT_ROOT}/.vscode"
 
 CURSOR_RULES_DIR=".cursor/rules/user"
 
@@ -52,8 +53,10 @@ setup_file() {
 }
 
 setup() {
+	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
+
 	# Set up test environment and source the script
-	TEST_TEMP_DIR=$(mktemp -d)
+	TEST_TEMP_DIR="$(mktemp -d "${base}/quest-log-test.XXXXXX")"
 	# shellcheck disable=SC2164
 	cd "$TEST_TEMP_DIR"
 
@@ -84,6 +87,9 @@ setup() {
 	set +e
 	trap - EXIT ERR
 	source "$SCRIPT"
+	export SCRIPT_DIR="${QUEST_LOG_ROOT}"
+	# shellcheck source=../../lib/vscodeoverride.sh
+	source "${QUEST_LOG_ROOT}/../lib/vscodeoverride.sh"
 	# Disable traps again after sourcing (script re-enables them)
 	trap - EXIT ERR
 	# Keep errexit disabled - bats' run command handles error status
@@ -660,12 +666,11 @@ Line 3"
 # vscodeoverride
 ########################################################
 
-@test 'vscodeoverride:: syncs when directory is empty' {
+@test 'vscodeoverride:: syncs when destination directory is empty' {
+	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
 	local test_git_root
-	test_git_root="$(mktemp -d)"
-	mkdir -p "${test_git_root}/.vscode"
-	echo '{"test": "settings"}' >"${test_git_root}/.vscode/settings.json"
 
+	test_git_root="$(mktemp -d "${base}/vscodeoverride-dest.XXXXXX")"
 	export GIT_ROOT="${test_git_root}"
 	export FORCE=false
 
@@ -674,11 +679,14 @@ Line 3"
 	echo "$output" | grep -q "vscodeoverride: complete"
 	[[ -d "${GIT_ROOT}/.vscode" ]]
 	[[ -f "${GIT_ROOT}/.vscode/settings.json" ]]
+	cmp -s "${GIT_ROOT}/.vscode/settings.json" "${ZANGARMARSH_VSCODE_DIR}/settings.json"
 }
 
 @test 'vscodeoverride:: skips when directory exists and FORCE is false' {
+	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
 	local test_git_root
-	test_git_root="$(mktemp -d)"
+
+	test_git_root="$(mktemp -d "${base}/vscodeoverride-dest.XXXXXX")"
 	mkdir -p "${test_git_root}/.vscode"
 	echo "existing" >"${test_git_root}/.vscode/settings.json"
 
@@ -687,13 +695,16 @@ Line 3"
 
 	run vscodeoverride
 	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "vscodeoverride: existing settings kept, use FORCE=true to replace"
 	echo "$output" | grep -q "vscodeoverride: complete"
 	[[ "$(cat "${GIT_ROOT}/.vscode/settings.json")" == "existing" ]]
 }
 
 @test 'vscodeoverride:: replaces when FORCE is true' {
+	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
 	local test_git_root
-	test_git_root="$(mktemp -d)"
+
+	test_git_root="$(mktemp -d "${base}/vscodeoverride-dest.XXXXXX")"
 	mkdir -p "${test_git_root}/.vscode"
 	echo "existing" >"${test_git_root}/.vscode/settings.json"
 
@@ -703,7 +714,7 @@ Line 3"
 	run vscodeoverride
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "vscodeoverride: complete"
-	[[ -f "${GIT_ROOT}/.vscode/settings.json" ]]
+	cmp -s "${GIT_ROOT}/.vscode/settings.json" "${ZANGARMARSH_VSCODE_DIR}/settings.json"
 }
 
 @test 'vscodeoverride:: fails when GIT_ROOT is not set' {
@@ -715,16 +726,23 @@ Line 3"
 	echo "$output" | grep -q "vscodeoverride:: GIT_ROOT is not set"
 }
 
-@test 'vscodeoverride:: fails when .vscode directory does not exist in git root' {
+@test 'vscodeoverride:: fails when Zangarmarsh template is missing' {
+	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
 	local test_git_root
-	test_git_root="$(mktemp -d)"
+	local fake_script_dir
+
+	test_git_root="$(mktemp -d "${base}/vscodeoverride-dest.XXXXXX")"
+	fake_script_dir="$(mktemp -d "${base}/vscodeoverride-no-template.XXXXXX")"
 
 	export GIT_ROOT="${test_git_root}"
 	export FORCE=false
+	export SCRIPT_DIR="${fake_script_dir}"
 
 	run vscodeoverride
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "vscodeoverride:: VSCode settings directory not found"
+
+	export SCRIPT_DIR="${QUEST_LOG_ROOT}"
 }
 
 ########################################################

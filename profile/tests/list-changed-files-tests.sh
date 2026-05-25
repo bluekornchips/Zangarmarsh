@@ -9,29 +9,8 @@ SCRIPT="$GIT_ROOT/profile/functions.sh"
 	exit 1
 }
 
-create_mock_git_repo() {
-	local test_dir="$1"
-	cd "$test_dir" || {
-		echo "test_dir does not exist: $test_dir" >&2
-		return 1
-	}
-	git init >/dev/null 2>&1
-	git config user.name "Test User" >/dev/null 2>&1
-	git config user.email "test@example.com" >/dev/null 2>&1
-	echo "test content" >test_file
-	git add test_file >/dev/null 2>&1
-	git commit -m "Initial commit" >/dev/null 2>&1
-}
-
-create_mock_git_branch() {
-	local test_dir="$1"
-	local branch_name="$2"
-	cd "$test_dir" || {
-		echo "Failed to cd to test_dir: $test_dir" >&2
-		return 1
-	}
-	git checkout -b "$branch_name" >/dev/null 2>&1
-}
+# shellcheck source=fixtures.sh
+source "$GIT_ROOT/profile/tests/fixtures.sh"
 
 setup_repo_with_committed_files() {
 	create_mock_git_repo "$TEST_DIR"
@@ -46,13 +25,14 @@ setup_repo_with_committed_files() {
 }
 
 setup() {
-	local test_dir
-	test_dir=$(mktemp -d)
-	cd "$test_dir" || exit 1
+	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
+
+	TEST_DIR="$(mktemp -d "${base}/list-changed-files-test.XXXXXX")"
+	cd "${TEST_DIR}" || return 1
 
 	source "$SCRIPT"
 
-	export TEST_DIR="$test_dir"
+	export TEST_DIR
 }
 
 teardown() {

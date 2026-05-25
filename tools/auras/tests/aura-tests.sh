@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 #
-# Test file for auras.sh
+# Tests for shared auras helpers and CLI dispatch in auras.sh
 #
 
 setup_file() {
@@ -46,20 +46,32 @@ make_appimage() {
 
 make_managed_desktop() {
 	local name
+	local exec_path
 	local path
 
 	name="$1"
+	exec_path="${2:-/tmp/${name}.AppImage}"
 	mkdir -p "${HOME}/.local/share/applications"
 	path="${HOME}/.local/share/applications/${name}.desktop"
 	cat <<EOF >"${path}"
 [Desktop Entry]
 Type=Application
 Name=${name}
-Exec="/tmp/${name}.AppImage" %u
+Exec="${exec_path}" %u
 Terminal=false
 X-Auras-Managed=true
-X-Auras-Version=1
+X-Auras-Version=${AURAS_DESKTOP_VERSION}
 EOF
+}
+
+make_managed_bin_link() {
+	local name
+	local target
+
+	name="$1"
+	target="$2"
+	mkdir -p "${HOME}/.local/bin"
+	ln -sf "${target}" "${HOME}/.local/bin/${name}"
 }
 
 ########################################################
@@ -175,6 +187,26 @@ EOF
 }
 
 ########################################################
+# prepare_appimage_path
+########################################################
+@test "prepare_appimage_path:: resolves relative AppImage path" {
+	local appdir
+	local appimage
+	local expected
+
+	appdir="${AURAS_TEST_HOME}/apps"
+	make_appimage "${appdir}" "archon.AppImage"
+	appimage="apps/archon.AppImage"
+	expected="${appdir}/archon.AppImage"
+
+	cd "${AURAS_TEST_HOME}"
+
+	run prepare_appimage_path "${appimage}" "prepare_appimage_path"
+	[[ "$status" -eq 0 ]]
+	[[ "$output" == "${expected}" ]]
+}
+
+########################################################
 # desktop_entry_is_auras_managed
 ########################################################
 @test "desktop_entry_is_auras_managed:: accepts current marker and version" {
@@ -192,165 +224,41 @@ EOF
 	[[ "$status" -eq 1 ]]
 }
 
-@test "ensure_desktop_entry_writable:: refuses unmanaged existing desktop file" {
+@test "desktop_entry_is_auras_managed:: rejects desktop with only managed marker" {
 	mkdir -p "${HOME}/.local/share/applications"
-	: >"${HOME}/.local/share/applications/archon.desktop"
+	printf '%s\n' "X-Auras-Managed=true" >"${HOME}/.local/share/applications/archon.desktop"
 
-	run ensure_desktop_entry_writable "${HOME}/.local/share/applications/archon.desktop"
+	run desktop_entry_is_auras_managed "${HOME}/.local/share/applications/archon.desktop"
 	[[ "$status" -eq 1 ]]
-
-	grep -q "ensure_desktop_entry_writable:: refusing to overwrite unmanaged desktop file" <<<"$output"
 }
 
-########################################################
-# write_application_desktop
-########################################################
-@test "write_application_desktop:: writes managed desktop entry with expected fields" {
-	local appdir
-	local appimage
-
-	appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "archon.AppImage"
-	appimage="${appdir}/archon.AppImage"
-
-	run write_application_desktop "archon" "${appimage}" "archon"
-	[[ "$status" -eq 0 ]]
-
-	[[ -f "${HOME}/.local/share/applications/archon.desktop" ]]
-	grep -q '^Name=archon$' "${HOME}/.local/share/applications/archon.desktop"
-	grep -q "Exec=\"${appimage}\" %u" "${HOME}/.local/share/applications/archon.desktop"
-	grep -q '^Terminal=false$' "${HOME}/.local/share/applications/archon.desktop"
-	grep -q '^X-Auras-Managed=true$' "${HOME}/.local/share/applications/archon.desktop"
-	grep -q '^X-Auras-Version=1$' "${HOME}/.local/share/applications/archon.desktop"
-}
-
-@test "write_application_desktop:: resolves relative AppImage path before writing" {
-	local appdir
-	local appimage
-	local expected
-
-	appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "archon.AppImage"
-	appimage="apps/archon.AppImage"
-	expected="${appdir}/archon.AppImage"
-
-	cd "${AURAS_TEST_HOME}"
-
-	run write_application_desktop "archon" "${appimage}" "archon"
-	[[ "$status" -eq 0 ]]
-
-	grep -q "Exec=\"${expected}\" %u" "${HOME}/.local/share/applications/archon.desktop"
-}
-
-@test "write_application_desktop:: overwrites existing Auras-managed desktop file" {
-	local appdir
-	local appimage
-
-	appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "archon.AppImage"
-	appimage="${appdir}/archon.AppImage"
-	make_managed_desktop "archon"
-
-	run write_application_desktop "archon" "${appimage}" "archon"
-	[[ "$status" -eq 0 ]]
-
-	grep -q "Exec=\"${appimage}\" %u" "${HOME}/.local/share/applications/archon.desktop"
-}
-
-@test "write_application_desktop:: refuses to overwrite unmanaged desktop file" {
-	local appdir
-	local appimage
-
-	appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "archon.AppImage"
-	appimage="${appdir}/archon.AppImage"
+@test "desktop_entry_is_auras_managed:: rejects desktop with only version marker" {
 	mkdir -p "${HOME}/.local/share/applications"
-	: >"${HOME}/.local/share/applications/archon.desktop"
+	printf '%s\n' "X-Auras-Version=${AURAS_DESKTOP_VERSION}" >"${HOME}/.local/share/applications/archon.desktop"
 
-	run write_application_desktop "archon" "${appimage}" "archon"
+	run desktop_entry_is_auras_managed "${HOME}/.local/share/applications/archon.desktop"
 	[[ "$status" -eq 1 ]]
-
-	grep -q "ensure_desktop_entry_writable:: refusing to overwrite unmanaged desktop file" <<<"$output"
-}
-
-@test "write_application_desktop:: rejects stem containing slash" {
-	local appdir
-	local appimage
-
-	appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "archon.AppImage"
-	appimage="${appdir}/archon.AppImage"
-
-	run write_application_desktop "evil/name" "${appimage}" "Label"
-	[[ "$status" -eq 1 ]]
-
-	grep -q "write_application_desktop:: name must be one segment without slashes" <<<"$output"
 }
 
 ########################################################
-# debuff_appimage
+# desktop_entry_exec_path
 ########################################################
-@test "debuff_appimage:: removes an Auras-managed desktop file" {
-	make_managed_desktop "archon"
+@test "desktop_entry_exec_path:: parses quoted Exec with field code" {
+	make_managed_desktop "archon" "/tmp/archon.AppImage"
 
-	run debuff_appimage "archon"
+	run desktop_entry_exec_path "${HOME}/.local/share/applications/archon.desktop"
 	[[ "$status" -eq 0 ]]
-
-	[[ ! -f "${HOME}/.local/share/applications/archon.desktop" ]]
+	[[ "$output" == "/tmp/archon.AppImage" ]]
 }
 
-@test "debuff_appimage:: refuses to remove unmanaged desktop file" {
+@test "desktop_entry_exec_path:: rejects unparseable Exec line" {
 	mkdir -p "${HOME}/.local/share/applications"
-	: >"${HOME}/.local/share/applications/archon.desktop"
+	printf '%s\n' 'Exec=broken line' >"${HOME}/.local/share/applications/archon.desktop"
 
-	run debuff_appimage "archon"
+	run desktop_entry_exec_path "${HOME}/.local/share/applications/archon.desktop"
 	[[ "$status" -eq 1 ]]
 
-	grep -q "debuff_appimage:: refusing to remove unmanaged desktop file" <<<"$output"
-}
-
-@test "debuff_appimage:: fails when desktop file is missing" {
-	mkdir -p "${HOME}/.local/share/applications"
-
-	run debuff_appimage "missing"
-	[[ "$status" -eq 1 ]]
-
-	grep -q "debuff_appimage:: no desktop file" <<<"$output"
-}
-
-########################################################
-# buff_appimage
-########################################################
-@test "buff_appimage:: writes a desktop entry from explicit AppImage and name" {
-	local appdir
-	local appimage
-
-	appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "archon.AppImage"
-	appimage="${appdir}/archon.AppImage"
-
-	run buff_appimage "${appimage}" "archon"
-	[[ "$status" -eq 0 ]]
-
-	grep -q "Exec=\"${appimage}\" %u" "${HOME}/.local/share/applications/archon.desktop"
-}
-
-@test "buff_appimage:: writes a desktop entry from relative AppImage path" {
-	local appdir
-	local appimage
-	local expected
-
-	appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "archon.AppImage"
-	appimage="apps/archon.AppImage"
-	expected="${appdir}/archon.AppImage"
-
-	cd "${AURAS_TEST_HOME}"
-
-	run buff_appimage "${appimage}" "archon"
-	[[ "$status" -eq 0 ]]
-
-	grep -q "Exec=\"${expected}\" %u" "${HOME}/.local/share/applications/archon.desktop"
+	grep -q "desktop_entry_exec_path:: could not parse Exec=" <<<"$output"
 }
 
 ########################################################
@@ -361,7 +269,8 @@ EOF
 	[[ "$status" -eq 0 ]]
 
 	grep -q "Usage:" <<<"$output"
-	grep -q -- "--buff APPIMAGE NAME" <<<"$output"
+	grep -q -- "--buff NAME" <<<"$output"
+	grep -q -- "--appimage PATH" <<<"$output"
 }
 
 @test "main:: script handles unknown options" {
@@ -371,14 +280,7 @@ EOF
 	grep -q "main:: unknown option" <<<"$output"
 }
 
-@test "main:: buff mode requires AppImage and name" {
-	run bash "$SCRIPT" --buff
-	[[ "$status" -eq 1 ]]
-
-	grep -q "main:: --buff requires APPIMAGE and NAME" <<<"$output"
-}
-
-@test "main:: buff mode writes AppImage launcher" {
+@test "main:: accepts short mode flags -b and -d" {
 	local appdir
 	local appimage
 
@@ -386,41 +288,23 @@ EOF
 	make_appimage "${appdir}" "archon.AppImage"
 	appimage="${appdir}/archon.AppImage"
 
-	run bash "$SCRIPT" --buff "${appimage}" "archon"
+	run bash "$SCRIPT" -b archon -a "${appimage}"
 	[[ "$status" -eq 0 ]]
 
 	[[ -f "${HOME}/.local/share/applications/archon.desktop" ]]
-}
+	[[ "$(readlink -f "${HOME}/.local/bin/archon")" == "${appimage}" ]]
 
-@test "main:: buff mode resolves relative AppImage path" {
-	local appdir
-	local appimage
-	local expected
+	make_managed_desktop "curseforge" "${appimage}"
+	make_managed_bin_link "curseforge" "${appimage}"
 
-	appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "archon.AppImage"
-	appimage="apps/archon.AppImage"
-	expected="${appdir}/archon.AppImage"
-
-	cd "${AURAS_TEST_HOME}"
-
-	run bash "$SCRIPT" --buff "${appimage}" "archon"
+	run bash "$SCRIPT" -d curseforge
 	[[ "$status" -eq 0 ]]
 
-	grep -q "Exec=\"${expected}\" %u" "${HOME}/.local/share/applications/archon.desktop"
-}
-
-@test "main:: debuff mode removes managed desktop entry" {
-	make_managed_desktop "archon"
-
-	run bash "$SCRIPT" --debuff archon
-	[[ "$status" -eq 0 ]]
-
-	[[ ! -f "${HOME}/.local/share/applications/archon.desktop" ]]
+	[[ ! -f "${HOME}/.local/share/applications/curseforge.desktop" ]]
 }
 
 @test "main:: rejects packages-dir after simplification" {
-	run bash "$SCRIPT" --packages-dir "${HOME}" --buff /tmp/x.AppImage archon
+	run bash "$SCRIPT" --packages-dir "${HOME}" --buff archon --appimage /tmp/x.AppImage
 	[[ "$status" -eq 1 ]]
 
 	grep -q "main:: unknown option" <<<"$output"

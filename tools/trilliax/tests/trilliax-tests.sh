@@ -19,8 +19,10 @@ setup() {
 	trap - EXIT ERR
 	set +e
 
+	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
+
+	TEST_DIR="$(mktemp -d "${base}/trilliax-test.XXXXXX")"
 	export TEST_DIR
-	TEST_DIR="$(mktemp -d)"
 	export TEST_CLEANUP_DIR="$TEST_DIR/cleanup_test"
 
 	mkdir -p "$TEST_CLEANUP_DIR"

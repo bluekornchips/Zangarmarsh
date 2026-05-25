@@ -1,6 +1,7 @@
 #!/usr/bin/env bats
 
 # Test file for gw function in profile/functions.sh
+# Uses isolated temp git repos only. Never run gw shortcut tests from the real checkout cwd.
 
 GIT_ROOT="$(git rev-parse --show-toplevel)"
 SCRIPT="$GIT_ROOT/profile/functions.sh"
@@ -9,32 +10,35 @@ SCRIPT="$GIT_ROOT/profile/functions.sh"
 	exit 1
 }
 
-create_mock_git_repo() {
-	local test_dir="$1"
-	cd "$test_dir" || {
-		echo "test_dir does not exist: $test_dir" >&2
-		exit 1
-	}
-	git init >/dev/null 2>&1
-	git config user.name "Test User" >/dev/null 2>&1
-	git config user.email "test@example.com" >/dev/null 2>&1
-	echo "test content" >test_file
-	git add test_file >/dev/null 2>&1
-	git commit -m "Initial commit" >/dev/null 2>&1
-}
+# shellcheck source=fixtures.sh
+source "$GIT_ROOT/profile/tests/fixtures.sh"
 
 setup() {
-	local test_dir
-	test_dir=$(mktemp -d)
-	cd "$test_dir" || exit 1
+	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
+
+	TEST_DIR="$(mktemp -d "${base}/gw-test.XXXXXX")"
+	cd "${TEST_DIR}" || return 1
 
 	source "$SCRIPT"
 
-	export TEST_DIR="$test_dir"
+	export TEST_DIR
 }
 
 teardown() {
-	rm -rf "$TEST_DIR"
+	local wt_path
+	local git_root
+
+	if [[ -n "${TEST_DIR}" && -d "${TEST_DIR}" ]]; then
+		git_root="$(git -C "${TEST_DIR}" rev-parse --show-toplevel 2>/dev/null || true)"
+		if [[ -n "${git_root}" ]]; then
+			while IFS= read -r wt_path; do
+				[[ -z "${wt_path}" ]] && continue
+				[[ "${wt_path}" == "${git_root}" ]] && continue
+				git -C "${git_root}" worktree remove --force "${wt_path}" 2>/dev/null || true
+			done < <(git -C "${git_root}" worktree list --porcelain 2>/dev/null | awk '/^worktree / { print $2 }')
+		fi
+		rm -rf "${TEST_DIR}"
+	fi
 }
 
 @test "gw:: returns 1 when not in a git repository" {
@@ -46,88 +50,98 @@ teardown() {
 @test "gw:: passes add through from repository root" {
 	local repo_dir
 	local worktree_dir
-	repo_dir="$TEST_DIR/repo"
-	worktree_dir="$TEST_DIR/add-root"
 
-	mkdir -p "$repo_dir"
-	create_mock_git_repo "$repo_dir"
+	repo_dir="${TEST_DIR}/repo"
+	worktree_dir="${TEST_DIR}/add-root"
 
-	run gw add "$worktree_dir" HEAD
+	mkdir -p "${repo_dir}"
+	create_mock_git_repo "${repo_dir}"
+	cd "${repo_dir}" || return 1
+
+	run gw add "${worktree_dir}" HEAD
 	[[ "$status" -eq 0 ]]
-	[[ -d "$worktree_dir" ]]
+	[[ -d "${worktree_dir}" ]]
 }
 
 @test "gw:: passes add through from subdirectory" {
 	local repo_dir
 	local worktree_dir
-	repo_dir="$TEST_DIR/repo"
-	worktree_dir="$TEST_DIR/add-subdir"
 
-	mkdir -p "$repo_dir"
-	create_mock_git_repo "$repo_dir"
-	mkdir -p "$repo_dir/subdir"
-	cd "$repo_dir/subdir" || exit 1
+	repo_dir="${TEST_DIR}/repo"
+	worktree_dir="${TEST_DIR}/add-subdir"
 
-	run gw add "$worktree_dir" HEAD
+	mkdir -p "${repo_dir}"
+	create_mock_git_repo "${repo_dir}"
+	mkdir -p "${repo_dir}/subdir"
+	cd "${repo_dir}/subdir" || return 1
+
+	run gw add "${worktree_dir}" HEAD
 	[[ "$status" -eq 0 ]]
-	[[ -d "$worktree_dir" ]]
+	[[ -d "${worktree_dir}" ]]
 }
 
 @test "gw:: passes remove through to git worktree" {
 	local repo_dir
 	local worktree_dir
-	repo_dir="$TEST_DIR/repo"
-	worktree_dir="$TEST_DIR/remove-me"
 
-	mkdir -p "$repo_dir"
-	create_mock_git_repo "$repo_dir"
-	git -C "$repo_dir" worktree add "$worktree_dir" HEAD >/dev/null 2>&1
+	repo_dir="${TEST_DIR}/repo"
+	worktree_dir="${TEST_DIR}/remove-me"
 
-	run gw remove "$worktree_dir"
+	mkdir -p "${repo_dir}"
+	create_mock_git_repo "${repo_dir}"
+	git -C "${repo_dir}" worktree add "${worktree_dir}" HEAD >/dev/null 2>&1
+	cd "${repo_dir}" || return 1
+
+	run gw remove "${worktree_dir}"
 	[[ "$status" -eq 0 ]]
-	[[ ! -d "$worktree_dir" ]]
+	[[ ! -d "${worktree_dir}" ]]
 }
 
 @test "gw:: creates worktree from current branch when base is omitted" {
 	local repo_dir
 	local worktree_dir
 	local current_branch
-	repo_dir="$TEST_DIR/repo"
-	worktree_dir="$TEST_DIR/feature-one"
 
-	mkdir -p "$repo_dir"
-	create_mock_git_repo "$repo_dir"
-	current_branch="$(git -C "$repo_dir" branch --show-current)"
+	repo_dir="${TEST_DIR}/repo"
+	worktree_dir="${repo_dir}/../feature-one"
+
+	mkdir -p "${repo_dir}"
+	create_mock_git_repo "${repo_dir}"
+	current_branch="$(git -C "${repo_dir}" branch --show-current)"
+	cd "${repo_dir}" || return 1
 
 	run gw feature-one
 	[[ "$status" -eq 0 ]]
-	[[ -d "$worktree_dir" ]]
-	[[ "$(git -C "$worktree_dir" branch --show-current)" == "feature-one" ]]
-	[[ "$(git -C "$worktree_dir" merge-base feature-one "$current_branch")" == "$(git -C "$repo_dir" rev-parse "$current_branch")" ]]
+	[[ -d "${worktree_dir}" ]]
+	[[ "$(git -C "${worktree_dir}" branch --show-current)" == "feature-one" ]]
+	[[ "$(git -C "${worktree_dir}" merge-base feature-one "${current_branch}")" == "$(git -C "${repo_dir}" rev-parse "${current_branch}")" ]]
 }
 
 @test "gw:: creates worktree from explicit base branch" {
 	local repo_dir
 	local worktree_dir
-	repo_dir="$TEST_DIR/repo"
-	worktree_dir="$TEST_DIR/feature-two"
 
-	mkdir -p "$repo_dir"
-	create_mock_git_repo "$repo_dir"
-	git -C "$repo_dir" checkout -b base-branch >/dev/null 2>&1
-	echo "base content" >"$repo_dir/base_file"
-	git -C "$repo_dir" add base_file >/dev/null 2>&1
-	git -C "$repo_dir" commit -m "Base commit" >/dev/null 2>&1
+	repo_dir="${TEST_DIR}/repo"
+	worktree_dir="${repo_dir}/../feature-two"
+
+	mkdir -p "${repo_dir}"
+	create_mock_git_repo "${repo_dir}"
+	git -C "${repo_dir}" checkout -b base-branch >/dev/null 2>&1
+	echo "base content" >"${repo_dir}/base_file"
+	git -C "${repo_dir}" add base_file >/dev/null 2>&1
+	git -C "${repo_dir}" commit -m "Base commit" >/dev/null 2>&1
+	cd "${repo_dir}" || return 1
 
 	run gw feature-two base-branch
 	[[ "$status" -eq 0 ]]
-	[[ -d "$worktree_dir" ]]
-	[[ -f "$worktree_dir/base_file" ]]
-	[[ "$(git -C "$worktree_dir" branch --show-current)" == "feature-two" ]]
+	[[ -d "${worktree_dir}" ]]
+	[[ -f "${worktree_dir}/base_file" ]]
+	[[ "$(git -C "${worktree_dir}" branch --show-current)" == "feature-two" ]]
 }
 
 @test "gw:: fails when shortcut receives too many arguments" {
-	create_mock_git_repo "$TEST_DIR"
+	create_mock_git_repo "${TEST_DIR}"
+	cd "${TEST_DIR}" || return 1
 
 	run gw feature-three base-branch extra-arg
 	[[ "$status" -ne 0 ]]
@@ -135,7 +149,8 @@ teardown() {
 }
 
 @test "gw:: fails when no shortcut name is provided" {
-	create_mock_git_repo "$TEST_DIR"
+	create_mock_git_repo "${TEST_DIR}"
+	cd "${TEST_DIR}" || return 1
 
 	run gw
 	[[ "$status" -ne 0 ]]

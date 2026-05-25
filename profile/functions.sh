@@ -17,7 +17,7 @@ _nvm_load() {
 	local nvm_script=""
 
 	# Determine NVM script location based on platform
-	case "$PLATFORM" in
+	case "${PLATFORM_OS:-${PLATFORM}}" in
 	macos)
 		# Try Homebrew installation first, then default location
 		if [[ -n "$HOMEBREW_PREFIX" && -s "$HOMEBREW_PREFIX/opt/nvm/nvm.sh" ]]; then
@@ -26,7 +26,7 @@ _nvm_load() {
 			nvm_script="$NVM_DIR/nvm.sh"
 		fi
 		;;
-	linux | wsl)
+	linux)
 		nvm_script="$NVM_DIR/nvm.sh"
 		;;
 	*)
@@ -36,14 +36,14 @@ _nvm_load() {
 
 	# Check if NVM script exists
 	if [[ -z "$nvm_script" ]] || [[ ! -s "$nvm_script" ]]; then
-		echo "NVM not found at $nvm_script" >&2
-		echo "Install NVM from: https://github.com/nvm-sh/nvm" >&2
+		echo "_nvm_load:: NVM not found at ${nvm_script}" >&2
+		echo "_nvm_load:: Install NVM from: https://github.com/nvm-sh/nvm" >&2
 		return 1
 	fi
 
 	# Source NVM
 	if ! source "$nvm_script" 2>/dev/null; then
-		echo "Failed to source NVM script" >&2
+		echo "_nvm_load:: Failed to source NVM script" >&2
 		return 1
 	fi
 
@@ -217,8 +217,8 @@ EOF
 			shift
 			;;
 		*)
-			echo "Unknown option '$1'" >&2
-			echo "Use 'penv --help' for usage information" >&2
+			echo "penv:: Unknown option '${1}'" >&2
+			echo "penv:: Use 'penv --help' for usage information" >&2
 			return 1
 			;;
 		esac
@@ -226,10 +226,10 @@ EOF
 
 	# Validate Python version
 	if ! command -v "$python_version" >/dev/null 2>&1; then
-		echo "$python_version not found" >&2
-		echo "Available Python versions:" >&2
+		echo "penv:: ${python_version} not found" >&2
+		echo "penv:: Available Python versions:" >&2
 		find /usr/bin -maxdepth 1 -name "python*" -type f 2>/dev/null | head -5 || echo "No Python versions found in /usr/bin" >&2
-		[[ "$PLATFORM" == "macos" ]] && echo "Try installing Python via Homebrew: brew install python" >&2
+		[[ "${PLATFORM_OS:-${PLATFORM}}" == "macos" ]] && echo "Try installing Python via Homebrew: brew install python" >&2
 		return 1
 	fi
 
@@ -252,7 +252,7 @@ EOF
 	if [[ -d "$env_name" ]] && [[ "$(realpath "$env_name" 2>/dev/null || echo "$env_name")" == "$(realpath "$(pwd)/$env_name" 2>/dev/null || echo "$(pwd)/$env_name")" ]]; then
 		echo "Removing existing virtual environment: $env_name"
 		rm -rf "$env_name" 2>/dev/null || {
-			echo "Failed to remove existing environment" >&2
+			echo "penv:: Failed to remove existing environment" >&2
 			return 1
 		}
 	fi
@@ -287,15 +287,15 @@ EOF
 	# Create virtual environment
 	echo "Creating virtual environment with $python_version: $env_name"
 	if ! "$python_version" -m venv "$env_name" 2>/dev/null; then
-		echo "Failed to create virtual environment" >&2
-		echo "Make sure $python_version has venv module installed" >&2
-		echo "Try: $python_version -m pip install --user virtualenv" >&2
+		echo "penv:: Failed to create virtual environment" >&2
+		echo "penv:: Make sure ${python_version} has venv module installed" >&2
+		echo "penv:: Try: ${python_version} -m pip install --user virtualenv" >&2
 		return 1
 	fi
 
 	# Activate virtual environment
 	if ! source "$env_name/bin/activate" >/dev/null 2>&1; then
-		echo "Failed to activate virtual environment" >&2
+		echo "penv:: Failed to activate virtual environment" >&2
 		return 1
 	fi
 
@@ -382,22 +382,4 @@ list_changed_files() {
 	printf '%s\n' "${to_format[@]}"
 
 	return 0
-}
-
-# Run a command with integration tests enabled
-#
-# Inputs:
-# - $@: command and arguments to execute
-#
-# Side Effects:
-# - Sets RUN_INTEGRATION_TESTS=true in a subshell before executing the command
-#
-# Returns:
-# - Exit code of the executed command
-runint() {
-	(
-		RUN_INTEGRATION_TESTS="true"
-		export RUN_INTEGRATION_TESTS
-		"$@"
-	)
 }

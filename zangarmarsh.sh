@@ -22,6 +22,16 @@ COMMON_FILES=(
 )
 
 # Load common shell configuration components from profile directory
+#
+# Inputs:
+# - Uses ZANGARMARSH_ROOT and COMMON_FILES
+#
+# Side Effects:
+# - Sources each existing file under profile/ listed in COMMON_FILES
+#
+# Returns:
+# - 0 on success
+# - 1 when sourcing a required file fails
 load_common_components() {
 	local file
 	local file_path

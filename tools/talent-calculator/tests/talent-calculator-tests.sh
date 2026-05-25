@@ -23,8 +23,10 @@ setup() {
 	trap - EXIT ERR
 	set +e
 
+	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
+
+	TEST_DIR="$(mktemp -d "${base}/talent-calculator-test.XXXXXX")"
 	export TEST_DIR
-	TEST_DIR="$(mktemp -d)"
 
 	DRY_RUN="false"
 	TALENT_MODE="check"

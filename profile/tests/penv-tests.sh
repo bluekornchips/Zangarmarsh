@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-# Test file for penv function in tools/functions.sh
+# Test file for penv function in profile/functions.sh
 
 GIT_ROOT="$(git rev-parse --show-toplevel)"
 SCRIPT="$GIT_ROOT/profile/functions.sh"
@@ -50,19 +50,22 @@ EOF
 
 # Setup test environment for Python virtual environment testing
 setup() {
-	local test_dir
-	test_dir=$(mktemp -d)
-	cd "$test_dir" || exit 1
+	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
+
+	TEST_DIR="$(mktemp -d "${base}/penv-test.XXXXXX")"
+	cd "${TEST_DIR}" || return 1
 
 	source "$SCRIPT"
 
 	setup_common_mocks
 
 	PLATFORM="linux"
+	PLATFORM_OS="linux"
 	ZANGARMARSH_VERBOSE=true
 
-	export TEST_DIR="$test_dir"
+	export TEST_DIR
 	export PLATFORM
+	export PLATFORM_OS
 	export ZANGARMARSH_VERBOSE
 }
 
@@ -90,14 +93,14 @@ teardown() {
 	echo "$output" | grep -q "Use 'penv --help'"
 }
 
-@test "penv should fail with invalid Python version" {
+@test "penv:: fail with invalid Python version" {
 	run penv python9.99
 	[[ "$status" -ne 0 ]]
 	echo "$output" | grep -q "python9.99 not found"
 	echo "$output" | grep -q "Available Python versions:"
 }
 
-@test "penv should use default python3 when no version specified" {
+@test "penv:: use default python3 when no version specified" {
 	# Mock python3 to succeed
 	mock_command "python3" "Python 3.9.7"
 	mock_command "python3 -m venv .venv" "Virtual environment created successfully"
@@ -107,7 +110,7 @@ teardown() {
 	echo "$output" | grep -q "Using Python: python3"
 }
 
-@test "penv should create virtual environment with default Python" {
+@test "penv:: create virtual environment with default Python" {
 	run penv
 	[[ "$status" -eq 0 ]]
 	[[ -d ".venv" ]]
@@ -115,7 +118,7 @@ teardown() {
 	echo "$output" | grep -q "Virtual environment setup complete"
 }
 
-@test "penv should clean up cache files during creation" {
+@test "penv:: clean up cache files during creation" {
 	mock_dir_exists "__pycache__" true
 	mock_dir_exists ".mypy_cache" true
 	mock_dir_exists ".pytest_cache" true
@@ -130,7 +133,7 @@ teardown() {
 	mock_file_exists "test.pyc" false
 }
 
-@test "penv should activate existing virtual environment" {
+@test "penv:: activate existing virtual environment" {
 	setup_common_mocks
 
 	mkdir -p .venv/bin
@@ -166,7 +169,7 @@ teardown() {
 	[[ ! -f ".venv/test_file" ]]
 }
 
-@test "penv should install dependencies from pyproject.toml" {
+@test "penv:: install dependencies from pyproject.toml" {
 	mock_command "pip install -e ." "Requirement already satisfied: test-project in ./.venv/lib/python3.9/site-packages"
 
 	create_mock_dependency_file "pyproject"
@@ -175,7 +178,7 @@ teardown() {
 	echo "$output" | grep -q "Found pyproject.toml. Installing with pip"
 }
 
-@test "penv should install dependencies from requirements.txt" {
+@test "penv:: install dependencies from requirements.txt" {
 	mock_command "pip install -r requirements.txt" "Requirement already satisfied: pytest in ./.venv/lib/python3.9/site-packages"
 
 	create_mock_dependency_file "requirements"
@@ -184,20 +187,20 @@ teardown() {
 	echo "$output" | grep -q "Found requirements.txt. Installing dependencies"
 }
 
-@test "penv should handle missing dependency files gracefully" {
+@test "penv:: handle missing dependency files gracefully" {
 	run penv
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "No dependency files found"
 }
 
-@test "penv should show Python and pip versions in output" {
+@test "penv:: show Python and pip versions in output" {
 	run penv
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Python version:"
 	echo "$output" | grep -q "Pip version:"
 }
 
-@test "penv should handle failed virtual environment creation" {
+@test "penv:: handle failed virtual environment creation" {
 	# Mock python3 to fail
 	python3() { return 1; }
 	export -f python3
@@ -207,7 +210,7 @@ teardown() {
 	echo "$output" | grep -q "Failed to create virtual environment"
 }
 
-@test "penv should handle failed virtual environment activation" {
+@test "penv:: handle failed virtual environment activation" {
 
 	mkdir -p .venv/bin
 
@@ -217,7 +220,7 @@ teardown() {
 	echo "$output" | grep -q "Creating virtual environment"
 }
 
-@test "penv should preserve existing environment when no force flag" {
+@test "penv:: preserve existing environment when no force flag" {
 	setup_common_mocks
 
 	# Create actual test directory ad files
@@ -230,7 +233,7 @@ teardown() {
 	[[ -f ".venv/original_file" ]]
 }
 
-@test "penv should handle multiple flags correctly" {
+@test "penv:: handle multiple flags correctly" {
 	setup_common_mocks
 
 	mkdir -p .venv
@@ -241,8 +244,9 @@ teardown() {
 	echo "$output" | grep -q "Removing existing virtual environment"
 }
 
-@test "penv should handle platform-specific behavior" {
+@test "penv:: handle platform-specific behavior" {
 	export PLATFORM="macos"
+	export PLATFORM_OS="macos"
 	# Mock python3 to fail
 	python3() { return 1; }
 	export -f python3

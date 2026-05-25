@@ -20,8 +20,10 @@ setup() {
 # Mocks
 ########################################################
 mock_commands_success() {
+	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
 	local mock_dir
-	mock_dir="$(mktemp -d)"
+
+	mock_dir="$(mktemp -d "${base}/hearthstone-mock.XXXXXX")"
 
 	echo '#!/usr/bin/env bash' >"$mock_dir/trilliax.sh"
 	echo 'echo "trilliax mocked"' >>"$mock_dir/trilliax.sh"
@@ -31,20 +33,17 @@ mock_commands_success() {
 	echo 'echo "questlog mocked"' >>"$mock_dir/questlog.sh"
 	chmod +x "$mock_dir/questlog.sh"
 
-	echo '#!/usr/bin/env bash' >"$mock_dir/gdlf.sh"
-	echo 'echo "gdlf mocked"' >>"$mock_dir/gdlf.sh"
-	chmod +x "$mock_dir/gdlf.sh"
-
 	TRILLIAX_SCRIPT="$mock_dir/trilliax.sh"
 	QUESTLOG_SCRIPT="$mock_dir/questlog.sh"
-	GDLF_SCRIPT="$mock_dir/gdlf.sh"
 
-	export TRILLIAX_SCRIPT QUESTLOG_SCRIPT GDLF_SCRIPT
+	export TRILLIAX_SCRIPT QUESTLOG_SCRIPT
 }
 
 mock_commands_failure() {
+	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
 	local mock_dir
-	mock_dir="$(mktemp -d)"
+
+	mock_dir="$(mktemp -d "${base}/hearthstone-mock.XXXXXX")"
 
 	echo '#!/usr/bin/env bash' >"$mock_dir/trilliax.sh"
 	echo 'echo "trilliax failed" >&2' >>"$mock_dir/trilliax.sh"
@@ -55,15 +54,10 @@ mock_commands_failure() {
 	echo 'echo "questlog succeeded"' >>"$mock_dir/questlog.sh"
 	chmod +x "$mock_dir/questlog.sh"
 
-	echo '#!/usr/bin/env bash' >"$mock_dir/gdlf.sh"
-	echo 'echo "gdlf succeeded"' >>"$mock_dir/gdlf.sh"
-	chmod +x "$mock_dir/gdlf.sh"
-
 	TRILLIAX_SCRIPT="$mock_dir/trilliax.sh"
 	QUESTLOG_SCRIPT="$mock_dir/questlog.sh"
-	GDLF_SCRIPT="$mock_dir/gdlf.sh"
 
-	export TRILLIAX_SCRIPT QUESTLOG_SCRIPT GDLF_SCRIPT
+	export TRILLIAX_SCRIPT QUESTLOG_SCRIPT
 }
 
 ########################################################
@@ -84,60 +78,6 @@ mock_commands_failure() {
 }
 
 ########################################################
-# vscodeoverride
-########################################################
-@test "vscodeoverride:: syncs when directory is empty" {
-	FORCE=false
-	export FORCE
-
-	test_dir="$(mktemp -d)"
-	cd "$test_dir" || return 1
-
-	run vscodeoverride
-	[[ "$status" -eq 0 ]]
-
-	grep -q "vscodeoverride:: VSCode settings synced" <<<"$output"
-	[[ -d "$test_dir/.vscode" ]]
-
-	cd - >/dev/null || return 1
-}
-
-@test "vscodeoverride:: skips when directory exists and FORCE is false" {
-	FORCE=false
-	export FORCE
-
-	test_dir="$(mktemp -d)"
-	mkdir -p "$test_dir/.vscode"
-	echo "existing" >"$test_dir/.vscode/settings.json"
-	cd "$test_dir" || return 1
-
-	run vscodeoverride
-	[[ "$status" -eq 0 ]]
-
-	grep -q "vscodeoverride:: VSCode settings already exist" <<<"$output"
-	grep -q "use --force to replace" <<<"$output"
-
-	cd - >/dev/null || return 1
-}
-
-@test "vscodeoverride:: replaces when FORCE is true" {
-	FORCE=true
-	export FORCE
-
-	test_dir="$(mktemp -d)"
-	mkdir -p "$test_dir/.vscode"
-	echo "existing" >"$test_dir/.vscode/settings.json"
-	cd "$test_dir" || return 1
-
-	run vscodeoverride
-	[[ "$status" -eq 0 ]]
-
-	grep -q "vscodeoverride:: VSCode settings synced (replaced existing)" <<<"$output"
-
-	cd - >/dev/null || return 1
-}
-
-########################################################
 # execute_operations
 ########################################################
 @test "execute_operations:: runs all commands successfully without FORCE" {
@@ -150,8 +90,6 @@ mock_commands_failure() {
 
 	! grep -q "execute_operations:: Running: trilliax --all" <<<"$output"
 	grep -q "execute_operations:: Running: questlog" <<<"$output"
-	grep -q "execute_operations:: Running: vscodeoverride" <<<"$output"
-	grep -q "execute_operations:: Running: gdlf --install" <<<"$output"
 }
 
 @test "execute_operations:: runs all commands including trilliax with FORCE" {
@@ -164,8 +102,6 @@ mock_commands_failure() {
 
 	grep -q "execute_operations:: Running: trilliax --all" <<<"$output"
 	grep -q "execute_operations:: Running: questlog" <<<"$output"
-	grep -q "execute_operations:: Running: vscodeoverride" <<<"$output"
-	grep -q "execute_operations:: Running: gdlf --install" <<<"$output"
 }
 
 @test "execute_operations:: fails when trilliax fails with FORCE" {
@@ -177,65 +113,6 @@ mock_commands_failure() {
 	[[ "$status" -eq 1 ]]
 
 	grep -q "execute_operations:: Failed to execute: trilliax --all" <<<"$output"
-}
-
-@test "execute_operations:: passes force flag to gdlf when FORCE is true" {
-	local mock_dir
-	mock_dir="$(mktemp -d)"
-
-	echo '#!/usr/bin/env bash' >"$mock_dir/trilliax.sh"
-	echo 'exit 0' >>"$mock_dir/trilliax.sh"
-	chmod +x "$mock_dir/trilliax.sh"
-
-	echo '#!/usr/bin/env bash' >"$mock_dir/questlog.sh"
-	echo 'exit 0' >>"$mock_dir/questlog.sh"
-	chmod +x "$mock_dir/questlog.sh"
-
-	echo '#!/usr/bin/env bash' >"$mock_dir/gdlf.sh"
-	echo 'echo "Args: $@"' >>"$mock_dir/gdlf.sh"
-	echo 'exit 0' >>"$mock_dir/gdlf.sh"
-	chmod +x "$mock_dir/gdlf.sh"
-
-	TRILLIAX_SCRIPT="$mock_dir/trilliax.sh"
-	QUESTLOG_SCRIPT="$mock_dir/questlog.sh"
-	GDLF_SCRIPT="$mock_dir/gdlf.sh"
-	FORCE=true
-	export TRILLIAX_SCRIPT QUESTLOG_SCRIPT GDLF_SCRIPT FORCE
-
-	run execute_operations
-	[[ "$status" -eq 0 ]]
-
-	grep -q "Args: -i -f" <<<"$output"
-}
-
-@test "execute_operations:: does not pass force flag to gdlf when FORCE is false" {
-	local mock_dir
-	mock_dir="$(mktemp -d)"
-
-	echo '#!/usr/bin/env bash' >"$mock_dir/trilliax.sh"
-	echo 'exit 0' >>"$mock_dir/trilliax.sh"
-	chmod +x "$mock_dir/trilliax.sh"
-
-	echo '#!/usr/bin/env bash' >"$mock_dir/questlog.sh"
-	echo 'exit 0' >>"$mock_dir/questlog.sh"
-	chmod +x "$mock_dir/questlog.sh"
-
-	echo '#!/usr/bin/env bash' >"$mock_dir/gdlf.sh"
-	echo 'echo "Args: $@"' >>"$mock_dir/gdlf.sh"
-	echo 'exit 0' >>"$mock_dir/gdlf.sh"
-	chmod +x "$mock_dir/gdlf.sh"
-
-	TRILLIAX_SCRIPT="$mock_dir/trilliax.sh"
-	QUESTLOG_SCRIPT="$mock_dir/questlog.sh"
-	GDLF_SCRIPT="$mock_dir/gdlf.sh"
-	FORCE=false
-	export TRILLIAX_SCRIPT QUESTLOG_SCRIPT GDLF_SCRIPT FORCE
-
-	run execute_operations
-	[[ "$status" -eq 0 ]]
-
-	grep -q "Args: -i" <<<"$output"
-	! grep -q "Args: -i -f" <<<"$output"
 }
 
 ########################################################

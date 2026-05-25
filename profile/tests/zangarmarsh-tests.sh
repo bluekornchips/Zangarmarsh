@@ -3,36 +3,33 @@
 # Test file for zangarmarsh.sh
 # Tests the main zangarmarsh script functionality and shell compatibility
 
-GIT_ROOT="$(git rev-parse --show-toplevel)"
-SCRIPT="$GIT_ROOT/zangarmarsh.sh"
-[[ -f "$SCRIPT" ]] || {
-	echo "Script not found: $SCRIPT" >&2
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+SCRIPT="${REPO_ROOT}/zangarmarsh.sh"
+[[ -f "${SCRIPT}" ]] || {
+	echo "Script not found: ${SCRIPT}" >&2
 	exit 1
 }
 
-source "$GIT_ROOT/profile/tests/fixtures.sh"
+source "${REPO_ROOT}/profile/tests/fixtures.sh"
 
 # Setup test environment with mock git repository
 setup() {
-	local test_dir
-	test_dir=$(mktemp -d)
-	cd "$test_dir" || exit 1
+	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
+
+	TEST_DIR="$(mktemp -d "${base}/zangarmarsh-test.XXXXXX")"
+	cd "${TEST_DIR}" || return 1
 
 	# Create a mock git repository for testing using fixtures
-	create_mock_git_repo "$test_dir"
-	TEST_DIR="$test_dir"
-	ZANGARMARSH_ROOT="$test_dir"
+	create_mock_git_repo "${TEST_DIR}"
+	ZANGARMARSH_ROOT="${TEST_DIR}"
 	ZANGARMARSH_VERBOSE=true
 
 	# Copy the profile and tools directories to the test directory
-	cp -r "$GIT_ROOT/profile" "$test_dir"
-	cp -r "$GIT_ROOT/tools" "$test_dir"
-	cp "$GIT_ROOT/zangarmarsh.sh" "$test_dir"
+	cp -r "${REPO_ROOT}/profile" "${TEST_DIR}"
+	cp -r "${REPO_ROOT}/tools" "${TEST_DIR}"
+	cp "${REPO_ROOT}/zangarmarsh.sh" "${TEST_DIR}"
 
-	# Set GIT_ROOT to the test directory _after_ copying files
-	GIT_ROOT="$test_dir"
-
-	export TEST_DIR="$test_dir"
+	export TEST_DIR
 	export ZANGARMARSH_ROOT
 	export ZANGARMARSH_VERBOSE
 }
@@ -42,79 +39,62 @@ teardown() {
 	rm -rf "$TEST_DIR"
 }
 
-@test "zangarmarsh should load successfully with default settings" {
+@test "zangarmarsh:: load successfully with default settings" {
 	run source "$SCRIPT"
 	[[ "$status" -eq 0 ]]
 }
 
-@test "zangarmarsh should set ZANGARMARSH_ROOT to script directory" {
+@test "zangarmarsh:: set ZANGARMARSH_ROOT to script directory" {
 	source "$TEST_DIR/zangarmarsh.sh"
 	[[ "$ZANGARMARSH_ROOT" == "$TEST_DIR" ]]
 }
 
-@test "zangarmarsh should export required variables" {
+@test "zangarmarsh:: export required variables" {
 	source "$SCRIPT"
 	[[ -n "$ZANGARMARSH_ROOT" ]]
 }
 
-@test "zangarmarsh should set ZANGARMARSH_VERBOSE default to empty" {
+@test "zangarmarsh:: set ZANGARMARSH_VERBOSE default to empty" {
 	unset ZANGARMARSH_VERBOSE
 	source "$SCRIPT"
 	[[ -z "${ZANGARMARSH_VERBOSE:-}" ]]
 }
 
-@test "zangarmarsh should preserve existing ZANGARMARSH_VERBOSE value" {
+@test "zangarmarsh:: preserve existing ZANGARMARSH_VERBOSE value" {
 	export ZANGARMARSH_VERBOSE=true
 	source "$SCRIPT"
 	[[ "$ZANGARMARSH_VERBOSE" == "true" ]]
 }
 
-@test "zangarmarsh should not output debug info when verbose is false" {
+@test "zangarmarsh:: not output debug info when verbose is false" {
 	export ZANGARMARSH_VERBOSE=false
 	run source "$SCRIPT" 2>&1
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -v -q "Loading Zangarmarsh"
 }
 
-@test "zangarmarsh should load in non-interactive shells" {
+@test "zangarmarsh:: load in non-interactive shells" {
 	run source "$SCRIPT"
 	[[ "$status" -eq 0 ]]
 }
 
-@test "zangarmarsh should exit with error when not in git repository" {
+@test "load_common_components:: sources without requiring a git repository" {
 	local temp_dir
-	temp_dir=$(mktemp -d)
-	cd "$temp_dir"
 
-	cat >test_zangarmarsh.sh <<'EOF'
-#!/usr/bin/env bash
-ZANGARMARSH_VERBOSE="${ZANGARMARSH_VERBOSE:-false}"
+	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
 
-# This should fail since we're not in a git repo
-ZANGARMARSH_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
-if [[ -z "$ZANGARMARSH_ROOT" ]]; then
-    echo "Error: ZANGARMARSH_ROOT is not set" >&2
-    exit 1
-fi
+	temp_dir="$(mktemp -d "${base}/zangarmarsh-load-test.XXXXXX")"
+	cd "${temp_dir}" || return 1
 
-export ZANGARMARSH_VERBOSE
-export ZANGARMARSH_ROOT
+	run bash -c "source '${SCRIPT}' && printf '%s\n' \"\${ZANGARMARSH_ROOT}\""
+	[[ "${status}" -eq 0 ]]
+	echo "${output}" | grep -q "${REPO_ROOT}"
 
-load_zangarmarsh(){
-    return 0
+	cd - >/dev/null || return 1
+	rm -rf "${temp_dir}"
 }
 
-load_zangarmarsh
-EOF
-
-	run source test_zangarmarsh.sh
-	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "Error: ZANGARMARSH_ROOT is not set"
-
-	rm -rf "$temp_dir"
-}
-
-@test "zangarmarsh should load every time without errors" {
+@test "zangarmarsh:: load every time without errors" {
 	run source "$SCRIPT"
 	[[ "$status" -eq 0 ]]
 	run source "$SCRIPT"
@@ -122,7 +102,7 @@ EOF
 }
 
 # Shell compatibility tests
-@test "zangarmarsh should work with bash" {
+@test "zangarmarsh:: work with bash" {
 	if command -v bash >/dev/null 2>&1; then
 		if bash -c "source '$SCRIPT'"; then
 			: # Test passed
@@ -134,7 +114,7 @@ EOF
 	fi
 }
 
-@test "zangarmarsh should work with zsh if available" {
+@test "zangarmarsh:: work with zsh if available" {
 	if command -v zsh >/dev/null 2>&1; then
 		if zsh -c "source '$SCRIPT'"; then
 			: # Test passed
@@ -146,7 +126,7 @@ EOF
 	fi
 }
 
-@test "zangarmarsh should handle special characters in paths" {
+@test "zangarmarsh:: handle special characters in paths" {
 	local test_path_with_specials
 	test_path_with_specials="$TEST_DIR/path with spaces and (parentheses)"
 	mkdir -p "$test_path_with_specials"
@@ -156,7 +136,7 @@ EOF
 	[ "$status" -eq 0 ]
 }
 
-@test "zangarmarsh should handle very long paths" {
+@test "zangarmarsh:: handle very long paths" {
 	local long_path
 	local i
 	long_path="$TEST_DIR"
@@ -170,7 +150,7 @@ EOF
 	[ "$status" -eq 0 ]
 }
 
-@test "zangarmarsh should handle unicode characters in paths" {
+@test "zangarmarsh:: handle unicode characters in paths" {
 	UNICODE_PATH="$TEST_DIR/test_path/rocket/celebration"
 	mkdir -p "$UNICODE_PATH"
 	cd "$UNICODE_PATH"

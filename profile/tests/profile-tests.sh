@@ -18,16 +18,17 @@ source "$GIT_ROOT/profile/tests/fixtures.sh"
 
 # Setup test environment for zsh profile testing
 setup() {
-	local test_dir
-	test_dir=$(mktemp -d)
-	cd "$test_dir" || exit 1
+	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
 
-	export TEST_DIR="$test_dir"
+	TEST_DIR="$(mktemp -d "${base}/profile-test.XXXXXX")"
+	cd "${TEST_DIR}" || return 1
+
+	export TEST_DIR
 	export USER="frodo"
 	export HOSTNAME="bag-end"
-	export HOME="$test_dir"
-	export PWD="$test_dir"
-	export ZSH="$test_dir/.oh-my-zsh"
+	export HOME="${TEST_DIR}"
+	export PWD="${TEST_DIR}"
+	export ZSH="${TEST_DIR}/.oh-my-zsh"
 	export ZANGARMARSH_ROOT="$GIT_ROOT"
 	export ZANGARMARSH_VERBOSE=true
 
@@ -44,75 +45,75 @@ teardown() {
 }
 
 # Core loading tests
-@test "profile should load successfully in zsh" {
+@test "profile:: load successfully in zsh" {
 	run zsh -c "source '$SCRIPT'"
 	[ "$status" -eq 0 ]
 }
 
-@test "profile should set ZSH environment variable" {
+@test "profile:: set ZSH environment variable" {
 	run zsh -c "source '$SCRIPT' && echo \$ZSH"
 	[ "$status" -eq 0 ]
 	[[ -n "$output" ]]
 }
 
-@test "profile should set ZSH_THEME variable" {
+@test "profile:: set ZSH_THEME variable" {
 	run zsh -c "source '$SCRIPT' && echo \$ZSH_THEME"
 	[ "$status" -eq 0 ]
 	echo "$output" | grep -q "robbyrussell"
 }
 
-@test "profile should set plugins array" {
+@test "profile:: set plugins array" {
 	run zsh -c "source '$SCRIPT' && echo \${plugins[@]}"
 	[ "$status" -eq 0 ]
 	echo "$output" | grep -q "git"
 	echo "$output" | grep -q "zsh-autosuggestions"
 }
 
-@test "profile should set HISTFILE variable" {
+@test "profile:: set HISTFILE variable" {
 	run zsh -c "source '$SCRIPT' && echo \$HISTFILE"
 	[ "$status" -eq 0 ]
 	echo "$output" | grep -q ".zsh_history"
 }
 
-@test "profile should set HISTSIZE variable" {
+@test "profile:: set HISTSIZE variable" {
 	run zsh -c "source '$SCRIPT' && echo \$HISTSIZE"
 	[ "$status" -eq 0 ]
 	echo "$output" | grep -q "100000"
 }
 
-@test "profile should set SAVEHIST variable" {
+@test "profile:: set SAVEHIST variable" {
 	run zsh -c "source '$SCRIPT' && echo \$SAVEHIST"
 	[ "$status" -eq 0 ]
 	echo "$output" | grep -q "100000"
 }
 
-@test "profile should handle missing Oh My Zsh gracefully" {
+@test "profile:: handle missing Oh My Zsh gracefully" {
 	rm -rf "$ZSH"
 	run zsh -c "source '$SCRIPT'"
 	[ "$status" -eq 0 ]
 	echo "$output" | grep -q "Oh My Zsh is not installed"
 }
 
-@test "profile should handle missing zsh-autosuggestions plugin gracefully" {
+@test "profile:: handle missing zsh-autosuggestions plugin gracefully" {
 	rm -rf "$ZSH/plugins/zsh-autosuggestions"
 	run zsh -c "source '$SCRIPT'"
 	[ "$status" -eq 0 ]
 	echo "$output" | grep -q "zsh-autosuggestions plugin is not installed"
 }
 
-@test "profile should set ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE when plugin is available" {
+@test "profile:: set ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE when plugin is available" {
 	run zsh -c "source '$SCRIPT' && echo \$ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE"
 	[ "$status" -eq 0 ]
 	echo "$output" | grep -q "fg=#00ffff,bg=#2d2f40,bold"
 }
 
-@test "profile should load custom zsh files" {
+@test "profile:: load custom zsh files" {
 	run zsh -c "source '$SCRIPT' && echo \$ZANGARMARSH_ROOT"
 	[ "$status" -eq 0 ]
 	[[ -n "$output" ]]
 }
 
-@test "profile should set _comp_setup variable after completion setup" {
+@test "profile:: set _comp_setup variable after completion setup" {
 	run zsh -c "source '$SCRIPT' && echo \$_comp_setup"
 	[ "$status" -eq 0 ]
 	echo "$output" | grep -q "1"

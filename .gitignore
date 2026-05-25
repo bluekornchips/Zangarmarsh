@@ -31,6 +31,22 @@ CLAUDE.md
 test_*
 temp_*
 *.test
+/gw-test.*/
+/penv-test.*/
+/nvm-test.*/
+/profile-test.*/
+/zangarmarsh-test.*/
+/zangarmarsh-load-test.*/
+/list-changed-files-test.*/
+/prompt-test.*/
+/quest-log-test.*/
+/vscodeoverride-dest.*/
+/vscodeoverride-no-template.*/
+/hearthstone-mock.*/
+/trilliax-test.*/
+/talent-calculator-test.*/
+/brew-tools-test.*/
+/other-tools-test.*/
 
 # Backup files
 *.bak

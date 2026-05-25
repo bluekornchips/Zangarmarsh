@@ -8,7 +8,6 @@ GIT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 DEFAULT_TRILLIAX_SCRIPT="$GIT_ROOT/tools/trilliax/trilliax.sh"
 DEFAULT_QUESTLOG_SCRIPT="$GIT_ROOT/tools/quest-log/quest-log.sh"
-DEFAULT_GDLF_SCRIPT="$HOME/bluekornchips/gandalf/gandalf.sh"
 
 # Default values
 DEFAULT_FORCE=false
@@ -21,11 +20,48 @@ Hearthstone setup and sync tool. Runs a series of setup and sync commands
 to initialize and synchronize the Zangarmarsh development environment.
 
 OPTIONS:
-	-y, --yes     Skip confirmation prompt
-	-f, --force   Force operations (replace existing VSCode settings, run trilliax, pass force to gdlf)
-	-h, --help    Show this help message
+	-y, --yes           Skip confirmation prompt
+	-f, --force         Force operations, run trilliax
+	-h, --help          Show this help message
+	--health-check      Validate local dependencies and script paths
 
 EOF
+}
+
+# Check required external commands and scripts
+#
+# Side Effects:
+# - Writes missing dependency messages to stderr
+#
+# Returns:
+# - 0 when checks pass
+# - 1 when any check fails
+health_check() {
+	local errors=0
+	local script_path
+
+	for script_path in \
+		"${TRILLIAX_SCRIPT:-${DEFAULT_TRILLIAX_SCRIPT}}" \
+		"${QUESTLOG_SCRIPT:-${DEFAULT_QUESTLOG_SCRIPT}}"; do
+		if [[ ! -f "${script_path}" ]]; then
+			echo "health_check:: script not found: ${script_path}" >&2
+			errors=$((errors + 1))
+		fi
+	done
+
+	if ! command -v jq >/dev/null 2>&1; then
+		echo "health_check:: jq is not installed" >&2
+		errors=$((errors + 1))
+	fi
+
+	if [[ "${errors}" -eq 0 ]]; then
+		echo "health_check:: passed"
+		return 0
+	fi
+
+	echo "health_check:: failed with ${errors} error(s)" >&2
+
+	return 1
 }
 
 # Prompt user to confirm proceeding with destructive operations
@@ -41,20 +77,12 @@ confirm_proceed() {
 	local build_deck_msg
 	local questlog_msg
 	local trilliax_msg
-	local vscodeoverride_msg
-	local gdlf_msg
 	local msg
 	local response
 
 	build_deck_msg="build_deck: Build the deck, install packages, etc."
-	questlog_msg="questlog: Generate agentic tool rules"
+	questlog_msg="questlog: Generate agentic tool rules and sync VSCode settings"
 	trilliax_msg="trilliax --all: Clean generated files and directories"
-	vscodeoverride_msg="vscodeoverride: Sync VSCode settings"
-	gdlf_msg="gdlf --install: Install Gandalf MCP server"
-
-	if [[ "${FORCE:-}" = "true" ]]; then
-		gdlf_msg="${gdlf_msg} (with --force)"
-	fi
 
 	cat <<EOF
 This script performs destructive operations. You will be prompted
@@ -63,7 +91,7 @@ to confirm before proceeding unless the -y flag is provided.
 OPERATIONS:
 EOF
 
-	for msg in "$build_deck_msg" "$questlog_msg" "$vscodeoverride_msg" "$gdlf_msg" "$trilliax_msg"; do
+	for msg in "$build_deck_msg" "$questlog_msg" "$trilliax_msg"; do
 		echo "${msg}"
 	done
 
@@ -94,56 +122,6 @@ verify_git_repository() {
 	if [[ ! -d "${GIT_ROOT}/tools" ]]; then
 		echo "verify_git_repository:: Invalid Zangarmarsh structure: tools directory not found" >&2
 		return 1
-	fi
-
-	return 0
-}
-
-# Sync VSCode settings from Zangarmarsh root to git root
-#
-# Outputs:
-# - Status messages to stdout
-# - Error messages to stderr if copy operation fails
-#
-# Returns:
-# - 0 if sync is successful
-# - 1 if copy operation fails
-vscodeoverride() {
-	if [[ -z "${GIT_ROOT:-}" ]]; then
-		echo "vscodeoverride:: GIT_ROOT is not set" >&2
-		return 1
-	fi
-
-	local target_git_root
-	if target_git_root=$(git rev-parse --show-toplevel 2>/dev/null); then
-		:
-	else
-		target_git_root="${PWD}"
-	fi
-
-	if [[ ! -d "${GIT_ROOT}/.vscode" ]]; then
-		echo "vscodeoverride:: VSCode settings directory not found in ${GIT_ROOT}/.vscode" >&2
-		return 1
-	fi
-
-	mkdir -p "${target_git_root}/.vscode"
-
-	if [[ "${FORCE:-}" = "true" ]]; then
-		if cp -rf "${GIT_ROOT}/.vscode/"* "${target_git_root}/.vscode/" 2>/dev/null; then
-			echo "vscodeoverride:: VSCode settings synced to ${target_git_root}/.vscode (replaced existing)"
-		else
-			echo "vscodeoverride:: Failed to copy VSCode settings" >&2
-			return 1
-		fi
-	elif [[ ! "$(ls -A "${target_git_root}/.vscode" 2>/dev/null)" ]]; then
-		if cp -rf "${GIT_ROOT}/.vscode/"* "${target_git_root}/.vscode/" 2>/dev/null; then
-			echo "vscodeoverride:: VSCode settings synced to ${target_git_root}/.vscode"
-		else
-			echo "vscodeoverride:: Failed to copy VSCode settings" >&2
-			return 1
-		fi
-	else
-		echo "vscodeoverride:: VSCode settings already exist in ${target_git_root}/.vscode (use --force to replace)"
 	fi
 
 	return 0
@@ -217,7 +195,7 @@ build_deck() {
 # - 0 if all operations complete successfully
 # - 1 if any operation fails
 execute_operations() {
-	if [[ -z "${TRILLIAX_SCRIPT:-}" ]] || [[ -z "${QUESTLOG_SCRIPT:-}" ]] || [[ -z "${GDLF_SCRIPT:-}" ]]; then
+	if [[ -z "${TRILLIAX_SCRIPT:-}" ]] || [[ -z "${QUESTLOG_SCRIPT:-}" ]]; then
 		echo "execute_operations:: Required script variables are not set" >&2
 		return 1
 	fi
@@ -242,25 +220,6 @@ execute_operations() {
 		return 1
 	fi
 
-	echo "execute_operations:: Running: vscodeoverride"
-	if ! vscodeoverride; then
-		echo "execute_operations:: Failed to execute: vscodeoverride" >&2
-		return 1
-	fi
-
-	echo "execute_operations:: Running: gdlf --install"
-	local gdlf_args=("-i")
-	if [[ "${FORCE:-}" = "true" ]]; then
-		gdlf_args+=("-f")
-	fi
-	if [[ "${skip_confirmation:-}" = "true" ]]; then
-		gdlf_args+=("-y")
-	fi
-	if ! "${GDLF_SCRIPT}" "${gdlf_args[@]}"; then
-		echo "execute_operations:: Failed to execute: gdlf ${gdlf_args[*]}" >&2
-		return 1
-	fi
-
 	return 0
 }
 
@@ -268,11 +227,9 @@ run_hearthstone() {
 	local skip_confirmation
 	local trilliax_script
 	local questlog_script
-	local gdlf_script
 
 	trilliax_script="${TRILLIAX_SCRIPT:-${DEFAULT_TRILLIAX_SCRIPT}}"
 	questlog_script="${QUESTLOG_SCRIPT:-${DEFAULT_QUESTLOG_SCRIPT}}"
-	gdlf_script="${GDLF_SCRIPT:-${DEFAULT_GDLF_SCRIPT}}"
 	FORCE="${FORCE:-${DEFAULT_FORCE}}"
 
 	skip_confirmation=false
@@ -291,6 +248,10 @@ run_hearthstone() {
 			usage
 			return 0
 			;;
+		--health-check)
+			health_check
+			return $?
+			;;
 		*)
 			echo "run_hearthstone:: Unknown option '${1}'" >&2
 			echo "run_hearthstone:: Use '$(basename "$0") --help' for usage information" >&2
@@ -301,13 +262,11 @@ run_hearthstone() {
 
 	TRILLIAX_SCRIPT="${trilliax_script}"
 	QUESTLOG_SCRIPT="${questlog_script}"
-	GDLF_SCRIPT="${gdlf_script}"
 
 	export FORCE
 	export skip_confirmation
 	export TRILLIAX_SCRIPT
 	export QUESTLOG_SCRIPT
-	export GDLF_SCRIPT
 
 	if ! verify_git_repository; then
 		return 1

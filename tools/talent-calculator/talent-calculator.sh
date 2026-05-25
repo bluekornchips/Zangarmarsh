@@ -46,6 +46,7 @@ Usage: $(basename "$0") [OPTIONS]
 
 OPTIONS:
   -h, --help          Show this help message
+  --health-check      Validate curl and brew availability
   --spec              Install missing tools
   --respec            Remove existing installations before reinstalling
   -r, --dry-run       Show what would be installed without making changes
@@ -317,6 +318,34 @@ install_core_tools() {
 	return 0
 }
 
+# Validate prerequisites without installing tools
+#
+# Returns:
+# - 0 when curl is available and brew is installed or installable
+# - 1 when a required dependency is missing
+health_check() {
+	local errors=0
+
+	if ! command -v curl >/dev/null 2>&1; then
+		echo "health_check:: curl is not installed" >&2
+		errors=$((errors + 1))
+	fi
+
+	if ! command -v brew >/dev/null 2>&1; then
+		echo "health_check:: brew is not installed" >&2
+		errors=$((errors + 1))
+	fi
+
+	if [[ "${errors}" -eq 0 ]]; then
+		echo "health_check:: passed"
+		return 0
+	fi
+
+	echo "health_check:: failed with ${errors} error(s)" >&2
+
+	return 1
+}
+
 run_talent_calculator() {
 	local dry_run="false"
 	local talent_mode="check"
@@ -327,6 +356,10 @@ run_talent_calculator() {
 		-h | --help)
 			usage
 			return 0
+			;;
+		--health-check)
+			health_check
+			return $?
 			;;
 		-r | --dry-run)
 			dry_run="true"

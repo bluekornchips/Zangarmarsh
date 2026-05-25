@@ -614,51 +614,6 @@ install_rules() {
 # - Error messages to stderr if copy operation fails
 #
 # Returns:
-# - 0 if sync is successful
-# - 1 if copy operation fails
-vscodeoverride() {
-	if [[ -z "${GIT_ROOT:-}" ]]; then
-		echo "vscodeoverride:: GIT_ROOT is not set" >&2
-		return 1
-	fi
-
-	echo "vscodeoverride: running"
-
-	local zangarmarsh_root
-	zangarmarsh_root="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-
-	if [[ ! -d "${zangarmarsh_root}/.vscode" ]]; then
-		echo "vscodeoverride:: VSCode settings directory not found in ${zangarmarsh_root}/.vscode" >&2
-		return 1
-	fi
-
-	if [[ "${GIT_ROOT}" == "${zangarmarsh_root}" ]]; then
-		echo "vscodeoverride: complete"
-		return 0
-	fi
-
-	mkdir -p "${GIT_ROOT}/.vscode"
-
-	if [[ "${FORCE:-}" = "true" ]]; then
-		if cp -rf "${zangarmarsh_root}/.vscode/"* "${GIT_ROOT}/.vscode/" 2>/dev/null; then
-			:
-		else
-			echo "vscodeoverride:: Failed to copy VSCode settings" >&2
-			return 1
-		fi
-	elif [[ ! "$(ls -A "${GIT_ROOT}/.vscode" 2>/dev/null)" ]]; then
-		if cp -rf "${zangarmarsh_root}/.vscode/"* "${GIT_ROOT}/.vscode/" 2>/dev/null; then
-			:
-		else
-			echo "vscodeoverride:: Failed to copy VSCode settings" >&2
-			return 1
-		fi
-	fi
-
-	echo "vscodeoverride: complete"
-	return 0
-}
-
 # Print summary statistics
 #
 # Side Effects:
@@ -737,6 +692,14 @@ run_quest_log() {
 	SCRIPT_DIR="$(cd "$(dirname "${SCRIPT_PATH}")" && pwd)"
 	QUEST_LOG_ROOT="${SCRIPT_DIR}"
 	export SCRIPT_DIR
+
+	if [[ ! -f "${SCRIPT_DIR}/../lib/vscodeoverride.sh" ]]; then
+		echo "run_quest_log:: vscodeoverride library not found" >&2
+		return 1
+	fi
+
+	# shellcheck source=../lib/vscodeoverride.sh
+	source "${SCRIPT_DIR}/../lib/vscodeoverride.sh"
 
 	QUEST_DIR="${SCRIPT_DIR}/quests"
 	export QUEST_DIR
