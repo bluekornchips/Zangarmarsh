@@ -52,13 +52,16 @@ if ! load_common_components; then
 	return 1
 fi
 
-SHELL_NAME=$(ps -p "$$" -o comm= 2>/dev/null | tail -1)
-[[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "Shell detection: ZSH_VERSION='${ZSH_VERSION:-}', BASH_VERSION='${BASH_VERSION:-}', SHELL_NAME='$SHELL_NAME'" >&2
-if [[ -n "${ZSH_VERSION:-}" ]] || [[ "$SHELL_NAME" == *zsh ]]; then
+SHELL_NAME=""
+if [[ -z "${ZSH_VERSION:-}" && -z "${BASH_VERSION:-}" ]]; then
+	SHELL_NAME=$(ps -p "$$" -o comm= 2>/dev/null | tail -1)
+fi
+[[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "Shell detection: ZSH_VERSION='${ZSH_VERSION:-}', BASH_VERSION='${BASH_VERSION:-}', SHELL_NAME='${SHELL_NAME}'" >&2
+if [[ -n "${ZSH_VERSION:-}" ]] || [[ "${SHELL_NAME}" == *zsh* ]]; then
 	[[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "Sourcing profile/zsh/profile.sh" >&2
 
 	source "$ZANGARMARSH_ROOT/profile/zsh/profile.sh"
-elif [[ -n "${BASH_VERSION:-}" ]] || [[ "$SHELL_NAME" == *bash ]]; then
+elif [[ -n "${BASH_VERSION:-}" ]] || [[ "${SHELL_NAME}" == *bash* ]]; then
 	[[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "Loading bash components" >&2
 	source "$ZANGARMARSH_ROOT/profile/bash/profile.sh"
 else

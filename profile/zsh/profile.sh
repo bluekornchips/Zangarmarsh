@@ -30,10 +30,8 @@ Or visit: https://github.com/zsh-users/zsh-autosuggestions
 EOF
 fi
 
-# Load zsh-autosuggestions plugin
+# Oh My Zsh loads zsh-autosuggestions from plugins=(); set highlight style only
 if [[ -z "$ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE" ]] && [[ -f "${ZSH}/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh" ]]; then
-
-	source "${ZSH}/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh"
 	ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#00ffff,bg=#2d2f40,bold"
 fi
 

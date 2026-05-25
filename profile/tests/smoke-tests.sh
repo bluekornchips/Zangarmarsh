@@ -30,31 +30,73 @@ setup() {
 	export ZANGARMARSH_VERBOSE=false
 	unset ZANGARMARSH_ROOT
 
-	mkdir -p "${ZSH}/plugins/zsh-autosuggestions"
-	touch "${ZSH}/oh-my-zsh.sh"
-	touch "${ZSH}/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh"
-	printf 'source "%s"\n' "${ZANGARMARSH_SCRIPT}" >"${HOME}/.zshrc"
-
 	return 0
 }
 
 teardown() {
 	[[ -n "${TEST_DIR}" && -d "${TEST_DIR}" ]] && rm -rf "${TEST_DIR}"
+
 	return 0
 }
 
-@test "smoke:: zsh session startup time with zangarmarsh" {
+measure_warm_zsh_load_ms() {
 	local start_ns
 	local end_ns
 	local load_ms
 
+	rm -f "${HOME}/.zcompdump"
+	zsh -i -c 'exit' >/dev/null 2>&1
+
 	start_ns=$(date +%s%N)
 
 	run zsh -i -c 'exit'
-	[[ "${status}" -eq 0 ]]
+	[[ "${status}" -eq 0 ]] || return 1
 
 	end_ns=$(date +%s%N)
 	load_ms=$(((end_ns - start_ns) / 1000000))
+	echo "${load_ms}"
 
-	echo -e "\nzsh session load time: ${load_ms}ms\n" >&0
+	return 0
+}
+
+@test "smoke:: zsh session startup times" {
+	local zm_ms
+	local omz_ms
+	local zm_no_omz_ms
+	local bare_ms
+
+	mkdir -p "${ZSH}/plugins/zsh-autosuggestions"
+	touch "${ZSH}/oh-my-zsh.sh"
+	touch "${ZSH}/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh"
+	printf 'source "%s"\n' "${ZANGARMARSH_SCRIPT}" >"${HOME}/.zshrc"
+	zm_ms="$(measure_warm_zsh_load_ms)" || return 1
+
+	cat >"${HOME}/.zshrc" <<EOF
+export ZSH="${ZSH}"
+ZSH_THEME="robbyrussell"
+plugins=(git zsh-autosuggestions)
+source "\${ZSH}/oh-my-zsh.sh"
+autoload -Uz compinit
+comp_dump="\${HOME}/.zcompdump"
+if [[ -f "\${comp_dump}" && "\${comp_dump}" -nt "\${HOME}/.zshrc" ]]; then
+	compinit -C
+else
+	compinit
+fi
+EOF
+	omz_ms="$(measure_warm_zsh_load_ms)" || return 1
+
+	mkdir -p "${ZSH}"
+	printf 'source "%s"\n' "${ZANGARMARSH_SCRIPT}" >"${HOME}/.zshrc"
+	zm_no_omz_ms="$(measure_warm_zsh_load_ms)" || return 1
+
+	printf '\n' >"${HOME}/.zshrc"
+	bare_ms="$(measure_warm_zsh_load_ms)" || return 1
+
+	cat <<EOF >&3
+zangarmarsh with omz: ${zm_ms}ms
+omz only: ${omz_ms}ms
+zangarmarsh without omz: ${zm_no_omz_ms}ms
+bare zsh: ${bare_ms}ms
+EOF
 }
