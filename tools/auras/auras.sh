@@ -13,8 +13,9 @@ Usage: $(basename "$0") -b|--buff APPIMAGE NAME | -d|--debuff NAME | -h|--help
 
 Creates or refreshes a user .desktop launcher for one AppImage path.
 
-Buff requires the full path to an AppImage and an explicit NAME. NAME is used
-for both the desktop file stem and the desktop entry Name= value.
+Buff requires a path to an AppImage and an explicit NAME. Relative AppImage
+directories are resolved from the current working directory. NAME is used for
+both the desktop file stem and the desktop entry Name= value.
 
 Existing launchers are overwritten only when they were created by this script
 and include the current Auras management marker.
@@ -68,6 +69,60 @@ validate_app_name_segment() {
 		echo "${ctx}:: name must not contain control characters" >&2
 		return 1
 	fi
+
+	return 0
+}
+
+# Resolve an AppImage path to an absolute path
+#
+# Inputs:
+# - $1 appimage_path, path to an AppImage
+# - $2 context label for error messages
+#
+# Outputs:
+# - Absolute AppImage path on stdout
+#
+# Returns:
+# - 0 when the directory can be resolved
+# - 1 when the path is empty, unsafe, or has an unavailable directory
+resolve_appimage_path() {
+	local appimage_path
+	local ctx
+	local appimage_dir
+	local appimage_name
+	local resolved_dir
+
+	appimage_path="$1"
+	ctx="${2:-resolve_appimage_path}"
+
+	if [[ -z "${appimage_path}" ]]; then
+		echo "${ctx}:: AppImage path is required" >&2
+		return 1
+	fi
+
+	if [[ "${appimage_path}" =~ [[:cntrl:]] ]]; then
+		echo "${ctx}:: AppImage path must not contain control characters" >&2
+		return 1
+	fi
+
+	appimage_dir="${appimage_path%/*}"
+	appimage_name="${appimage_path##*/}"
+
+	if [[ "${appimage_dir}" == "${appimage_path}" ]]; then
+		appimage_dir="."
+	fi
+
+	if [[ -z "${appimage_name}" || "${appimage_name}" == "." || "${appimage_name}" == ".." ]]; then
+		echo "${ctx}:: AppImage file name is required" >&2
+		return 1
+	fi
+
+	if ! resolved_dir="$(cd "${appimage_dir}" && pwd -P)"; then
+		echo "${ctx}:: AppImage directory does not exist: ${appimage_dir}" >&2
+		return 1
+	fi
+
+	echo "${resolved_dir}/${appimage_name}"
 
 	return 0
 }
@@ -208,7 +263,7 @@ ensure_desktop_entry_writable() {
 #
 # Inputs:
 # - $1 app_stem, basename for the .desktop file without extension
-# - $2 appimage_path, absolute path to the AppImage
+# - $2 appimage_path, path to the AppImage
 # - $3 display_name, value for the Name= field
 #
 # Side Effects:
@@ -221,6 +276,7 @@ ensure_desktop_entry_writable() {
 write_application_desktop() {
 	local app_stem
 	local appimage_path
+	local resolved_appimage_path
 	local display_name
 	local apps_root
 	local desktop_path
@@ -238,7 +294,11 @@ write_application_desktop() {
 		return 1
 	fi
 
-	if ! validate_appimage_path "${appimage_path}" "write_application_desktop"; then
+	if ! resolved_appimage_path="$(resolve_appimage_path "${appimage_path}" "write_application_desktop")"; then
+		return 1
+	fi
+
+	if ! validate_appimage_path "${resolved_appimage_path}" "write_application_desktop"; then
 		return 1
 	fi
 
@@ -261,7 +321,7 @@ write_application_desktop() {
 [Desktop Entry]
 Type=Application
 Name=${display_name}
-Exec="${appimage_path}" %u
+Exec="${resolved_appimage_path}" %u
 Terminal=false
 ${AURAS_MANAGED_KEY}
 ${AURAS_VERSION_KEY}
@@ -331,7 +391,7 @@ debuff_appimage() {
 # Create or refresh a managed launcher for one explicit AppImage path
 #
 # Inputs:
-# - $1 appimage_path, absolute path to AppImage
+# - $1 appimage_path, path to AppImage
 # - $2 app_stem, desktop stem and display name
 #
 # Side Effects:
@@ -342,6 +402,7 @@ debuff_appimage() {
 # - 1 on validation or desktop write failure
 buff_appimage() {
 	local appimage_path
+	local resolved_appimage_path
 	local app_stem
 
 	appimage_path="$1"
@@ -351,12 +412,16 @@ buff_appimage() {
 		return 1
 	fi
 
-	if ! validate_appimage_path "${appimage_path}" "buff_appimage"; then
+	if ! resolved_appimage_path="$(resolve_appimage_path "${appimage_path}" "buff_appimage")"; then
 		return 1
 	fi
 
-	if ! write_application_desktop "${app_stem}" "${appimage_path}" "${app_stem}"; then
-		echo "buff_appimage:: failed to write desktop for ${appimage_path}" >&2
+	if ! validate_appimage_path "${resolved_appimage_path}" "buff_appimage"; then
+		return 1
+	fi
+
+	if ! write_application_desktop "${app_stem}" "${resolved_appimage_path}" "${app_stem}"; then
+		echo "buff_appimage:: failed to write desktop for ${resolved_appimage_path}" >&2
 		return 1
 	fi
 

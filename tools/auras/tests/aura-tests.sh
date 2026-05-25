@@ -80,6 +80,47 @@ EOF
 }
 
 ########################################################
+# resolve_appimage_path
+########################################################
+@test "resolve_appimage_path:: resolves relative AppImage directory" {
+	local appdir
+	local appimage
+	local expected
+
+	appdir="${AURAS_TEST_HOME}/apps"
+	make_appimage "${appdir}" "archon.AppImage"
+	appimage="apps/archon.AppImage"
+	expected="${appdir}/archon.AppImage"
+
+	cd "${AURAS_TEST_HOME}"
+
+	run resolve_appimage_path "${appimage}" "resolve_appimage_path"
+	[[ "$status" -eq 0 ]]
+	[[ "$output" == "${expected}" ]]
+}
+
+@test "resolve_appimage_path:: resolves AppImage name in current directory" {
+	local expected
+
+	make_appimage "${AURAS_TEST_HOME}" "archon.AppImage"
+	expected="${AURAS_TEST_HOME}/archon.AppImage"
+
+	cd "${AURAS_TEST_HOME}"
+
+	run resolve_appimage_path "archon.AppImage" "resolve_appimage_path"
+	[[ "$status" -eq 0 ]]
+	[[ "$output" == "${expected}" ]]
+}
+
+@test "resolve_appimage_path:: rejects missing relative directory" {
+
+	run resolve_appimage_path "missing/archon.AppImage" "resolve_appimage_path"
+	[[ "$status" -eq 1 ]]
+
+	grep -q "resolve_appimage_path:: AppImage directory does not exist" <<<"$output"
+}
+
+########################################################
 # validate_appimage_path
 ########################################################
 @test "validate_appimage_path:: accepts executable absolute AppImage path" {
@@ -183,6 +224,24 @@ EOF
 	grep -q '^X-Auras-Version=1$' "${HOME}/.local/share/applications/archon.desktop"
 }
 
+@test "write_application_desktop:: resolves relative AppImage path before writing" {
+	local appdir
+	local appimage
+	local expected
+
+	appdir="${AURAS_TEST_HOME}/apps"
+	make_appimage "${appdir}" "archon.AppImage"
+	appimage="apps/archon.AppImage"
+	expected="${appdir}/archon.AppImage"
+
+	cd "${AURAS_TEST_HOME}"
+
+	run write_application_desktop "archon" "${appimage}" "archon"
+	[[ "$status" -eq 0 ]]
+
+	grep -q "Exec=\"${expected}\" %u" "${HOME}/.local/share/applications/archon.desktop"
+}
+
 @test "write_application_desktop:: overwrites existing Auras-managed desktop file" {
 	local appdir
 	local appimage
@@ -276,6 +335,24 @@ EOF
 	grep -q "Exec=\"${appimage}\" %u" "${HOME}/.local/share/applications/archon.desktop"
 }
 
+@test "buff_appimage:: writes a desktop entry from relative AppImage path" {
+	local appdir
+	local appimage
+	local expected
+
+	appdir="${AURAS_TEST_HOME}/apps"
+	make_appimage "${appdir}" "archon.AppImage"
+	appimage="apps/archon.AppImage"
+	expected="${appdir}/archon.AppImage"
+
+	cd "${AURAS_TEST_HOME}"
+
+	run buff_appimage "${appimage}" "archon"
+	[[ "$status" -eq 0 ]]
+
+	grep -q "Exec=\"${expected}\" %u" "${HOME}/.local/share/applications/archon.desktop"
+}
+
 ########################################################
 # main
 ########################################################
@@ -313,6 +390,24 @@ EOF
 	[[ "$status" -eq 0 ]]
 
 	[[ -f "${HOME}/.local/share/applications/archon.desktop" ]]
+}
+
+@test "main:: buff mode resolves relative AppImage path" {
+	local appdir
+	local appimage
+	local expected
+
+	appdir="${AURAS_TEST_HOME}/apps"
+	make_appimage "${appdir}" "archon.AppImage"
+	appimage="apps/archon.AppImage"
+	expected="${appdir}/archon.AppImage"
+
+	cd "${AURAS_TEST_HOME}"
+
+	run bash "$SCRIPT" --buff "${appimage}" "archon"
+	[[ "$status" -eq 0 ]]
+
+	grep -q "Exec=\"${expected}\" %u" "${HOME}/.local/share/applications/archon.desktop"
 }
 
 @test "main:: debuff mode removes managed desktop entry" {

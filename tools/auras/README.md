@@ -4,7 +4,7 @@ Creates, refreshes, and removes user `.desktop` launcher entries for explicit Ap
 
 ## What It Does
 
-Auras writes one launcher at a time. You provide the full path to an AppImage and the launcher name:
+Auras writes one launcher at a time. You provide a path to an AppImage and the launcher name:
 
 ```text
 ~/.local/share/applications/<name>.desktop
@@ -34,6 +34,9 @@ If a target `.desktop` file already exists, Auras overwrites it only when both c
 # Short form
 ./tools/auras/auras.sh -b "$HOME/packages/CurseForge/CurseForge.AppImage" CurseForge
 
+# Relative AppImage paths are resolved from the current directory
+./tools/auras/auras.sh --buff ./packages/PrismLauncher.AppImage PrismLauncher
+
 # Remove one managed launcher
 ./tools/auras/auras.sh --debuff Archon
 
@@ -49,7 +52,8 @@ update-desktop-database "$HOME/.local/share/applications"
 
 ## Behavior
 
-- `--buff` requires an absolute `*.AppImage` or `*.appimage` path and a single-segment name.
+- `--buff` requires a `*.AppImage` or `*.appimage` path and a single-segment name.
+- Relative AppImage directories are resolved before writing `Exec=`.
 - The AppImage must exist, be readable, and be executable.
 - Existing unmarked `.desktop` files are not overwritten.
 - `--debuff` removes only `.desktop` files with current Auras markers.
