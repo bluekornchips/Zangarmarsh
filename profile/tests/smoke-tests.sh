@@ -40,19 +40,18 @@ teardown() {
 }
 
 measure_warm_zsh_load_ms() {
-	local start_ns
-	local end_ns
-	local load_ms
-
 	rm -f "${HOME}/.zcompdump"
 	zsh -i -c 'exit' >/dev/null 2>&1
 
+	local start_ns
 	start_ns=$(date +%s%N)
 
 	run zsh -i -c 'exit'
 	[[ "${status}" -eq 0 ]] || return 1
 
+	local end_ns
 	end_ns=$(date +%s%N)
+	local load_ms
 	load_ms=$(((end_ns - start_ns) / 1000000))
 	echo "${load_ms}"
 
@@ -60,15 +59,11 @@ measure_warm_zsh_load_ms() {
 }
 
 @test "smoke:: zsh session startup times" {
-	local zm_ms
-	local omz_ms
-	local zm_no_omz_ms
-	local bare_ms
-
 	mkdir -p "${ZSH}/plugins/zsh-autosuggestions"
 	touch "${ZSH}/oh-my-zsh.sh"
 	touch "${ZSH}/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh"
 	printf 'source "%s"\n' "${ZANGARMARSH_SCRIPT}" >"${HOME}/.zshrc"
+	local zm_ms
 	zm_ms="$(measure_warm_zsh_load_ms)" || return 1
 
 	cat >"${HOME}/.zshrc" <<EOF
@@ -84,13 +79,16 @@ else
 	compinit
 fi
 EOF
+	local omz_ms
 	omz_ms="$(measure_warm_zsh_load_ms)" || return 1
 
 	mkdir -p "${ZSH}"
 	printf 'source "%s"\n' "${ZANGARMARSH_SCRIPT}" >"${HOME}/.zshrc"
+	local zm_no_omz_ms
 	zm_no_omz_ms="$(measure_warm_zsh_load_ms)" || return 1
 
 	printf '\n' >"${HOME}/.zshrc"
+	local bare_ms
 	bare_ms="$(measure_warm_zsh_load_ms)" || return 1
 
 	cat <<EOF >&3

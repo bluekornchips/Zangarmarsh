@@ -34,12 +34,9 @@ COMMON_FILES=(
 # - 1 when sourcing a required file fails
 load_common_components() {
 	local file
-	local file_path
-
 	for file in "${COMMON_FILES[@]}"; do
-		file_path="$ZANGARMARSH_ROOT/profile/$file"
+		local file_path="$ZANGARMARSH_ROOT/profile/$file"
 		if [[ -f "$file_path" ]]; then
-
 			source "$file_path" 2>/dev/null || {
 				[[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "Failed to source $file_path" >&2
 			}

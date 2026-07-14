@@ -121,10 +121,6 @@ _penv_install_dependencies() {
 # - 1 if not in a git repository or git worktree fails
 gw() {
 	local git_root
-	local worktree_name
-	local base_branch
-	local worktree_path
-
 	git_root="$(git rev-parse --show-toplevel 2>/dev/null)"
 	if [[ -z "${git_root}" ]]; then
 		echo "gw:: not in a git repository" >&2
@@ -149,8 +145,8 @@ gw() {
 		return 1
 	fi
 
-	worktree_name="$1"
-	base_branch="${2:-}"
+	local worktree_name="$1"
+	local base_branch="${2:-}"
 
 	if [[ -z "${base_branch}" ]]; then
 		base_branch="$(git -C "${git_root}" symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null)"
@@ -165,7 +161,7 @@ gw() {
 		return 1
 	fi
 
-	worktree_path="${git_root}/../${worktree_name}"
+	local worktree_path="${git_root}/../${worktree_name}"
 
 	git -C "${git_root}" worktree add -b "${worktree_name}" "${worktree_path}" "${base_branch}"
 
@@ -188,10 +184,8 @@ gw() {
 # - 0 on success
 # - 1 on failure (bad args, missing Python, venv creation/activation failure)
 penv() {
-	local env_name=".venv"
 	local python_version="python3"
 	local force_recreate=false
-
 	# Handle flags and Python version specification
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
@@ -237,6 +231,7 @@ EOF
 	echo "Using Python: $python_version ($(command -v "$python_version"))"
 	echo "Version: $("$python_version" --version 2>/dev/null || echo "Version info unavailable")"
 
+	local env_name=".venv"
 	# If venv exists and no force recreate, just activate it
 	if [[ -d "$env_name" && "$force_recreate" != true ]]; then
 		echo "Virtual environment exists, activating: $env_name"

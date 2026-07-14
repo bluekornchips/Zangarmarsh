@@ -53,18 +53,14 @@ ensure_target_dir() {
 # - 0 on success
 # - 1 on failure
 copy_source() {
-	local src
-	local dest
-	local resolved_src
-
-	src="$1"
+	local src="$1"
 
 	if [[ -z "${src}" ]]; then
 		echo "copy_source:: Source path is required" >&2
 		return 1
 	fi
 
-	resolved_src="${src/#\~/${HOME}}"
+	local resolved_src="${src/#\~/${HOME}}"
 	resolved_src="$(realpath -m "${resolved_src}")"
 
 	if [[ ! -e "${resolved_src}" ]]; then
@@ -72,6 +68,7 @@ copy_source() {
 		return 0
 	fi
 
+	local dest
 	dest="${TARGET_DIR}/$(basename "${resolved_src}")"
 	echo "Copying ${resolved_src} -> ${dest}"
 
@@ -88,12 +85,11 @@ copy_source() {
 
 # Main entry point
 main() {
-	local src
-
 	if ! ensure_target_dir; then
 		return 1
 	fi
 
+	local src
 	for src in "${SOURCES[@]}"; do
 		if ! copy_source "${src}"; then
 			echo "main:: Failed to copy source: ${src}" >&2

@@ -16,19 +16,15 @@
 # - 0 on success or when no symlink exists
 # - 1 when symlink exists but does not match expected_target
 remove_application_bin_link() {
-	local app_stem
-	local expected_target
-	local link_path
-	local current_target
-
-	app_stem="$1"
-	expected_target="$2"
+	local app_stem="$1"
+	local expected_target="$2"
 
 	if [[ -z "${app_stem}" || -z "${expected_target}" ]]; then
 		echo "remove_application_bin_link:: app_stem and expected_target are required" >&2
 		return 1
 	fi
 
+	local link_path
 	if ! link_path="$(bin_link_path "${app_stem}")"; then
 		return 1
 	fi
@@ -42,6 +38,7 @@ remove_application_bin_link() {
 		return 1
 	fi
 
+	local current_target
 	current_target="$(readlink -f "${link_path}" 2>/dev/null || true)"
 
 	if [[ "${current_target}" != "${expected_target}" ]]; then
@@ -71,12 +68,7 @@ remove_application_bin_link() {
 # - 0 on success
 # - 1 if name missing, HOME unset, file missing, or file is unmanaged
 debuff_appimage() {
-	local app_stem
-	local apps_root
-	local desktop_path
-	local exec_target
-
-	app_stem="$1"
+	local app_stem="$1"
 
 	if [[ -z "${app_stem}" ]]; then
 		echo "debuff_appimage:: app_stem is required" >&2
@@ -87,10 +79,12 @@ debuff_appimage() {
 		return 1
 	fi
 
+	local desktop_path
 	if ! desktop_path="$(desktop_path_for_stem "${app_stem}")"; then
 		return 1
 	fi
 
+	local apps_root
 	if ! apps_root="$(applications_dir)"; then
 		return 1
 	fi
@@ -105,6 +99,7 @@ debuff_appimage() {
 		return 1
 	fi
 
+	local exec_target
 	if ! exec_target="$(desktop_entry_exec_path "${desktop_path}")"; then
 		return 1
 	fi
@@ -133,11 +128,8 @@ debuff_appimage() {
 # - 0 on success
 # - 1 on validation or removal failure
 debuff_main() {
-	local app_stem
-	local appimage_path
-
-	app_stem="$1"
-	appimage_path="$2"
+	local app_stem="$1"
+	local appimage_path="$2"
 
 	if [[ -n "${appimage_path}" ]]; then
 		echo "main:: --appimage is only valid with --buff" >&2

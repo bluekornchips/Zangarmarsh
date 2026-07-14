@@ -25,12 +25,11 @@ setup() {
 }
 
 teardown() {
-	local wt_path
-	local git_root
-
 	if [[ -n "${TEST_DIR}" && -d "${TEST_DIR}" ]]; then
+		local git_root
 		git_root="$(git -C "${TEST_DIR}" rev-parse --show-toplevel 2>/dev/null || true)"
 		if [[ -n "${git_root}" ]]; then
+			local wt_path
 			while IFS= read -r wt_path; do
 				[[ -z "${wt_path}" ]] && continue
 				[[ "${wt_path}" == "${git_root}" ]] && continue
@@ -48,11 +47,8 @@ teardown() {
 }
 
 @test "gw:: passes add through from repository root" {
-	local repo_dir
-	local worktree_dir
-
-	repo_dir="${TEST_DIR}/repo"
-	worktree_dir="${TEST_DIR}/add-root"
+	local repo_dir="${TEST_DIR}/repo"
+	local worktree_dir="${TEST_DIR}/add-root"
 
 	mkdir -p "${repo_dir}"
 	create_mock_git_repo "${repo_dir}"
@@ -64,11 +60,8 @@ teardown() {
 }
 
 @test "gw:: passes add through from subdirectory" {
-	local repo_dir
-	local worktree_dir
-
-	repo_dir="${TEST_DIR}/repo"
-	worktree_dir="${TEST_DIR}/add-subdir"
+	local repo_dir="${TEST_DIR}/repo"
+	local worktree_dir="${TEST_DIR}/add-subdir"
 
 	mkdir -p "${repo_dir}"
 	create_mock_git_repo "${repo_dir}"
@@ -81,11 +74,8 @@ teardown() {
 }
 
 @test "gw:: passes remove through to git worktree" {
-	local repo_dir
-	local worktree_dir
-
-	repo_dir="${TEST_DIR}/repo"
-	worktree_dir="${TEST_DIR}/remove-me"
+	local repo_dir="${TEST_DIR}/repo"
+	local worktree_dir="${TEST_DIR}/remove-me"
 
 	mkdir -p "${repo_dir}"
 	create_mock_git_repo "${repo_dir}"
@@ -98,15 +88,12 @@ teardown() {
 }
 
 @test "gw:: creates worktree from current branch when base is omitted" {
-	local repo_dir
-	local worktree_dir
-	local current_branch
-
-	repo_dir="${TEST_DIR}/repo"
-	worktree_dir="${repo_dir}/../feature-one"
+	local repo_dir="${TEST_DIR}/repo"
+	local worktree_dir="${repo_dir}/../feature-one"
 
 	mkdir -p "${repo_dir}"
 	create_mock_git_repo "${repo_dir}"
+	local current_branch
 	current_branch="$(git -C "${repo_dir}" branch --show-current)"
 	cd "${repo_dir}" || return 1
 
@@ -118,11 +105,8 @@ teardown() {
 }
 
 @test "gw:: creates worktree from explicit base branch" {
-	local repo_dir
-	local worktree_dir
-
-	repo_dir="${TEST_DIR}/repo"
-	worktree_dir="${repo_dir}/../feature-two"
+	local repo_dir="${TEST_DIR}/repo"
+	local worktree_dir="${repo_dir}/../feature-two"
 
 	mkdir -p "${repo_dir}"
 	create_mock_git_repo "${repo_dir}"

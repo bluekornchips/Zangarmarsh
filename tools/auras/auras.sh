@@ -45,11 +45,8 @@ EOF
 # - 0 when the token is safe to use as one filesystem segment
 # - 1 when empty, includes slashes or control characters, or is . or ..
 validate_app_name_segment() {
-	local token
-	local ctx
-
-	token="$1"
-	ctx="${2:-validate_app_name_segment}"
+	local token="$1"
+	local ctx="${2:-validate_app_name_segment}"
 
 	if [[ -z "${token}" ]]; then
 		echo "${ctx}:: name must be non-empty" >&2
@@ -87,14 +84,8 @@ validate_app_name_segment() {
 # - 0 when the directory can be resolved
 # - 1 when the path is empty, unsafe, or has an unavailable directory
 resolve_appimage_path() {
-	local appimage_path
-	local ctx
-	local appimage_dir
-	local appimage_name
-	local resolved_dir
-
-	appimage_path="$1"
-	ctx="${2:-resolve_appimage_path}"
+	local appimage_path="$1"
+	local ctx="${2:-resolve_appimage_path}"
 
 	if [[ -z "${appimage_path}" ]]; then
 		echo "${ctx}:: AppImage path is required" >&2
@@ -106,8 +97,8 @@ resolve_appimage_path() {
 		return 1
 	fi
 
-	appimage_dir="${appimage_path%/*}"
-	appimage_name="${appimage_path##*/}"
+	local appimage_dir="${appimage_path%/*}"
+	local appimage_name="${appimage_path##*/}"
 
 	if [[ "${appimage_dir}" == "${appimage_path}" ]]; then
 		appimage_dir="."
@@ -118,6 +109,7 @@ resolve_appimage_path() {
 		return 1
 	fi
 
+	local resolved_dir
 	if ! resolved_dir="$(cd "${appimage_dir}" && pwd -P)"; then
 		echo "${ctx}:: AppImage directory does not exist: ${appimage_dir}" >&2
 		return 1
@@ -138,11 +130,8 @@ resolve_appimage_path() {
 # - 0 when the path is an absolute, executable AppImage file
 # - 1 when the path is invalid or not usable
 validate_appimage_path() {
-	local appimage_path
-	local ctx
-
-	appimage_path="$1"
-	ctx="${2:-validate_appimage_path}"
+	local appimage_path="$1"
+	local ctx="${2:-validate_appimage_path}"
 
 	if [[ -z "${appimage_path}" ]]; then
 		echo "${ctx}:: AppImage path is required" >&2
@@ -195,13 +184,10 @@ validate_appimage_path() {
 # - 0 on success
 # - 1 on resolve or validation failure
 prepare_appimage_path() {
-	local raw_appimage_path
-	local ctx
+	local raw_appimage_path="$1"
+	local ctx="${2:-prepare_appimage_path}"
+
 	local resolved_appimage_path
-
-	raw_appimage_path="$1"
-	ctx="${2:-prepare_appimage_path}"
-
 	if ! resolved_appimage_path="$(resolve_appimage_path "${raw_appimage_path}" "${ctx}")"; then
 		return 1
 	fi
@@ -228,11 +214,8 @@ prepare_appimage_path() {
 # - 0 on success
 # - 1 if HOME is unset or empty
 local_user_dir() {
-	local suffix
-	local ctx
-
-	suffix="$1"
-	ctx="$2"
+	local suffix="$1"
+	local ctx="$2"
 
 	if [[ -z "${HOME}" ]]; then
 		echo "${ctx}:: HOME is not set" >&2
@@ -264,15 +247,13 @@ bin_link_dir() {
 # - 0 on success
 # - 1 if HOME is unset or stem validation fails
 bin_link_path() {
-	local app_stem
-	local bin_root
-
-	app_stem="$1"
+	local app_stem="$1"
 
 	if ! validate_app_name_segment "${app_stem}" "bin_link_path"; then
 		return 1
 	fi
 
+	local bin_root
 	if ! bin_root="$(bin_link_dir)"; then
 		return 1
 	fi
@@ -295,12 +276,12 @@ bin_link_path() {
 # - 1 when HOME is unset or stem validation fails
 desktop_path_for_stem() {
 	local app_stem="$1"
-	local apps_root
 
 	if ! validate_app_name_segment "${app_stem}" "desktop_path_for_stem"; then
 		return 1
 	fi
 
+	local apps_root
 	if ! apps_root="$(applications_dir)"; then
 		return 1
 	fi
@@ -320,8 +301,8 @@ desktop_path_for_stem() {
 # - 1 otherwise
 auras_manages_app_stem() {
 	local app_stem="$1"
-	local desktop_path
 
+	local desktop_path
 	if ! desktop_path="$(desktop_path_for_stem "${app_stem}")"; then
 		return 1
 	fi
@@ -346,9 +327,7 @@ auras_manages_app_stem() {
 # - 0 when the file has current Auras management markers
 # - 1 otherwise
 desktop_entry_is_auras_managed() {
-	local desktop_path
-
-	desktop_path="$1"
+	local desktop_path="$1"
 
 	if [[ -z "${desktop_path}" || ! -f "${desktop_path}" ]]; then
 		return 1
@@ -377,17 +356,14 @@ desktop_entry_is_auras_managed() {
 # - 0 on success
 # - 1 when Exec= is missing or empty
 desktop_entry_exec_path() {
-	local desktop_path
-	local exec_line
-	local exec_path
-
-	desktop_path="$1"
+	local desktop_path="$1"
 
 	if [[ -z "${desktop_path}" || ! -f "${desktop_path}" ]]; then
 		echo "desktop_entry_exec_path:: desktop_path is required" >&2
 		return 1
 	fi
 
+	local exec_line
 	exec_line="$(grep -E '^Exec=' "${desktop_path}" | head -n1)"
 
 	if [[ -z "${exec_line}" ]]; then
@@ -395,6 +371,7 @@ desktop_entry_exec_path() {
 		return 1
 	fi
 
+	local exec_path
 	exec_path="${exec_line#Exec=}"
 	exec_path="${exec_path#\"}"
 	exec_path="${exec_path%\"}"

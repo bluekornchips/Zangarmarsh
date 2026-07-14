@@ -51,9 +51,9 @@ validate_rule() {
 	local globs="$3"
 	local description="$4"
 	local cursor_always_apply="$5"
-	local validation_failed=false
 
 	# Validate rule length (500 line limit per Cursor best practices)
+	local validation_failed=false
 	local line_count
 	line_count=$(echo "${file_content}" | wc -l | tr -d ' ')
 	if ((line_count > 500)); then
@@ -211,11 +211,11 @@ write_if_changed() {
 	local stats_mode="${3:-none}"
 	local error_label="${4:-write_if_changed}"
 
-	local display_path
-	display_path=$(realpath "${file_path}" 2>/dev/null || echo "${file_path}")
-
 	local existing_content
 	existing_content=$(read_file_or_empty "${file_path}")
+
+	local display_path
+	display_path=$(realpath "${file_path}" 2>/dev/null || echo "${file_path}")
 
 	if [[ "${existing_content}" == "${new_content}" ]]; then
 		echo "No changes: ${display_path}"
@@ -365,12 +365,11 @@ EOF
 	)
 
 	local cursor_rule_file="${CURSOR_RULES_DIR}/rules-${name}.mdc"
-	local agent_rule_file="${AGENT_RULES_DIR}/rules-${name}.md"
-
 	if ! write_if_changed "${cursor_rule_file}" "${new_content}" "rule" "create_cursor_rule_file"; then
 		return 1
 	fi
 
+	local agent_rule_file="${AGENT_RULES_DIR}/rules-${name}.md"
 	if ! write_if_changed "${agent_rule_file}" "${new_content}" "none" "create_cursor_rule_file"; then
 		return 1
 	fi
@@ -406,16 +405,15 @@ fill_quest_log() {
 	fi
 
 	local quest
-	local name
-	local file
-	local icon
-	local description
-	local keywords
-	local cursor_always_apply
-	local cursor_globs
-	local file_content
-
 	while IFS= read -r quest; do
+		local name
+		local file
+		local icon
+		local description
+		local keywords
+		local cursor_always_apply
+		local cursor_globs
+		local file_content
 		name=$(jq -r '.name // ""' <<<"${quest}")
 		file=$(jq -r '.file // ""' <<<"${quest}")
 		icon=$(jq -r '.icon // ""' <<<"${quest}")
@@ -458,6 +456,7 @@ EOF
 	done <<<"$(jq -c '.[]' <<<"${schema_contents}")"
 
 	echo "fill_quest_log: complete"
+
 	return 0
 }
 
@@ -476,14 +475,14 @@ generate_commands() {
 		return 1
 	fi
 
+	echo "generate_commands: running"
+
 	local commands_dir="${QUEST_LOG_ROOT}/commands"
 	local cursor_commands_dir="${target_dir}/.cursor/commands/user"
 
 	if [[ ! -d "${commands_dir}" ]]; then
 		return 0
 	fi
-
-	echo "generate_commands: running"
 
 	if ! ensure_dir "${cursor_commands_dir}" "generate_commands"; then
 		return 1
@@ -505,6 +504,7 @@ generate_commands() {
 	done < <(find "${commands_dir}" -maxdepth 1 -name "*.md" -type f -print0 2>/dev/null || true)
 
 	echo "generate_commands: complete"
+
 	return 0
 }
 
@@ -523,14 +523,14 @@ generate_workflows() {
 		return 1
 	fi
 
+	echo "generate_workflows: running"
+
 	local commands_dir="${QUEST_LOG_ROOT}/commands"
 	local agent_workflows_dir="${target_dir}/.agent/workflows"
 
 	if [[ ! -d "${commands_dir}" ]]; then
 		return 0
 	fi
-
-	echo "generate_workflows: running"
 
 	if ! ensure_dir "${agent_workflows_dir}" "generate_workflows"; then
 		return 1
@@ -649,6 +649,7 @@ EOF
 	fi
 
 	echo "print_summary:: All rules processed successfully."
+
 	return 0
 }
 

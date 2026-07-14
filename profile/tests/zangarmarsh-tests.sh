@@ -79,10 +79,9 @@ teardown() {
 }
 
 @test "load_common_components:: sources without requiring a git repository" {
-	local temp_dir
-
 	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
 
+	local temp_dir
 	temp_dir="$(mktemp -d "${base}/zangarmarsh-load-test.XXXXXX")"
 	cd "${temp_dir}" || return 1
 
@@ -127,8 +126,7 @@ teardown() {
 }
 
 @test "zangarmarsh:: handle special characters in paths" {
-	local test_path_with_specials
-	test_path_with_specials="$TEST_DIR/path with spaces and (parentheses)"
+	local test_path_with_specials="$TEST_DIR/path with spaces and (parentheses)"
 	mkdir -p "$test_path_with_specials"
 	cd "$test_path_with_specials"
 
@@ -137,9 +135,8 @@ teardown() {
 }
 
 @test "zangarmarsh:: handle very long paths" {
-	local long_path
+	local long_path="$TEST_DIR"
 	local i
-	long_path="$TEST_DIR"
 	for i in {1..20}; do
 		long_path="$long_path/very_long_directory_name_$i"
 		mkdir -p "$long_path"

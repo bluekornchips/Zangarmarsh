@@ -12,9 +12,7 @@
 # - 0 when no file exists or the file is current Auras-managed
 # - 1 when a file exists without current Auras markers
 ensure_desktop_entry_writable() {
-	local desktop_path
-
-	desktop_path="$1"
+	local desktop_path="$1"
 
 	if [[ -z "${desktop_path}" ]]; then
 		echo "ensure_desktop_entry_writable:: desktop_path is required" >&2
@@ -45,14 +43,9 @@ ensure_desktop_entry_writable() {
 # - 0 when the path may be written or refreshed
 # - 1 when an unmanaged path would be overwritten
 ensure_bin_link_writable() {
-	local link_path
-	local expected_target
-	local app_stem
-	local current_target
-
-	link_path="$1"
-	expected_target="$2"
-	app_stem="$3"
+	local link_path="$1"
+	local expected_target="$2"
+	local app_stem="$3"
 
 	if [[ -z "${link_path}" || -z "${expected_target}" || -z "${app_stem}" ]]; then
 		echo "ensure_bin_link_writable:: link_path, expected_target, and app_stem are required" >&2
@@ -64,6 +57,7 @@ ensure_bin_link_writable() {
 	fi
 
 	if [[ -L "${link_path}" ]]; then
+		local current_target
 		current_target="$(readlink -f "${link_path}" 2>/dev/null || true)"
 
 		if [[ "${current_target}" == "${expected_target}" ]]; then
@@ -99,15 +93,9 @@ ensure_bin_link_writable() {
 # - 0 on success
 # - 1 on validation, safety, or write failure
 write_application_desktop() {
-	local app_stem
-	local resolved_appimage_path
-	local display_name
-	local apps_root
-	local desktop_path
-
-	app_stem="$1"
-	resolved_appimage_path="$2"
-	display_name="$3"
+	local app_stem="$1"
+	local resolved_appimage_path="$2"
+	local display_name="$3"
 
 	if [[ -z "${app_stem}" || -z "${resolved_appimage_path}" || -z "${display_name}" ]]; then
 		echo "write_application_desktop:: app_stem, resolved_appimage_path, and display_name are required" >&2
@@ -122,6 +110,7 @@ write_application_desktop() {
 		return 1
 	fi
 
+	local apps_root
 	if ! apps_root="$(applications_dir)"; then
 		return 1
 	fi
@@ -131,7 +120,7 @@ write_application_desktop() {
 		return 1
 	fi
 
-	desktop_path="${apps_root}/${app_stem}.desktop"
+	local desktop_path="${apps_root}/${app_stem}.desktop"
 
 	if ! ensure_desktop_entry_writable "${desktop_path}"; then
 		return 1
@@ -169,19 +158,15 @@ EOF
 # - 0 on success
 # - 1 on validation, safety, or link failure
 write_application_bin_link() {
-	local app_stem
-	local resolved_appimage_path
-	local link_path
-	local bin_root
-
-	app_stem="$1"
-	resolved_appimage_path="$2"
+	local app_stem="$1"
+	local resolved_appimage_path="$2"
 
 	if [[ -z "${app_stem}" || -z "${resolved_appimage_path}" ]]; then
 		echo "write_application_bin_link:: app_stem and resolved_appimage_path are required" >&2
 		return 1
 	fi
 
+	local link_path
 	if ! link_path="$(bin_link_path "${app_stem}")"; then
 		return 1
 	fi
@@ -190,6 +175,7 @@ write_application_bin_link() {
 		return 1
 	fi
 
+	local bin_root
 	if ! bin_root="$(bin_link_dir)"; then
 		return 1
 	fi
@@ -248,18 +234,15 @@ auras_rollback_desktop() {
 # - 0 on success
 # - 1 on write failure
 buff_launcher() {
-	local app_stem
-	local resolved_appimage_path
-	local desktop_path
-
-	app_stem="$1"
-	resolved_appimage_path="$2"
+	local app_stem="$1"
+	local resolved_appimage_path="$2"
 
 	if [[ -z "${app_stem}" || -z "${resolved_appimage_path}" ]]; then
 		echo "buff_launcher:: app_stem and resolved_appimage_path are required" >&2
 		return 1
 	fi
 
+	local desktop_path
 	if ! desktop_path="$(desktop_path_for_stem "${app_stem}")"; then
 		return 1
 	fi
@@ -288,12 +271,8 @@ buff_launcher() {
 # - 0 on success
 # - 1 on validation or write failure
 buff_main() {
-	local app_stem
-	local raw_appimage_path
-	local resolved_appimage_path
-
-	app_stem="$1"
-	raw_appimage_path="$2"
+	local app_stem="$1"
+	local raw_appimage_path="$2"
 
 	if [[ -z "${app_stem}" ]]; then
 		echo "main:: --buff requires NAME" >&2
@@ -309,6 +288,7 @@ buff_main() {
 		return 1
 	fi
 
+	local resolved_appimage_path
 	if ! resolved_appimage_path="$(prepare_appimage_path "${raw_appimage_path}" "main")"; then
 		return 1
 	fi

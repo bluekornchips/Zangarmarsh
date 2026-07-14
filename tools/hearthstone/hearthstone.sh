@@ -39,7 +39,6 @@ EOF
 health_check() {
 	local errors=0
 	local script_path
-
 	for script_path in \
 		"${TRILLIAX_SCRIPT:-${DEFAULT_TRILLIAX_SCRIPT}}" \
 		"${QUESTLOG_SCRIPT:-${DEFAULT_QUESTLOG_SCRIPT}}"; do
@@ -74,15 +73,9 @@ health_check() {
 # - 0 if user confirms with y/yes/Y
 # - 1 if user declines or provides invalid input
 confirm_proceed() {
-	local build_deck_msg
-	local questlog_msg
-	local trilliax_msg
-	local msg
-	local response
-
-	build_deck_msg="build_deck: Build the deck, install packages, etc."
-	questlog_msg="questlog: Generate agentic tool rules and sync VSCode settings"
-	trilliax_msg="trilliax --all: Clean generated files and directories"
+	local build_deck_msg="build_deck: Build the deck, install packages, etc."
+	local questlog_msg="questlog: Generate agentic tool rules and sync VSCode settings"
+	local trilliax_msg="trilliax --all: Clean generated files and directories"
 
 	cat <<EOF
 This script performs destructive operations. You will be prompted
@@ -91,10 +84,12 @@ to confirm before proceeding unless the -y flag is provided.
 OPERATIONS:
 EOF
 
+	local msg
 	for msg in "$build_deck_msg" "$questlog_msg" "$trilliax_msg"; do
 		echo "${msg}"
 	done
 
+	local response
 	read -r -p "Do you want to proceed? [y/N] " response
 	if [[ "${response}" != [yY][eE][sS] && "${response}" != [yY] ]]; then
 		echo "confirm_proceed:: Operation cancelled by user"
@@ -224,16 +219,11 @@ execute_operations() {
 }
 
 run_hearthstone() {
-	local skip_confirmation
-	local trilliax_script
-	local questlog_script
-
-	trilliax_script="${TRILLIAX_SCRIPT:-${DEFAULT_TRILLIAX_SCRIPT}}"
-	questlog_script="${QUESTLOG_SCRIPT:-${DEFAULT_QUESTLOG_SCRIPT}}"
+	local trilliax_script="${TRILLIAX_SCRIPT:-${DEFAULT_TRILLIAX_SCRIPT}}"
+	local questlog_script="${QUESTLOG_SCRIPT:-${DEFAULT_QUESTLOG_SCRIPT}}"
 	FORCE="${FORCE:-${DEFAULT_FORCE}}"
 
-	skip_confirmation=false
-
+	local skip_confirmation=false
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
 		-y | --yes)
@@ -297,7 +287,6 @@ Hearthstone Complete
 =====
 
 EOF
-
 	return 0
 }
 

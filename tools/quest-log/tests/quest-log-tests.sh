@@ -669,7 +669,6 @@ Line 3"
 @test 'vscodeoverride:: syncs when destination directory is empty' {
 	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
 	local test_git_root
-
 	test_git_root="$(mktemp -d "${base}/vscodeoverride-dest.XXXXXX")"
 	export GIT_ROOT="${test_git_root}"
 	export FORCE=false
@@ -685,7 +684,6 @@ Line 3"
 @test 'vscodeoverride:: skips when directory exists and FORCE is false' {
 	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
 	local test_git_root
-
 	test_git_root="$(mktemp -d "${base}/vscodeoverride-dest.XXXXXX")"
 	mkdir -p "${test_git_root}/.vscode"
 	echo "existing" >"${test_git_root}/.vscode/settings.json"
@@ -703,7 +701,6 @@ Line 3"
 @test 'vscodeoverride:: replaces when FORCE is true' {
 	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
 	local test_git_root
-
 	test_git_root="$(mktemp -d "${base}/vscodeoverride-dest.XXXXXX")"
 	mkdir -p "${test_git_root}/.vscode"
 	echo "existing" >"${test_git_root}/.vscode/settings.json"
@@ -729,9 +726,8 @@ Line 3"
 @test 'vscodeoverride:: fails when Zangarmarsh template is missing' {
 	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
 	local test_git_root
-	local fake_script_dir
-
 	test_git_root="$(mktemp -d "${base}/vscodeoverride-dest.XXXXXX")"
+	local fake_script_dir
 	fake_script_dir="$(mktemp -d "${base}/vscodeoverride-no-template.XXXXXX")"
 
 	export GIT_ROOT="${test_git_root}"

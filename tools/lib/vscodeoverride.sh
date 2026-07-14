@@ -16,11 +16,8 @@
 # - 0 on success
 # - 1 when copy fails
 copy_vscode_template() {
-	local zangarmarsh_root
-	local dest_root
-
-	zangarmarsh_root="$1"
-	dest_root="$2"
+	local zangarmarsh_root="$1"
+	local dest_root="$2"
 
 	if [[ -z "${zangarmarsh_root}" || -z "${dest_root}" ]]; then
 		echo "copy_vscode_template:: zangarmarsh_root and dest_root are required" >&2

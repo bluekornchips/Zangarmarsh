@@ -71,10 +71,10 @@ get_hostname() {
 
 # Build the complete prompt string with caching
 build_prompt() {
-	local current_time
 	local current_pwd="$PWD"
 
 	# Get current time (use date +%s for compatibility)
+	local current_time
 	current_time=$(date +%s)
 
 	# Check if we need to regenerate the cache
@@ -97,13 +97,10 @@ build_prompt() {
 
 	# Generate new prompt
 	local prompt=""
-	local kube_ctx
-	local username
-	local hostname
-	local git_info
 
 	# Only check kube context if enabled and cache expired (expensive operation)
 	if [[ "$KUBE_PROMPT_ENABLED" == "true" ]]; then
+		local kube_ctx
 		if [[ "$cache_expired" == "true" ]]; then
 			kube_ctx="$(kube_context)"
 			_prompt_kube_cache="$kube_ctx"
@@ -116,6 +113,7 @@ build_prompt() {
 	# username@hostname, with configuration options
 	if [[ "$SHOW_USER" == "true" || "$SHOW_HOST" == "true" ]]; then
 		if [[ "$SHOW_USER" == "true" ]]; then
+			local username
 			username="${USER:-$(whoami 2>/dev/null || echo 'user')}"
 			if [[ "$SHORTEN_NAMES" == "true" ]]; then
 				username="$(shorten "$username" 1)"
@@ -128,6 +126,7 @@ build_prompt() {
 		fi
 
 		if [[ "$SHOW_HOST" == "true" ]]; then
+			local hostname
 			hostname="$(get_hostname)"
 			if [[ "$SHORTEN_NAMES" == "true" ]]; then
 				hostname="$(shorten "$hostname" 1)"
@@ -138,6 +137,7 @@ build_prompt() {
 
 	# git branch (check on pwd change or cache expiry) - only if enabled
 	if [[ "$GIT_PROMPT_ENABLED" == "true" ]]; then
+		local git_info
 		if [[ "$pwd_changed" == "true" || "$cache_expired" == "true" ]]; then
 			git_info="$(git_branch)"
 			_prompt_git_cache="$git_info"

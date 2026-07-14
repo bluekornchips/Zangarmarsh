@@ -85,8 +85,8 @@ EOF
 # - 1 if platform is unsupported
 detect_platform() {
 	local os
-	local arch
 	os="$(uname -s | tr '[:upper:]' '[:lower:]')"
+	local arch
 	arch="$(uname -m)"
 
 	if [[ "${os}" == "darwin" ]] && [[ "${arch}" == "arm64" ]]; then
@@ -206,6 +206,7 @@ extract_cmd_name() {
 	fi
 
 	echo "${cmd_name}"
+
 	return 0
 }
 
@@ -245,16 +246,16 @@ check_tool_status() {
 # - 0 if all tools are installed
 # - 1 if any tools are missing
 check_tools_status() {
+	echo "check_tools_status:: Checking tool installation status"
+
 	local installed_count=0
 	local missing_count=0
 	local missing_tools=()
-	local cmd_name=""
-	local tool=""
-
-	echo "check_tools_status:: Checking tool installation status"
 
 	# Check core tools
 	echo "check_tools_status:: Core tools:"
+	local tool
+	local cmd_name
 	for tool in "${CORE_TOOLS[@]}"; do
 		cmd_name=$(extract_cmd_name "${tool}")
 		if check_tool_status "${cmd_name}"; then
@@ -293,7 +294,6 @@ check_tools_status() {
 	if [[ ${missing_count} -gt 0 ]]; then
 		echo "check_tools_status:: Missing tools: ${missing_tools[*]}"
 		echo "check_tools_status:: Run with --spec to install missing tools"
-
 		return 1
 	fi
 
@@ -347,10 +347,9 @@ health_check() {
 }
 
 run_talent_calculator() {
+	# Parse arguments
 	local dry_run="false"
 	local talent_mode="check"
-
-	# Parse arguments
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
 		-h | --help)
@@ -440,7 +439,6 @@ run_talent_calculator() {
 	done
 
 	echo "run_talent_calculator:: Installation complete"
-
 	return 0
 }
 

@@ -13,7 +13,7 @@ Keep bash and zsh scripts safe to run, easy to read, and consistent about errors
 - Use `#!/usr/bin/env bash` or `#!/usr/bin/env zsh` for executables, and match the shell to the features used.
 - For bash scripts, stay compatible with bash 3.2+. For zsh scripts, stay compatible with zsh 5.0+.
 - In the direct-run entry block only, enable strict mode when it fits, for example `set -euo pipefail` or `set -eo pipefail`. Set `umask 077` when the script handles sensitive files.
-- Quote every expansion: `"${var}"` not bare `$var`.
+- Quote every expansion: `"${var}"` not bare `$var`. ShellCheck: SC2086.
 - Send errors to stderr with `>&2`.
 - Return explicit integer status codes from functions. Use `return`, not `exit`, inside functions.
 - Validate inputs at boundaries. Add function comments for invoked scripts unless the function is obvious and short.
@@ -24,7 +24,7 @@ Keep bash and zsh scripts safe to run, easy to read, and consistent about errors
 
 ### Allowed
 
-- `[[ ... ]]` in bash, `$(command)` instead of backticks, `(( ... ))` for integers.
+- `[[ ... ]]` in bash, `$(command)` instead of backticks, `(( ... ))` for integers. ShellCheck: SC2006 for backticks.
 - Heredocs with `cat <<EOF` for user-visible text longer than two lines.
 - `trap` to remove temp dirs the script created. Short-lived temp files may use `rm` in the same scope.
 - Explicit paths for destructive commands, for example `rm -v ./*`.
@@ -32,7 +32,8 @@ Keep bash and zsh scripts safe to run, easy to read, and consistent about errors
 - `command -v` for dependency checks with a clear stderr message when something is missing.
 - `mktemp` or `mktemp -d` with a template. `chmod 0600` on temp files that may hold secrets.
 - Array literals for lists, for example `flags=(--foo --bar='baz')`.
-- Separate define, assign, and export steps when that makes variable intent clearer.
+- Declare each `local` name once, at first use. Prefer `local name=value` for literals. When the RHS is a command substitution, declare and assign on separate lines so the command status is not masked. ShellCheck: SC2155. When more than one branch assigns the same name, declare once before the branch, then assign in each branch.
+- Split assign and `export` onto separate lines when export intent should stand out, still at first use of that name. ShellCheck: SC2155 when the RHS is a command substitution.
 - Function-name prefixes in helper error output, for example `load_config:: file is missing`.
 - A blank line before the final `return` in a function, except in `main`.
 - Bats for non-trivial shell. Use `@test "name:: description" {` for direct function tests. Use `setup_file` and `setup` as the project already does.
@@ -44,7 +45,10 @@ Keep bash and zsh scripts safe to run, easy to read, and consistent about errors
 
 - `echo` lines longer than 160 characters. Use a heredoc or a loop instead.
 - Removing paths the script did not create, except for the cleanup tools listed below.
-
+- Blank lines before early `return` statements inside a function.
+- Hoisting all `local` declarations to the top of a function away from first use.
+- Declaring the same `local` name more than once in a function.
+- `local name=$(cmd)`, `local name="$(cmd)"`, `export name=$(cmd)`, or `export name="$(cmd)"`, which masks the command return value. ShellCheck: SC2155.
 ### Cleanup tool exception
 
 These named tools may delete paths they did not create in the current run. All other scripts must still use `trap` for script-created temp dirs only.
@@ -66,9 +70,7 @@ These named tools may delete paths they did not create in the current run. All o
 # Validate local dependencies and an optional API token.
 #
 
-########################################################
 # Defaults
-########################################################
 REQUIRED_COMMANDS=("jq" "curl")
 
 usage() {
@@ -93,8 +95,8 @@ EOF
 # - 1 when any command is missing
 check_dependencies() {
   local missing=()
-  local cmd
 
+  local cmd
   for cmd in "${REQUIRED_COMMANDS[@]}"; do
     if ! command -v "$cmd" >/dev/null 2>&1; then
       missing+=("$cmd")
@@ -135,9 +137,6 @@ validate_token() {
   return 0
 }
 
-########################################################
-# Core
-########################################################
 health_check() {
   local errors=0
 
@@ -164,25 +163,21 @@ main() {
     case "$1" in
       -h | --help)
         usage
-
         return 0
         ;;
       --health-check)
         health_check
-
         return $?
         ;;
       *)
         echo "main:: unknown option '$1'" >&2
         echo "main:: use '$(basename "$0") --help' for usage" >&2
-
         return 1
         ;;
     esac
   done
 
   usage
-
   return 0
 }
 
@@ -227,8 +222,7 @@ setup() {
 }
 
 @test "health_check:: passes when dependencies are available" {
-  local mock_bin
-  mock_bin="${BATS_TEST_TMPDIR}/example-health-check-bin"
+  local mock_bin="${BATS_TEST_TMPDIR}/example-health-check-bin"
   mkdir -p "${mock_bin}"
 
   printf '#!/usr/bin/env bash\nexit 0\n' >"${mock_bin}/jq"

@@ -19,18 +19,16 @@
 # - 0 on success
 # - Outputs platform string to stdout (e.g., "macos_arm64", "linux_x86_64")
 detect_platform() {
-	local os_type="unknown"
+	local os_type
 	local arch
 
 	if [[ "$OSTYPE" == "darwin"* ]]; then
 		os_type="macos"
-		arch=$(uname -m)
-		echo "${os_type}_${arch}"
 	else
 		os_type="linux"
-		arch=$(uname -m)
-		echo "${os_type}_${arch}"
 	fi
+	arch=$(uname -m)
+	echo "${os_type}_${arch}"
 }
 
 # Set platform variable

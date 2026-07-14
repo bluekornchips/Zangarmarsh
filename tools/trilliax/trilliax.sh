@@ -25,7 +25,6 @@ execute_clean() {
 	local target_dir="$2"
 	shift 2
 	local find_args=("$@")
-	local max_depth=10
 
 	# Input validation
 	if [[ -z "${function_name}" ]]; then
@@ -50,6 +49,8 @@ execute_clean() {
 		echo "${function_name}:: Invalid target_dir: ${target_dir}" >&2
 		return 1
 	fi
+
+	local max_depth=10
 
 	# Dry-run mode: show what would be removed
 	if [[ "${DRY_RUN}" == "true" ]]; then
@@ -211,9 +212,8 @@ validate_targets() {
 	fi
 
 	local enabled_targets=""
-	local target
-
 	IFS=',' read -ra REQUESTED_TARGETS <<<"${targets_string}"
+	local target
 	for target in "${REQUESTED_TARGETS[@]}"; do
 		target=$(echo "${target}" | xargs)
 		case "${target}" in
@@ -232,6 +232,7 @@ validate_targets() {
 	done
 
 	ENABLED_TARGETS="${enabled_targets}"
+
 	return 0
 }
 
@@ -247,11 +248,10 @@ validate_targets() {
 # - Uses global DRY_RUN variable to determine dry-run mode
 # - Returns 0 on success, 1 on error
 run_trilliax() {
+	# Parse command line arguments
 	local target_dir="."
 	local targets_string=""
 	local all_flag="false"
-
-	# Parse command line arguments
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
 		-d | --dir)

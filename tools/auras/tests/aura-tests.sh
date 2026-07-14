@@ -17,9 +17,7 @@ setup_file() {
 setup() {
 	source "$SCRIPT"
 
-	local bats_tmp
-
-	bats_tmp="${BATS_TMPDIR:-/tmp}"
+	local bats_tmp="${BATS_TMPDIR:-/tmp}"
 	AURAS_TEST_HOME="$(mktemp -d "${bats_tmp}/auras_test_home.XXXXXX")"
 	HOME="${AURAS_TEST_HOME}"
 
@@ -33,11 +31,8 @@ teardown() {
 }
 
 make_appimage() {
-	local parent
-	local fname
-
-	parent="$1"
-	fname="$2"
+	local parent="$1"
+	local fname="$2"
 
 	mkdir -p "${parent}"
 	: >"${parent}/${fname}"
@@ -45,14 +40,10 @@ make_appimage() {
 }
 
 make_managed_desktop() {
-	local name
-	local exec_path
-	local path
-
-	name="$1"
-	exec_path="${2:-/tmp/${name}.AppImage}"
+	local name="$1"
+	local exec_path="${2:-/tmp/${name}.AppImage}"
+	local path="${HOME}/.local/share/applications/${name}.desktop"
 	mkdir -p "${HOME}/.local/share/applications"
-	path="${HOME}/.local/share/applications/${name}.desktop"
 	cat <<EOF >"${path}"
 [Desktop Entry]
 Type=Application
