@@ -74,6 +74,20 @@ mock_command_not_installed() {
 	export -f command
 }
 
+mock_all_other_tools_installed() {
+	check_is_installed() {
+		[[ -n "$1" ]] || return 1
+		return 0
+	}
+	export -f check_is_installed
+
+	colima() {
+		[[ "$1" == "status" ]] && return 0
+		return 0
+	}
+	export -f colima
+}
+
 ########################################################
 # install_with_curl
 ########################################################
@@ -201,7 +215,13 @@ mock_command_not_installed() {
 }
 
 @test "install_other_tools:: skips already installed tools" {
+	mock_all_other_tools_installed
+	DRY_RUN="true"
+
 	run install_other_tools
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "already installed" || true
+	echo "$output" | grep -q "aws-sso-util is already installed"
+	echo "$output" | grep -q "bun is already installed"
+	echo "$output" | grep -q "helm is already installed"
+	echo "$output" | grep -q "docker with colima is already installed and running"
 }

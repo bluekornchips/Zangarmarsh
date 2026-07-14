@@ -253,6 +253,9 @@ mock_uname_linux_arm64() {
 }
 
 @test "install_brew_prerequisite:: skips when brew is already installed" {
+	mock_command_installed "brew"
+	DRY_RUN="true"
+
 	run install_brew_prerequisite
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "brew is already installed"
