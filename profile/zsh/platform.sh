@@ -22,7 +22,7 @@ detect_platform() {
 	local os_type
 	local arch
 
-	if [[ "$OSTYPE" == "darwin"* ]]; then
+	if [[ "${OSTYPE}" == "darwin"* ]]; then
 		os_type="macos"
 	else
 		os_type="linux"
@@ -31,7 +31,6 @@ detect_platform() {
 	echo "${os_type}_${arch}"
 }
 
-# Set platform variable
 export PLATFORM="${PLATFORM:-$(detect_platform)}"
 
 # OS family for profile helpers that expect macos or linux
@@ -44,40 +43,32 @@ macos*)
 	;;
 esac
 
-# Platform-specific configurations
-case "$PLATFORM" in
+case "${PLATFORM}" in
 macos_*)
-	# macOS specific settings - support both Apple Silicon and Intel
 	if [[ -d "/opt/homebrew" ]]; then
-		# Apple Silicon Mac
-		export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
+		export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:${PATH}"
 		export HOMEBREW_PREFIX="/opt/homebrew"
 	elif [[ -d "/usr/local/Homebrew" ]] || [[ -d "/usr/local/bin/brew" ]]; then
-		# Intel Mac
-		export PATH="/usr/local/bin:/usr/local/sbin:$PATH"
+		export PATH="/usr/local/bin:/usr/local/sbin:${PATH}"
 		export HOMEBREW_PREFIX="/usr/local"
 	fi
 
-	# Homebrew completion with enhanced detection
 	if command -v brew >/dev/null 2>&1; then
 		brew_prefix="$(brew --prefix 2>/dev/null)"
-		if [[ -n "$brew_prefix" && -d "$brew_prefix/share/zsh/site-functions" ]]; then
-			FPATH="$brew_prefix/share/zsh/site-functions:${FPATH}"
+		if [[ -n "${brew_prefix}" && -d "${brew_prefix}/share/zsh/site-functions" ]]; then
+			FPATH="${brew_prefix}/share/zsh/site-functions:${FPATH}"
 			autoload -Uz compinit
 			compinit -u
 		fi
 	fi
 
-	# macOS-specific tools
 	if command -v gls >/dev/null 2>&1; then
 		alias ls='gls --color=auto'
 	fi
 	;;
 linux_*)
-	# Linux specific settings
-	export PATH="/usr/local/bin:/usr/local/sbin:$PATH"
+	export PATH="/usr/local/bin:/usr/local/sbin:${PATH}"
 
-	# Enable color support for ls
 	if [[ -x /usr/bin/dircolors ]]; then
 		alias ls='ls --color=auto'
 		alias grep='grep --color=auto'
@@ -85,5 +76,4 @@ linux_*)
 	;;
 esac
 
-# Debug output if verbose mode is enabled
-[[ "$ZANGARMARSH_VERBOSE" == "true" ]] && echo "Platform detected: $PLATFORM" >&2
+[[ "${ZANGARMARSH_VERBOSE}" == "true" ]] && echo "Platform detected: ${PLATFORM}" >&2

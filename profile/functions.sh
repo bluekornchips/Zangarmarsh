@@ -12,48 +12,40 @@
 # - 0 on success
 # - 1 if NVM script not found or source fails
 _nvm_load() {
-	# Set up NVM environment
-	export NVM_DIR="$HOME/.nvm"
+	export NVM_DIR="${HOME}/.nvm"
 	local nvm_script=""
 
-	# Determine NVM script location based on platform
 	case "${PLATFORM_OS:-${PLATFORM}}" in
 	macos)
-		# Try Homebrew installation first, then default location
-		if [[ -n "$HOMEBREW_PREFIX" && -s "$HOMEBREW_PREFIX/opt/nvm/nvm.sh" ]]; then
-			nvm_script="$HOMEBREW_PREFIX/opt/nvm/nvm.sh"
+		if [[ -n "${HOMEBREW_PREFIX}" && -s "${HOMEBREW_PREFIX}/opt/nvm/nvm.sh" ]]; then
+			nvm_script="${HOMEBREW_PREFIX}/opt/nvm/nvm.sh"
 		else
-			nvm_script="$NVM_DIR/nvm.sh"
+			nvm_script="${NVM_DIR}/nvm.sh"
 		fi
 		;;
 	linux)
-		nvm_script="$NVM_DIR/nvm.sh"
+		nvm_script="${NVM_DIR}/nvm.sh"
 		;;
 	*)
-		nvm_script="$NVM_DIR/nvm.sh"
+		nvm_script="${NVM_DIR}/nvm.sh"
 		;;
 	esac
 
-	# Check if NVM script exists
-	if [[ -z "$nvm_script" ]] || [[ ! -s "$nvm_script" ]]; then
+	if [[ -z "${nvm_script}" ]] || [[ ! -s "${nvm_script}" ]]; then
 		echo "_nvm_load:: NVM not found at ${nvm_script}" >&2
 		echo "_nvm_load:: Install NVM from: https://github.com/nvm-sh/nvm" >&2
 		return 1
 	fi
 
-	# Source NVM
-	if ! source "$nvm_script" 2>/dev/null; then
+	if ! source "${nvm_script}" 2>/dev/null; then
 		echo "_nvm_load:: Failed to source NVM script" >&2
 		return 1
 	fi
 
-	# Source bash completion if available
-	if [[ -s "$NVM_DIR/bash_completion" ]]; then
+	if [[ -s "${NVM_DIR}/bash_completion" ]]; then
 
-		\. "$NVM_DIR/bash_completion" 2>/dev/null || true
+		\. "${NVM_DIR}/bash_completion" 2>/dev/null || true
 	fi
-
-	# NVM is now loaded globally, no need to call it again
 }
 
 # Install Python dependencies from project files
@@ -79,7 +71,7 @@ _penv_install_dependencies() {
 		elif pip install -e . 2>/dev/null; then
 			dependency_installed=true
 		else
-			echo "pip install failed, you may need to install dependencies manually" >&2
+			echo "_penv_install_dependencies:: pip install failed, you may need to install dependencies manually" >&2
 			install_failed=true
 		fi
 	elif [[ -f "requirements.txt" ]]; then
@@ -87,16 +79,16 @@ _penv_install_dependencies() {
 		if pip install -r requirements.txt 2>/dev/null; then
 			dependency_installed=true
 		else
-			echo "Failed to install requirements.txt dependencies" >&2
+			echo "_penv_install_dependencies:: Failed to install requirements.txt dependencies" >&2
 			install_failed=true
 		fi
 	fi
 
-	if [[ "$dependency_installed" != true ]] && [[ "$install_failed" != true ]]; then
+	if [[ "${dependency_installed}" != true ]] && [[ "${install_failed}" != true ]]; then
 		echo "No dependency files found (pyproject.toml, requirements.txt)"
 	fi
 
-	[[ "$install_failed" == true ]] && return 1
+	[[ "${install_failed}" == true ]] && return 1
 
 	return 0
 }
@@ -129,7 +121,6 @@ gw() {
 
 	case "${1:-}" in
 	add | remove)
-		# Don't capture output, allow uninterrupted flow
 		git -C "${git_root}" worktree "$@"
 		return $?
 		;;
@@ -145,7 +136,7 @@ gw() {
 		return 1
 	fi
 
-	local worktree_name="$1"
+	local worktree_name="${1}"
 	local base_branch="${2:-}"
 
 	if [[ -z "${base_branch}" ]]; then
@@ -186,7 +177,6 @@ gw() {
 penv() {
 	local python_version="python3"
 	local force_recreate=false
-	# Handle flags and Python version specification
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
 		-d | --delete)
@@ -207,7 +197,7 @@ EOF
 			return 0
 			;;
 		python[0-9].[0-9]*)
-			python_version="$1"
+			python_version="${1}"
 			shift
 			;;
 		*)
@@ -218,41 +208,36 @@ EOF
 		esac
 	done
 
-	# Validate Python version
-	if ! command -v "$python_version" >/dev/null 2>&1; then
+	if ! command -v "${python_version}" >/dev/null 2>&1; then
 		echo "penv:: ${python_version} not found" >&2
 		echo "penv:: Available Python versions:" >&2
-		find /usr/bin -maxdepth 1 -name "python*" -type f 2>/dev/null | head -5 || echo "No Python versions found in /usr/bin" >&2
-		[[ "${PLATFORM_OS:-${PLATFORM}}" == "macos" ]] && echo "Try installing Python via Homebrew: brew install python" >&2
+		find /usr/bin -maxdepth 1 -name "python*" -type f 2>/dev/null | head -5 || echo "penv:: No Python versions found in /usr/bin" >&2
+		[[ "${PLATFORM_OS:-${PLATFORM}}" == "macos" ]] && echo "penv:: Try installing Python via Homebrew: brew install python" >&2
 		return 1
 	fi
 
-	# Show Python version info
-	echo "Using Python: $python_version ($(command -v "$python_version"))"
-	echo "Version: $("$python_version" --version 2>/dev/null || echo "Version info unavailable")"
+	echo "Using Python: ${python_version} ($(command -v "${python_version}"))"
+	echo "Version: $("${python_version}" --version 2>/dev/null || echo "Version info unavailable")"
 
 	local env_name=".venv"
-	# If venv exists and no force recreate, just activate it
-	if [[ -d "$env_name" && "$force_recreate" != true ]]; then
-		echo "Virtual environment exists, activating: $env_name"
+	if [[ -d "${env_name}" && "${force_recreate}" != true ]]; then
+		echo "Virtual environment exists, activating: ${env_name}"
 
-		if source "$env_name/bin/activate" >/dev/null 2>&1; then
-			echo "Activated existing environment: $env_name"
+		if source "${env_name}/bin/activate" >/dev/null 2>&1; then
+			echo "Activated existing environment: ${env_name}"
 			return 0
 		fi
 	fi
 
-	# Clean up existing environment if it exists
 	# Explicit path validation: ensure we're only removing .venv in current directory
-	if [[ -d "$env_name" ]] && [[ "$(realpath "$env_name" 2>/dev/null || echo "$env_name")" == "$(realpath "$(pwd)/$env_name" 2>/dev/null || echo "$(pwd)/$env_name")" ]]; then
-		echo "Removing existing virtual environment: $env_name"
-		rm -rf "$env_name" 2>/dev/null || {
+	if [[ -d "${env_name}" ]] && [[ "$(realpath "${env_name}" 2>/dev/null || echo "${env_name}")" == "$(realpath "$(pwd)/${env_name}" 2>/dev/null || echo "$(pwd)/${env_name}")" ]]; then
+		echo "Removing existing virtual environment: ${env_name}"
+		rm -rf "${env_name}" 2>/dev/null || {
 			echo "penv:: Failed to remove existing environment" >&2
 			return 1
 		}
 	fi
 
-	# Clean up cache files
 	# Explicit path validation: only clean cache files in current directory tree
 	echo "Cleaning up cache files."
 	local current_dir
@@ -279,22 +264,19 @@ EOF
 		find "${current_dir}" -maxdepth 10 -type f -name "${cache_file}" -exec rm -f {} + 2>/dev/null || true
 	done
 
-	# Create virtual environment
-	echo "Creating virtual environment with $python_version: $env_name"
-	if ! "$python_version" -m venv "$env_name" 2>/dev/null; then
+	echo "Creating virtual environment with ${python_version}: ${env_name}"
+	if ! "${python_version}" -m venv "${env_name}" 2>/dev/null; then
 		echo "penv:: Failed to create virtual environment" >&2
 		echo "penv:: Make sure ${python_version} has venv module installed" >&2
 		echo "penv:: Try: ${python_version} -m pip install --user virtualenv" >&2
 		return 1
 	fi
 
-	# Activate virtual environment
-	if ! source "$env_name/bin/activate" >/dev/null 2>&1; then
+	if ! source "${env_name}/bin/activate" >/dev/null 2>&1; then
 		echo "penv:: Failed to activate virtual environment" >&2
 		return 1
 	fi
 
-	# Install dependencies if project files are present
 	_penv_install_dependencies
 
 	cat <<EOF
@@ -311,19 +293,17 @@ EOF
 
 # Set up lazy loading for expensive operations (using configuration)
 if [[ "${ZANGARMARSH_LAZY_LOADING:-true}" == "true" ]] && [[ "${ZANGARMARSH_ENABLE_NVM:-true}" == "true" ]]; then
-	# Create lazy-loaded nvm function that will load the real NVM when first called
 	nvm() {
 		unset -f nvm
 		_nvm_load
 		if command -v nvm >/dev/null 2>&1; then
 			nvm "$@"
 		else
-			echo "NVM command not available after loading" >&2
+			echo "nvm:: NVM command not available after loading" >&2
 			return 1
 		fi
 	}
 elif [[ "${ZANGARMARSH_ENABLE_NVM:-true}" == "true" ]]; then
-	# Load NVM immediately if lazy loading is disabled but NVM is enabled
 	_nvm_load
 fi
 
@@ -342,15 +322,15 @@ fi
 # - 0 on success
 # - 1 if origin_branch missing, not in a git repo, or unknown option
 list_changed_files() {
-	local origin_branch
+	local origin_branch=""
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
 		-*)
-			echo "list_changed_files:: unknown option $1" >&2
+			echo "list_changed_files:: unknown option ${1}" >&2
 			return 1
 			;;
 		*)
-			[[ -z "${origin_branch}" ]] && origin_branch="$1"
+			[[ -z "${origin_branch}" ]] && origin_branch="${1}"
 			shift
 			;;
 		esac

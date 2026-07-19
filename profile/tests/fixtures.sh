@@ -2,7 +2,6 @@
 
 # Test fixtures and helper functions for shell tests
 # Provides git repository mocking for Bats tests
-# Compatible with bash 3.2+; no associative-array mock theater
 
 GIT_ROOT=$(git rev-parse --show-toplevel)
 

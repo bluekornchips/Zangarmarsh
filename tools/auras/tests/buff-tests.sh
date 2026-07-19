@@ -3,97 +3,16 @@
 # Tests for buff.sh install path functions and buff CLI mode
 #
 
-setup_file() {
-	GIT_ROOT="$(git rev-parse --show-toplevel || echo "")"
-	SCRIPT="$GIT_ROOT/tools/auras/auras.sh"
-	[[ ! -f "$SCRIPT" ]] && echo "Script not found: $SCRIPT" >&2 && return 1
-
-	export GIT_ROOT
-	export SCRIPT
-
-	return 0
-}
-
-setup() {
-	source "$SCRIPT"
-
-	local bats_tmp
-
-	bats_tmp="${BATS_TMPDIR:-/tmp}"
-	AURAS_TEST_HOME="$(mktemp -d "${bats_tmp}/auras_test_home.XXXXXX")"
-	HOME="${AURAS_TEST_HOME}"
-
-	return 0
-}
-
-teardown() {
-	[[ -n "${AURAS_TEST_HOME}" && -d "${AURAS_TEST_HOME}" ]] && rm -rf "${AURAS_TEST_HOME}"
-	AURAS_TEST_HOME=""
-	return 0
-}
-
-make_appimage() {
-	local parent
-	local fname
-
-	parent="$1"
-	fname="$2"
-
-	mkdir -p "${parent}"
-	: >"${parent}/${fname}"
-	chmod +x "${parent}/${fname}"
-}
-
-make_managed_desktop() {
-	local name
-	local exec_path
-	local path
-
-	name="$1"
-	exec_path="${2:-/tmp/${name}.AppImage}"
-	mkdir -p "${HOME}/.local/share/applications"
-	path="${HOME}/.local/share/applications/${name}.desktop"
-	cat <<EOF >"${path}"
-[Desktop Entry]
-Type=Application
-Name=${name}
-Exec="${exec_path}" %u
-Terminal=false
-X-Auras-Managed=true
-X-Auras-Version=${AURAS_DESKTOP_VERSION}
-EOF
-}
-
-setup_appimage_fixture() {
-	local stem
-	local relative
-
-	stem="${1:-archon}"
-	relative="${2:-false}"
-
-	APPIMAGE_APPDIR="${AURAS_TEST_HOME}/apps"
-	make_appimage "${APPIMAGE_APPDIR}" "${stem}.AppImage"
-	APPIMAGE_PATH="${APPIMAGE_APPDIR}/${stem}.AppImage"
-
-	if [[ "${relative}" == "true" ]]; then
-		APPIMAGE_ARG="apps/${stem}.AppImage"
-		APPIMAGE_EXPECTED="${APPIMAGE_PATH}"
-	else
-		APPIMAGE_ARG="${APPIMAGE_PATH}"
-		APPIMAGE_EXPECTED="${APPIMAGE_PATH}"
-	fi
-
-	export APPIMAGE_APPDIR APPIMAGE_PATH APPIMAGE_ARG APPIMAGE_EXPECTED
-}
+source "$(dirname "${BATS_TEST_FILENAME}")/fixtures.sh"
 
 ########################################################
 # ensure_desktop_entry_writable
 ########################################################
 @test "ensure_desktop_entry_writable:: refuses unmanaged existing desktop file" {
 	mkdir -p "${HOME}/.local/share/applications"
-	: >"${HOME}/.local/share/applications/archon.desktop"
+	: >"${HOME}/.local/share/applications/demoapp.desktop"
 
-	run ensure_desktop_entry_writable "${HOME}/.local/share/applications/archon.desktop"
+	run ensure_desktop_entry_writable "${HOME}/.local/share/applications/demoapp.desktop"
 	[[ "$status" -eq 1 ]]
 
 	grep -q "ensure_desktop_entry_writable:: refusing to overwrite unmanaged desktop file" <<<"$output"
@@ -107,18 +26,18 @@ setup_appimage_fixture() {
 	local appimage
 
 	appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "archon.AppImage"
-	appimage="${appdir}/archon.AppImage"
+	make_appimage "${appdir}" "demoapp.AppImage"
+	appimage="${appdir}/demoapp.AppImage"
 
-	run write_application_desktop "archon" "${appimage}" "archon"
+	run write_application_desktop "demoapp" "${appimage}" "demoapp"
 	[[ "$status" -eq 0 ]]
 
-	[[ -f "${HOME}/.local/share/applications/archon.desktop" ]]
-	grep -q '^Name=archon$' "${HOME}/.local/share/applications/archon.desktop"
-	grep -q "Exec=\"${appimage}\" %u" "${HOME}/.local/share/applications/archon.desktop"
-	grep -q '^Terminal=false$' "${HOME}/.local/share/applications/archon.desktop"
-	grep -q '^X-Auras-Managed=true$' "${HOME}/.local/share/applications/archon.desktop"
-	grep -q '^X-Auras-Version=1$' "${HOME}/.local/share/applications/archon.desktop"
+	[[ -f "${HOME}/.local/share/applications/demoapp.desktop" ]]
+	grep -q '^Name=demoapp$' "${HOME}/.local/share/applications/demoapp.desktop"
+	grep -q "Exec=\"${appimage}\" %u" "${HOME}/.local/share/applications/demoapp.desktop"
+	grep -q '^Terminal=false$' "${HOME}/.local/share/applications/demoapp.desktop"
+	grep -q '^X-Auras-Managed=true$' "${HOME}/.local/share/applications/demoapp.desktop"
+	grep -q '^X-Auras-Version=1$' "${HOME}/.local/share/applications/demoapp.desktop"
 }
 
 @test "write_application_desktop:: rejects relative AppImage path" {
@@ -126,12 +45,12 @@ setup_appimage_fixture() {
 	local appimage
 
 	appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "archon.AppImage"
-	appimage="apps/archon.AppImage"
+	make_appimage "${appdir}" "demoapp.AppImage"
+	appimage="apps/demoapp.AppImage"
 
 	cd "${AURAS_TEST_HOME}"
 
-	run write_application_desktop "archon" "${appimage}" "archon"
+	run write_application_desktop "demoapp" "${appimage}" "demoapp"
 	[[ "$status" -eq 1 ]]
 
 	grep -q "write_application_desktop:: AppImage path must be absolute" <<<"$output"
@@ -142,14 +61,14 @@ setup_appimage_fixture() {
 	local appimage
 
 	appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "archon.AppImage"
-	appimage="${appdir}/archon.AppImage"
-	make_managed_desktop "archon"
+	make_appimage "${appdir}" "demoapp.AppImage"
+	appimage="${appdir}/demoapp.AppImage"
+	make_managed_desktop "demoapp"
 
-	run write_application_desktop "archon" "${appimage}" "archon"
+	run write_application_desktop "demoapp" "${appimage}" "demoapp"
 	[[ "$status" -eq 0 ]]
 
-	grep -q "Exec=\"${appimage}\" %u" "${HOME}/.local/share/applications/archon.desktop"
+	grep -q "Exec=\"${appimage}\" %u" "${HOME}/.local/share/applications/demoapp.desktop"
 }
 
 @test "write_application_desktop:: refuses to overwrite unmanaged desktop file" {
@@ -157,12 +76,12 @@ setup_appimage_fixture() {
 	local appimage
 
 	appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "archon.AppImage"
-	appimage="${appdir}/archon.AppImage"
+	make_appimage "${appdir}" "demoapp.AppImage"
+	appimage="${appdir}/demoapp.AppImage"
 	mkdir -p "${HOME}/.local/share/applications"
-	: >"${HOME}/.local/share/applications/archon.desktop"
+	: >"${HOME}/.local/share/applications/demoapp.desktop"
 
-	run write_application_desktop "archon" "${appimage}" "archon"
+	run write_application_desktop "demoapp" "${appimage}" "demoapp"
 	[[ "$status" -eq 1 ]]
 
 	grep -q "ensure_desktop_entry_writable:: refusing to overwrite unmanaged desktop file" <<<"$output"
@@ -173,8 +92,8 @@ setup_appimage_fixture() {
 	local appimage
 
 	appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "archon.AppImage"
-	appimage="${appdir}/archon.AppImage"
+	make_appimage "${appdir}" "demoapp.AppImage"
+	appimage="${appdir}/demoapp.AppImage"
 
 	run write_application_desktop "evil/name" "${appimage}" "Label"
 	[[ "$status" -eq 1 ]]
@@ -200,14 +119,14 @@ setup_appimage_fixture() {
 	local appimage
 
 	appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "archon.AppImage"
-	appimage="${appdir}/archon.AppImage"
+	make_appimage "${appdir}" "demoapp.AppImage"
+	appimage="${appdir}/demoapp.AppImage"
 
-	run write_application_bin_link "archon" "${appimage}"
+	run write_application_bin_link "demoapp" "${appimage}"
 	[[ "$status" -eq 0 ]]
 
-	[[ -L "${HOME}/.local/bin/archon" ]]
-	[[ "$(readlink -f "${HOME}/.local/bin/archon")" == "${appimage}" ]]
+	[[ -L "${HOME}/.local/bin/demoapp" ]]
+	[[ "$(readlink -f "${HOME}/.local/bin/demoapp")" == "${appimage}" ]]
 }
 
 @test "write_application_bin_link:: refuses unmanaged existing regular file" {
@@ -215,12 +134,12 @@ setup_appimage_fixture() {
 	local appimage
 
 	appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "archon.AppImage"
-	appimage="${appdir}/archon.AppImage"
+	make_appimage "${appdir}" "demoapp.AppImage"
+	appimage="${appdir}/demoapp.AppImage"
 	mkdir -p "${HOME}/.local/bin"
-	: >"${HOME}/.local/bin/archon"
+	: >"${HOME}/.local/bin/demoapp"
 
-	run write_application_bin_link "archon" "${appimage}"
+	run write_application_bin_link "demoapp" "${appimage}"
 	[[ "$status" -eq 1 ]]
 
 	grep -q "ensure_bin_link_writable:: refusing to overwrite unmanaged bin path" <<<"$output"
@@ -230,37 +149,37 @@ setup_appimage_fixture() {
 # buff_launcher
 ########################################################
 @test "buff_launcher:: writes desktop entry and bin symlink" {
-	setup_appimage_fixture "archon"
+	setup_appimage_fixture "demoapp"
 
-	run buff_launcher "archon" "${APPIMAGE_EXPECTED}"
+	run buff_launcher "demoapp" "${APPIMAGE_EXPECTED}"
 	[[ "$status" -eq 0 ]]
 
-	grep -q "Exec=\"${APPIMAGE_EXPECTED}\" %u" "${HOME}/.local/share/applications/archon.desktop"
-	[[ "$(readlink -f "${HOME}/.local/bin/archon")" == "${APPIMAGE_EXPECTED}" ]]
+	grep -q "Exec=\"${APPIMAGE_EXPECTED}\" %u" "${HOME}/.local/share/applications/demoapp.desktop"
+	[[ "$(readlink -f "${HOME}/.local/bin/demoapp")" == "${APPIMAGE_EXPECTED}" ]]
 }
 
 @test "buff_launcher:: writes from relative AppImage path" {
-	setup_appimage_fixture "archon" true
+	setup_appimage_fixture "demoapp" true
 
 	cd "${AURAS_TEST_HOME}"
 
-	run buff_launcher "archon" "${APPIMAGE_EXPECTED}"
+	run buff_launcher "demoapp" "${APPIMAGE_EXPECTED}"
 	[[ "$status" -eq 0 ]]
 
-	grep -q "Exec=\"${APPIMAGE_EXPECTED}\" %u" "${HOME}/.local/share/applications/archon.desktop"
-	[[ "$(readlink -f "${HOME}/.local/bin/archon")" == "${APPIMAGE_EXPECTED}" ]]
+	grep -q "Exec=\"${APPIMAGE_EXPECTED}\" %u" "${HOME}/.local/share/applications/demoapp.desktop"
+	[[ "$(readlink -f "${HOME}/.local/bin/demoapp")" == "${APPIMAGE_EXPECTED}" ]]
 }
 
 @test "buff_launcher:: rolls back desktop when bin link fails" {
-	setup_appimage_fixture "archon"
+	setup_appimage_fixture "demoapp"
 	mkdir -p "${HOME}/.local/bin"
 	chmod 555 "${HOME}/.local/bin"
 
-	run buff_launcher "archon" "${APPIMAGE_EXPECTED}"
+	run buff_launcher "demoapp" "${APPIMAGE_EXPECTED}"
 	chmod 755 "${HOME}/.local/bin"
 	[[ "$status" -eq 1 ]]
 
-	[[ ! -f "${HOME}/.local/share/applications/archon.desktop" ]]
+	[[ ! -f "${HOME}/.local/share/applications/demoapp.desktop" ]]
 	grep -q "buff_launcher:: failed to write bin link" <<<"$output"
 }
 
@@ -275,7 +194,7 @@ setup_appimage_fixture() {
 }
 
 @test "main:: buff mode requires --appimage" {
-	run bash "$SCRIPT" --buff archon
+	run bash "$SCRIPT" --buff demoapp
 	[[ "$status" -eq 1 ]]
 
 	grep -q "main:: --buff requires --appimage PATH" <<<"$output"
@@ -286,10 +205,10 @@ setup_appimage_fixture() {
 	local appimage
 
 	appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "archon.AppImage"
-	appimage="${appdir}/archon.AppImage"
+	make_appimage "${appdir}" "demoapp.AppImage"
+	appimage="${appdir}/demoapp.AppImage"
 
-	run bash "$SCRIPT" --buff "${appimage}" archon
+	run bash "$SCRIPT" --buff "${appimage}" demoapp
 	[[ "$status" -eq 1 ]]
 
 	grep -q "main:: unknown option" <<<"$output"
@@ -300,12 +219,12 @@ setup_appimage_fixture() {
 	local appimage
 
 	appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "archon.AppImage"
-	appimage="${appdir}/archon.AppImage"
+	make_appimage "${appdir}" "demoapp.AppImage"
+	appimage="${appdir}/demoapp.AppImage"
 
-	run bash "$SCRIPT" --appimage "${appimage}" --buff archon
+	run bash "$SCRIPT" --appimage "${appimage}" --buff demoapp
 	[[ "$status" -eq 0 ]]
 
-	[[ -f "${HOME}/.local/share/applications/archon.desktop" ]]
-	[[ "$(readlink -f "${HOME}/.local/bin/archon")" == "${appimage}" ]]
+	[[ -f "${HOME}/.local/share/applications/demoapp.desktop" ]]
+	[[ "$(readlink -f "${HOME}/.local/bin/demoapp")" == "${appimage}" ]]
 }

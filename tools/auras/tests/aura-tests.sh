@@ -3,67 +3,7 @@
 # Tests for shared auras helpers and CLI dispatch in auras.sh
 #
 
-setup_file() {
-	GIT_ROOT="$(git rev-parse --show-toplevel || echo "")"
-	SCRIPT="$GIT_ROOT/tools/auras/auras.sh"
-	[[ ! -f "$SCRIPT" ]] && echo "Script not found: $SCRIPT" >&2 && return 1
-
-	export GIT_ROOT
-	export SCRIPT
-
-	return 0
-}
-
-setup() {
-	source "$SCRIPT"
-
-	local bats_tmp="${BATS_TMPDIR:-/tmp}"
-	AURAS_TEST_HOME="$(mktemp -d "${bats_tmp}/auras_test_home.XXXXXX")"
-	HOME="${AURAS_TEST_HOME}"
-
-	return 0
-}
-
-teardown() {
-	[[ -n "${AURAS_TEST_HOME}" && -d "${AURAS_TEST_HOME}" ]] && rm -rf "${AURAS_TEST_HOME}"
-	AURAS_TEST_HOME=""
-	return 0
-}
-
-make_appimage() {
-	local parent="$1"
-	local fname="$2"
-
-	mkdir -p "${parent}"
-	: >"${parent}/${fname}"
-	chmod +x "${parent}/${fname}"
-}
-
-make_managed_desktop() {
-	local name="$1"
-	local exec_path="${2:-/tmp/${name}.AppImage}"
-	local path="${HOME}/.local/share/applications/${name}.desktop"
-	mkdir -p "${HOME}/.local/share/applications"
-	cat <<EOF >"${path}"
-[Desktop Entry]
-Type=Application
-Name=${name}
-Exec="${exec_path}" %u
-Terminal=false
-X-Auras-Managed=true
-X-Auras-Version=${AURAS_DESKTOP_VERSION}
-EOF
-}
-
-make_managed_bin_link() {
-	local name
-	local target
-
-	name="$1"
-	target="$2"
-	mkdir -p "${HOME}/.local/bin"
-	ln -sf "${target}" "${HOME}/.local/bin/${name}"
-}
+source "$(dirname "${BATS_TEST_FILENAME}")/fixtures.sh"
 
 ########################################################
 # applications_dir
@@ -91,9 +31,9 @@ make_managed_bin_link() {
 	local expected
 
 	appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "archon.AppImage"
-	appimage="apps/archon.AppImage"
-	expected="${appdir}/archon.AppImage"
+	make_appimage "${appdir}" "demoapp.AppImage"
+	appimage="apps/demoapp.AppImage"
+	expected="${appdir}/demoapp.AppImage"
 
 	cd "${AURAS_TEST_HOME}"
 
@@ -105,19 +45,19 @@ make_managed_bin_link() {
 @test "resolve_appimage_path:: resolves AppImage name in current directory" {
 	local expected
 
-	make_appimage "${AURAS_TEST_HOME}" "archon.AppImage"
-	expected="${AURAS_TEST_HOME}/archon.AppImage"
+	make_appimage "${AURAS_TEST_HOME}" "demoapp.AppImage"
+	expected="${AURAS_TEST_HOME}/demoapp.AppImage"
 
 	cd "${AURAS_TEST_HOME}"
 
-	run resolve_appimage_path "archon.AppImage" "resolve_appimage_path"
+	run resolve_appimage_path "demoapp.AppImage" "resolve_appimage_path"
 	[[ "$status" -eq 0 ]]
 	[[ "$output" == "${expected}" ]]
 }
 
 @test "resolve_appimage_path:: rejects missing relative directory" {
 
-	run resolve_appimage_path "missing/archon.AppImage" "resolve_appimage_path"
+	run resolve_appimage_path "missing/demoapp.AppImage" "resolve_appimage_path"
 	[[ "$status" -eq 1 ]]
 
 	grep -q "resolve_appimage_path:: AppImage directory does not exist" <<<"$output"
@@ -131,8 +71,8 @@ make_managed_bin_link() {
 	local appimage
 
 	appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "archon.AppImage"
-	appimage="${appdir}/archon.AppImage"
+	make_appimage "${appdir}" "demoapp.AppImage"
+	appimage="${appdir}/demoapp.AppImage"
 
 	run validate_appimage_path "${appimage}" "validate_appimage_path"
 	[[ "$status" -eq 0 ]]
@@ -140,7 +80,7 @@ make_managed_bin_link() {
 
 @test "validate_appimage_path:: rejects relative AppImage path" {
 
-	run validate_appimage_path "archon.AppImage" "validate_appimage_path"
+	run validate_appimage_path "demoapp.AppImage" "validate_appimage_path"
 	[[ "$status" -eq 1 ]]
 
 	grep -q "validate_appimage_path:: AppImage path must be absolute" <<<"$output"
@@ -152,7 +92,7 @@ make_managed_bin_link() {
 
 	appdir="${AURAS_TEST_HOME}/apps"
 	mkdir -p "${appdir}"
-	appimage="${appdir}/archon.bin"
+	appimage="${appdir}/demoapp.bin"
 	: >"${appimage}"
 	chmod +x "${appimage}"
 
@@ -168,7 +108,7 @@ make_managed_bin_link() {
 
 	appdir="${AURAS_TEST_HOME}/apps"
 	mkdir -p "${appdir}"
-	appimage="${appdir}/archon.AppImage"
+	appimage="${appdir}/demoapp.AppImage"
 	: >"${appimage}"
 
 	run validate_appimage_path "${appimage}" "validate_appimage_path"
@@ -186,9 +126,9 @@ make_managed_bin_link() {
 	local expected
 
 	appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "archon.AppImage"
-	appimage="apps/archon.AppImage"
-	expected="${appdir}/archon.AppImage"
+	make_appimage "${appdir}" "demoapp.AppImage"
+	appimage="apps/demoapp.AppImage"
+	expected="${appdir}/demoapp.AppImage"
 
 	cd "${AURAS_TEST_HOME}"
 
@@ -201,33 +141,33 @@ make_managed_bin_link() {
 # desktop_entry_is_auras_managed
 ########################################################
 @test "desktop_entry_is_auras_managed:: accepts current marker and version" {
-	make_managed_desktop "archon"
+	make_managed_desktop "demoapp"
 
-	run desktop_entry_is_auras_managed "${HOME}/.local/share/applications/archon.desktop"
+	run desktop_entry_is_auras_managed "${HOME}/.local/share/applications/demoapp.desktop"
 	[[ "$status" -eq 0 ]]
 }
 
 @test "desktop_entry_is_auras_managed:: rejects unmarked desktop file" {
 	mkdir -p "${HOME}/.local/share/applications"
-	: >"${HOME}/.local/share/applications/archon.desktop"
+	: >"${HOME}/.local/share/applications/demoapp.desktop"
 
-	run desktop_entry_is_auras_managed "${HOME}/.local/share/applications/archon.desktop"
+	run desktop_entry_is_auras_managed "${HOME}/.local/share/applications/demoapp.desktop"
 	[[ "$status" -eq 1 ]]
 }
 
 @test "desktop_entry_is_auras_managed:: rejects desktop with only managed marker" {
 	mkdir -p "${HOME}/.local/share/applications"
-	printf '%s\n' "X-Auras-Managed=true" >"${HOME}/.local/share/applications/archon.desktop"
+	printf '%s\n' "X-Auras-Managed=true" >"${HOME}/.local/share/applications/demoapp.desktop"
 
-	run desktop_entry_is_auras_managed "${HOME}/.local/share/applications/archon.desktop"
+	run desktop_entry_is_auras_managed "${HOME}/.local/share/applications/demoapp.desktop"
 	[[ "$status" -eq 1 ]]
 }
 
 @test "desktop_entry_is_auras_managed:: rejects desktop with only version marker" {
 	mkdir -p "${HOME}/.local/share/applications"
-	printf '%s\n' "X-Auras-Version=${AURAS_DESKTOP_VERSION}" >"${HOME}/.local/share/applications/archon.desktop"
+	printf '%s\n' "X-Auras-Version=${AURAS_DESKTOP_VERSION}" >"${HOME}/.local/share/applications/demoapp.desktop"
 
-	run desktop_entry_is_auras_managed "${HOME}/.local/share/applications/archon.desktop"
+	run desktop_entry_is_auras_managed "${HOME}/.local/share/applications/demoapp.desktop"
 	[[ "$status" -eq 1 ]]
 }
 
@@ -235,18 +175,18 @@ make_managed_bin_link() {
 # desktop_entry_exec_path
 ########################################################
 @test "desktop_entry_exec_path:: parses quoted Exec with field code" {
-	make_managed_desktop "archon" "/tmp/archon.AppImage"
+	make_managed_desktop "demoapp" "/tmp/demoapp.AppImage"
 
-	run desktop_entry_exec_path "${HOME}/.local/share/applications/archon.desktop"
+	run desktop_entry_exec_path "${HOME}/.local/share/applications/demoapp.desktop"
 	[[ "$status" -eq 0 ]]
-	[[ "$output" == "/tmp/archon.AppImage" ]]
+	[[ "$output" == "/tmp/demoapp.AppImage" ]]
 }
 
 @test "desktop_entry_exec_path:: rejects unparseable Exec line" {
 	mkdir -p "${HOME}/.local/share/applications"
-	printf '%s\n' 'Exec=broken line' >"${HOME}/.local/share/applications/archon.desktop"
+	printf '%s\n' 'Exec=broken line' >"${HOME}/.local/share/applications/demoapp.desktop"
 
-	run desktop_entry_exec_path "${HOME}/.local/share/applications/archon.desktop"
+	run desktop_entry_exec_path "${HOME}/.local/share/applications/demoapp.desktop"
 	[[ "$status" -eq 1 ]]
 
 	grep -q "desktop_entry_exec_path:: could not parse Exec=" <<<"$output"
@@ -276,14 +216,14 @@ make_managed_bin_link() {
 	local appimage
 
 	appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "archon.AppImage"
-	appimage="${appdir}/archon.AppImage"
+	make_appimage "${appdir}" "demoapp.AppImage"
+	appimage="${appdir}/demoapp.AppImage"
 
-	run bash "$SCRIPT" -b archon -a "${appimage}"
+	run bash "$SCRIPT" -b demoapp -a "${appimage}"
 	[[ "$status" -eq 0 ]]
 
-	[[ -f "${HOME}/.local/share/applications/archon.desktop" ]]
-	[[ "$(readlink -f "${HOME}/.local/bin/archon")" == "${appimage}" ]]
+	[[ -f "${HOME}/.local/share/applications/demoapp.desktop" ]]
+	[[ "$(readlink -f "${HOME}/.local/bin/demoapp")" == "${appimage}" ]]
 
 	make_managed_desktop "curseforge" "${appimage}"
 	make_managed_bin_link "curseforge" "${appimage}"
@@ -295,7 +235,7 @@ make_managed_bin_link() {
 }
 
 @test "main:: rejects packages-dir after simplification" {
-	run bash "$SCRIPT" --packages-dir "${HOME}" --buff archon --appimage /tmp/x.AppImage
+	run bash "$SCRIPT" --packages-dir "${HOME}" --buff demoapp --appimage /tmp/x.AppImage
 	[[ "$status" -eq 1 ]]
 
 	grep -q "main:: unknown option" <<<"$output"

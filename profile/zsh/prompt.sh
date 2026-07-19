@@ -11,7 +11,6 @@ CYAN='%{%F{cyan}%}'
 YELLOW='%{%F{yellow}%}'
 RED='%{%F{red}%}'
 RESET='%{%f%}'
-#shellcheck disable=SC2148
 
 # Prompt caching variables
 _prompt_cache=""
@@ -29,7 +28,7 @@ KUBE_PROMPT_ENABLED="${ZANGARMARSH_KUBE_PROMPT:-true}"
 SHOW_USER="${ZANGARMARSH_SHOW_USER:-true}"
 SHOW_HOST="${ZANGARMARSH_SHOW_HOST:-true}"
 SHORTEN_NAMES="${ZANGARMARSH_SHORTEN_NAMES:-true}"
-PROMPT_SYMBOL="${ZANGARMARSH_PROMPT_SYMBOL:-🌻}"
+PROMPT_SYMBOL="${ZANGARMARSH_PROMPT_SYMBOL:-❯}"
 
 # Display current git branch or commit information with caching
 git_branch() {
@@ -41,12 +40,12 @@ git_branch() {
 	fi
 }
 
-# Display current kubectl context if not docker-desktop with caching
+# Display current kubectl context when available
 kube_context() {
 	if command -v kubectl >/dev/null 2>&1; then
 		local context
 		context=$(kubectl config current-context 2>/dev/null)
-		[[ -n "$context" && "$context" != "docker-desktop" ]] && echo "$context"
+		[[ -n "${context}" ]] && echo "${context}"
 	fi
 }
 

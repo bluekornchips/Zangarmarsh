@@ -30,16 +30,16 @@ If a target `.desktop` file already exists, Auras overwrites it only when both c
 
 ```bash
 # Create or refresh one managed launcher and shell command
-./tools/auras/auras.sh --buff archon --appimage "$HOME/packages/Archon/Archon-1.0.0.AppImage"
+./tools/auras/auras.sh --buff demoapp --appimage "$HOME/Apps/DemoApp/DemoApp-1.0.0.AppImage"
 
 # Short AppImage flag
-./tools/auras/auras.sh --buff CurseForge -a "$HOME/packages/CurseForge/CurseForge.AppImage"
+./tools/auras/auras.sh --buff SampleApp -a "$HOME/Apps/SampleApp/SampleApp.AppImage"
 
 # Relative AppImage paths are resolved from the current directory
-./tools/auras/auras.sh --buff archon --appimage ./packages/Archon/Archon-1.0.0.AppImage
+./tools/auras/auras.sh --buff demoapp --appimage ./Apps/DemoApp/DemoApp-1.0.0.AppImage
 
 # Remove one managed launcher and bin symlink
-./tools/auras/auras.sh --debuff archon
+./tools/auras/auras.sh --debuff demoapp
 
 # Show help
 ./tools/auras/auras.sh --help
@@ -53,7 +53,7 @@ update-desktop-database "$HOME/.local/share/applications"
 
 ## Shell access
 
-Buff creates `~/.local/bin/<name>` as a symlink to the resolved AppImage. For `archon` to work in zsh or bash, `~/.local/bin` must be on `PATH`. Many distros add it by default. If `command -v archon` is empty, add this to your shell config:
+Buff creates `~/.local/bin/<name>` as a symlink to the resolved AppImage. For `demoapp` to work in zsh or bash, `~/.local/bin` must be on `PATH`. Many distros add it by default. If `command -v demoapp` is empty, add this to your shell config:
 
 ```bash
 export PATH="${HOME}/.local/bin:${PATH}"
