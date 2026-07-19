@@ -22,8 +22,8 @@ setup() {
 	cd "${TEST_DIR}" || return 1
 
 	export TEST_DIR
-	export USER="frodo"
-	export HOSTNAME="bag-end"
+	export USER="testuser"
+	export HOSTNAME="testhost"
 	export HOME="${TEST_DIR}"
 	export PWD="${TEST_DIR}"
 }

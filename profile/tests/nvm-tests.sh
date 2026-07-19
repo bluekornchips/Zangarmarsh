@@ -5,8 +5,6 @@
 GIT_ROOT="$(git rev-parse --show-toplevel)"
 SCRIPT="$GIT_ROOT/profile/functions.sh"
 
-source "$GIT_ROOT/profile/tests/fixtures.sh"
-
 # Setup test environment with NVM configuration
 setup() {
 	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
@@ -15,12 +13,6 @@ setup() {
 	cd "${TEST_DIR}" || return 1
 
 	source "$SCRIPT"
-
-	setup_common_mocks
-
-	mock_command "curl" "NVM installation script"
-	mock_command "wget" "NVM installation script"
-	mock_command "bash" "NVM installed successfully"
 
 	PLATFORM="linux"
 	HOME="${TEST_DIR}"
@@ -35,7 +27,6 @@ setup() {
 
 # Clean up test environment
 teardown() {
-	cleanup_common_mocks
 	rm -rf "$TEST_DIR"
 }
 
@@ -58,10 +49,6 @@ teardown() {
 
 @test "nvm:: handle linux platform" {
 	PLATFORM="linux"
-
-	mock_dir_exists "$NVM_DIR" true
-	mock_file_exists "$NVM_DIR/nvm.sh" true
-	mock_file_exists "$NVM_DIR/bash_completion" true
 
 	run nvm --help 2>/dev/null || true
 	[[ "$status" -eq 0 ]] || [[ "$status" -eq 1 ]]
@@ -87,8 +74,6 @@ teardown() {
 @test "nvm:: fail gracefully when NVM_DIR not found on linux" {
 	PLATFORM="linux"
 
-	mock_dir_exists "$NVM_DIR" false
-
 	run nvm --help 2>&1
 	[[ "$status" -eq 0 ]] || [[ "$status" -eq 1 ]] || [[ "$status" -eq 127 ]]
 }
@@ -100,9 +85,7 @@ teardown() {
 
 @test "nvm:: handle missing nvm.sh file gracefully" {
 	PLATFORM="linux"
-
-	mock_dir_exists "$NVM_DIR" true
-	mock_file_exists "$NVM_DIR/nvm.sh" false
+	mkdir -p "$NVM_DIR"
 
 	run nvm --help 2>&1
 	[[ "$status" -eq 0 ]] || [[ "$status" -eq 1 ]] || [[ "$status" -eq 127 ]]
@@ -110,10 +93,8 @@ teardown() {
 
 @test "nvm:: handle missing bash_completion gracefully" {
 	PLATFORM="linux"
-
-	mock_dir_exists "$NVM_DIR" true
-	mock_file_exists "$NVM_DIR/nvm.sh" true
-	mock_file_exists "$NVM_DIR/bash_completion" false
+	mkdir -p "$NVM_DIR"
+	echo 'nvm() { :; }' >"$NVM_DIR/nvm.sh"
 
 	run nvm --help 2>/dev/null || true
 	[[ "$status" -eq 0 ]] || [[ "$status" -eq 1 ]]

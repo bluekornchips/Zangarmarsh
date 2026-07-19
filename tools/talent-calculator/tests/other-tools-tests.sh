@@ -11,6 +11,8 @@ OTHER_TOOLS="$SCRIPT_DIR/tools/other-tools.sh"
 [[ ! -f "$MAIN_SCRIPT" ]] && echo "setup:: Main script not found: $MAIN_SCRIPT" >&2 && exit 1
 [[ ! -f "$OTHER_TOOLS" ]] && echo "setup:: Other tools script not found: $OTHER_TOOLS" >&2 && exit 1
 
+source "${SCRIPT_DIR}/tests/fixtures.sh"
+
 setup_file() {
 	return 0
 }
@@ -41,51 +43,6 @@ teardown() {
 	[[ -d "$TEST_DIR" ]] && rm -rf "$TEST_DIR"
 
 	return 0
-}
-
-########################################################
-# Mocks
-########################################################
-mock_brew_success() {
-	brew() {
-		echo "brew $*"
-		return 0
-	}
-	export -f brew
-}
-
-mock_curl_success() {
-	curl() {
-		echo "curl $*"
-		return 0
-	}
-	export -f curl
-}
-
-mock_command_not_installed() {
-	local cmd_name="$1"
-	# shellcheck disable=SC2329
-	command() {
-		if [[ "$1" == "-v" ]] && [[ "$2" == "${cmd_name}" ]]; then
-			return 1
-		fi
-		builtin command "$@"
-	}
-	export -f command
-}
-
-mock_all_other_tools_installed() {
-	check_is_installed() {
-		[[ -n "$1" ]] || return 1
-		return 0
-	}
-	export -f check_is_installed
-
-	colima() {
-		[[ "$1" == "status" ]] && return 0
-		return 0
-	}
-	export -f colima
 }
 
 ########################################################

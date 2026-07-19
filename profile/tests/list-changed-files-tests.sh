@@ -9,7 +9,6 @@ SCRIPT="$GIT_ROOT/profile/functions.sh"
 	exit 1
 }
 
-# shellcheck source=fixtures.sh
 source "$GIT_ROOT/profile/tests/fixtures.sh"
 
 setup_repo_with_committed_files() {

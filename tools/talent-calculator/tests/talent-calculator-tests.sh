@@ -10,6 +10,8 @@ BREW_TOOLS="$SCRIPT_DIR/tools/brew-tools.sh"
 OTHER_TOOLS="$SCRIPT_DIR/tools/other-tools.sh"
 [[ ! -f "$SCRIPT" ]] && echo "setup:: Script not found: $SCRIPT" >&2 && exit 1
 
+source "${SCRIPT_DIR}/tests/fixtures.sh"
+
 setup_file() {
 	return 0
 }
@@ -40,99 +42,6 @@ teardown() {
 	[[ -d "$TEST_DIR" ]] && rm -rf "$TEST_DIR"
 
 	return 0
-}
-
-########################################################
-# Mocks
-########################################################
-mock_brew_success() {
-	brew() {
-		echo "brew $*"
-		return 0
-	}
-	export -f brew
-}
-
-mock_brew_failure() {
-	brew() {
-		echo "brew $*" >&2
-		return 1
-	}
-	export -f brew
-}
-
-mock_curl_success() {
-	curl() {
-		echo "curl $*"
-		return 0
-	}
-	export -f curl
-}
-
-mock_curl_failure() {
-	curl() {
-		echo "curl $*" >&2
-		return 1
-	}
-	export -f curl
-}
-
-mock_command_installed() {
-	local cmd_name="$1"
-	# shellcheck disable=SC2329
-	command() {
-		if [[ "$1" == "-v" ]] && [[ "$2" == "${cmd_name}" ]]; then
-			echo "/usr/local/bin/${cmd_name}"
-			return 0
-		fi
-		builtin command "$@"
-	}
-	export -f command
-}
-
-mock_command_not_installed() {
-	local cmd_name="$1"
-	# shellcheck disable=SC2329
-	command() {
-		if [[ "$1" == "-v" ]] && [[ "$2" == "${cmd_name}" ]]; then
-			return 1
-		fi
-		builtin command "$@"
-	}
-	export -f command
-}
-
-mock_uname_darwin_arm64() {
-	uname() {
-		case "$1" in
-		-s) echo "Darwin" ;;
-		-m) echo "arm64" ;;
-		*) builtin command uname "$@" ;;
-		esac
-	}
-	export -f uname
-}
-
-mock_uname_linux_amd64() {
-	uname() {
-		case "$1" in
-		-s) echo "Linux" ;;
-		-m) echo "x86_64" ;;
-		*) builtin command uname "$@" ;;
-		esac
-	}
-	export -f uname
-}
-
-mock_uname_linux_arm64() {
-	uname() {
-		case "$1" in
-		-s) echo "Linux" ;;
-		-m) echo "aarch64" ;;
-		*) builtin command uname "$@" ;;
-		esac
-	}
-	export -f uname
 }
 
 ########################################################

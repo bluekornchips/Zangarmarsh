@@ -9,18 +9,6 @@ SCRIPT="$GIT_ROOT/profile/functions.sh"
 	exit 1
 }
 
-source "$GIT_ROOT/profile/tests/fixtures.sh"
-
-# Python virtual environment helper functions for testing
-
-# Create a mock Python virtual environment for testing
-create_mock_venv() {
-	setup_common_mocks
-	mock_command "python3 -m venv .venv" "Virtual environment created successfully"
-	mock_file_exists ".venv/bin/activate" true
-	mock_dir_exists ".venv" true
-}
-
 # Create mock dependency files for testing
 create_mock_dependency_file() {
 	local file_type="$1"
@@ -57,8 +45,6 @@ setup() {
 
 	source "$SCRIPT"
 
-	setup_common_mocks
-
 	PLATFORM="linux"
 	PLATFORM_OS="linux"
 	ZANGARMARSH_VERBOSE=true
@@ -71,22 +57,21 @@ setup() {
 
 # Clean up test environment
 teardown() {
-	cleanup_common_mocks
 	rm -rf "$TEST_DIR"
 }
 
-@test "penv --help should display usage information" {
+@test "penv:: --help should display usage information" {
 	run penv --help
 	[[ "$status" -eq 0 ]]
 }
 
-@test "penv -h should display usage information" {
+@test "penv:: -h should display usage information" {
 	run penv -h
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Usage: penv"
 }
 
-@test "penv with unknown option should fail" {
+@test "penv:: unknown option should fail" {
 	run penv --unknown-option
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "Unknown option"
@@ -101,10 +86,6 @@ teardown() {
 }
 
 @test "penv:: use default python3 when no version specified" {
-	# Mock python3 to succeed
-	mock_command "python3" "Python 3.9.7"
-	mock_command "python3 -m venv .venv" "Virtual environment created successfully"
-
 	run penv
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Using Python: python3"
@@ -119,23 +100,14 @@ teardown() {
 }
 
 @test "penv:: clean up cache files during creation" {
-	mock_dir_exists "__pycache__" true
-	mock_dir_exists ".mypy_cache" true
-	mock_dir_exists ".pytest_cache" true
-	mock_file_exists "test.pyc" true
+	mkdir -p __pycache__ .mypy_cache .pytest_cache
+	touch test.pyc
 
 	run penv
 	[[ "$status" -eq 0 ]]
-
-	mock_dir_exists "__pycache__" false
-	mock_dir_exists ".mypy_cache" false
-	mock_dir_exists ".pytest_cache" false
-	mock_file_exists "test.pyc" false
 }
 
 @test "penv:: activate existing virtual environment" {
-	setup_common_mocks
-
 	mkdir -p .venv/bin
 	touch .venv/bin/activate
 
@@ -145,9 +117,7 @@ teardown() {
 	echo "$output" | grep -q "Activated existing environment"
 }
 
-@test "penv -d should force recreate virtual environment" {
-	setup_common_mocks
-
+@test "penv:: -d should force recreate" {
 	mkdir -p .venv
 	touch .venv/test_file
 
@@ -157,9 +127,7 @@ teardown() {
 	[[ ! -f ".venv/test_file" ]]
 }
 
-@test "penv --delete should force recreate virtual environment" {
-	setup_common_mocks
-
+@test "penv:: --delete should force recreate" {
 	mkdir -p .venv
 	touch .venv/test_file
 
@@ -170,8 +138,6 @@ teardown() {
 }
 
 @test "penv:: install dependencies from pyproject.toml" {
-	mock_command "pip install -e ." "Requirement already satisfied: test-project in ./.venv/lib/python3.9/site-packages"
-
 	create_mock_dependency_file "pyproject"
 	run penv
 	[[ "$status" -eq 0 ]]
@@ -179,8 +145,6 @@ teardown() {
 }
 
 @test "penv:: install dependencies from requirements.txt" {
-	mock_command "pip install -r requirements.txt" "Requirement already satisfied: pytest in ./.venv/lib/python3.9/site-packages"
-
 	create_mock_dependency_file "requirements"
 	run penv
 	[[ "$status" -eq 0 ]]
@@ -221,9 +185,7 @@ teardown() {
 }
 
 @test "penv:: preserve existing environment when no force flag" {
-	setup_common_mocks
-
-	# Create actual test directory ad files
+	# Create actual test directory and files
 	mkdir -p .venv/bin
 	touch .venv/bin/activate
 	touch .venv/original_file
@@ -234,8 +196,6 @@ teardown() {
 }
 
 @test "penv:: handle multiple flags correctly" {
-	setup_common_mocks
-
 	mkdir -p .venv
 	touch .venv/test_file
 
