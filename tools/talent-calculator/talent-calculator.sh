@@ -5,29 +5,32 @@
 # Installs and manages CLI tools for development workstations
 #
 
+_TC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${_TC_DIR}/../lib/platform.sh"
+
 CORE_TOOLS=(
-	"jq"                               # https://jqlang.org/download/
-	"yq"                               # https://github.com/mikefarah/yq
-	"bats --package bats-core"         # https://github.com/bats-core/bats-core#installation
-	"kubectl --package kubernetes-cli" # https://kubernetes.io/docs/tasks/tools/
+	"jq"      # https://jqlang.org/download/
+	"yq"      # https://github.com/mikefarah/yq
+	"bats"    # https://github.com/bats-core/bats-core#installation
+	"kubectl" # https://kubernetes.io/docs/tasks/tools/
 )
 
-BREW_TOOLS=(
-	"shfmt"                                              # https://github.com/mvdan/sh
-	"aws --package awscli"                               # https://awscli.amazonaws.com/
-	"infracost"                                          # https://www.infracost.io/docs/#quick-start
-	"k9s --package derailed/k9s/k9s"                     # https://k9scli.io/topics/install/
-	"localstack --package localstack/tap/localstack-cli" # https://docs.localstack.cloud/aws/getting-started/installation/
-	"minikube"                                           # https://minikube.sigs.k8s.io/docs/start/
-	"stern"                                              # https://github.com/stern/stern#installation
-	"tfenv"                                              # https://github.com/tfutils/tfenv#installation
+EXTRA_TOOLS=(
+	"shfmt"      # https://github.com/mvdan/sh
+	"aws"        # https://awscli.amazonaws.com/
+	"infracost"  # https://www.infracost.io/docs/#quick-start
+	"k9s"        # https://k9scli.io/topics/install/
+	"localstack" # https://docs.localstack.cloud/aws/getting-started/installation/
+	"minikube"   # https://minikube.sigs.k8s.io/docs/start/
+	"stern"      # https://github.com/stern/stern#installation
+	"tfenv"      # https://github.com/tfutils/tfenv#installation
+	"docker"     # https://docs.docker.com/engine/install/
 )
 
 SCRIPT_TOOLS=(
 	"aws-sso-util"
 	"bun"
 	"helm"
-	"docker"
 )
 
 ALLOWED_MODES=(
@@ -46,25 +49,28 @@ Usage: $(basename "$0") [OPTIONS]
 
 OPTIONS:
   -h, --help          Show this help message
-  --health-check      Validate curl and brew availability
-  --spec              Install missing tools
-  --respec            Remove existing installations before reinstalling
+  --health-check      Validate curl availability
+  --spec              Install missing script-managed tools
+  --respec            Reinstall script-managed tools
   -r, --dry-run       Show what would be installed without making changes
 
 DESCRIPTION:
   By default, this script checks which tools are installed and which are missing.
-  Use --spec to actually install missing tools.
+  Use --spec to install script-managed tools. Core and extra tools are checked
+  only; install those with your OS package manager when missing.
 
 PREREQUISITES:
-  curl and brew must be installed before running this script.
-  If brew is not installed, this script will attempt to install it.
+  curl must be installed before running this script.
 
 INSTALLATION ORDER:
-  Core tools:
+  Core tools, checked only:
 	${CORE_TOOLS[*]}
 
-  Other tools, installed after core:
-  ${BREW_TOOLS[*]}
+  Extra tools, checked only:
+	${EXTRA_TOOLS[*]}
+
+  Script-managed tools, installed after checks:
+	${SCRIPT_TOOLS[*]}
 
 SUPPORTED PLATFORMS:
   - darwin-arm64
@@ -77,6 +83,9 @@ EOF
 
 # Detect the current platform
 #
+# Uses _detect_platform from tools/lib/platform.sh, then restricts to
+# platforms this installer supports.
+#
 # Outputs:
 # - Prints platform identifier: darwin-arm64 or linux-amd64
 #
@@ -84,25 +93,30 @@ EOF
 # - 0 on success
 # - 1 if platform is unsupported
 detect_platform() {
+	local platform
 	local os
-	os="$(uname -s | tr '[:upper:]' '[:lower:]')"
 	local arch
+
+	os="$(uname -s | tr '[:upper:]' '[:lower:]')"
 	arch="$(uname -m)"
 
-	if [[ "${os}" == "darwin" ]] && [[ "${arch}" == "arm64" ]]; then
-		echo "darwin-arm64"
+	platform="$(_detect_platform)" || {
+		echo "detect_platform:: Unsupported platform: ${os}-${arch}" >&2
+		echo "detect_platform:: Supported: darwin-arm64, linux-amd64" >&2
+		return 1
+	}
+
+	case "${platform}" in
+	darwin-arm64 | linux-amd64)
+		echo "${platform}"
 		return 0
-	fi
-
-	if [[ "${os}" == "linux" ]] && [[ "${arch}" == "x86_64" ]]; then
-		echo "linux-amd64"
-		return 0
-	fi
-
-	echo "detect_platform:: Unsupported platform: ${os}-${arch}" >&2
-	echo "detect_platform:: Supported: darwin-arm64, linux-amd64" >&2
-
-	return 1
+		;;
+	*)
+		echo "detect_platform:: Unsupported platform: ${platform}" >&2
+		echo "detect_platform:: Supported: darwin-arm64, linux-amd64" >&2
+		return 1
+		;;
+	esac
 }
 
 # Check if a command is installed
@@ -126,88 +140,6 @@ check_is_installed() {
 	fi
 
 	return 1
-}
-
-# Install Homebrew
-#
-# https://brew.sh/
-#
-# Side Effects:
-# - Installs Homebrew
-#
-# Returns:
-# - 0 on success
-# - 1 on failure
-install_brew() {
-	if [[ "${DRY_RUN}" == "true" ]]; then
-		echo "install_brew:: Would install Homebrew"
-		return 0
-	fi
-
-	echo "install_brew:: Installing Homebrew"
-	/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-	return 0
-}
-
-# Install brew prerequisite
-#
-# Ensures Homebrew is installed before other tools can be installed.
-#
-# Returns:
-# - 0 on success
-# - 1 on failure
-install_brew_prerequisite() {
-	if check_is_installed "brew"; then
-		echo "install_brew_prerequisite:: brew is already installed"
-		return 0
-	fi
-
-	echo "install_brew_prerequisite:: Installing: brew"
-	if ! install_brew; then
-		echo "install_brew_prerequisite:: Failed to install brew" >&2
-		return 1
-	fi
-
-	return 0
-}
-
-# Extract command name from tool specification
-#
-# Inputs:
-# - $@, tool_spec, tool specification (e.g., "jq" or "kubectl --package kubernetes-cli")
-#
-# Outputs:
-# - Prints command name
-#
-# Returns:
-# - 0 on success
-# - 1 on failure
-extract_cmd_name() {
-	local cmd_name=""
-
-	# Parse tool specification to extract command name
-	while [[ $# -gt 0 ]]; do
-		case "$1" in
-		--package)
-			shift 2
-			;;
-		*)
-			if [[ -z "${cmd_name}" ]]; then
-				cmd_name="$1"
-			fi
-			shift
-			;;
-		esac
-	done
-
-	if [[ -z "${cmd_name}" ]]; then
-		return 1
-	fi
-
-	echo "${cmd_name}"
-
-	return 0
 }
 
 # Check status of a single tool
@@ -252,12 +184,9 @@ check_tools_status() {
 	local missing_count=0
 	local missing_tools=()
 
-	# Check core tools
 	echo "check_tools_status:: Core tools:"
-	local tool
 	local cmd_name
-	for tool in "${CORE_TOOLS[@]}"; do
-		cmd_name=$(extract_cmd_name "${tool}")
+	for cmd_name in "${CORE_TOOLS[@]}"; do
 		if check_tool_status "${cmd_name}"; then
 			((installed_count++)) || true
 		else
@@ -266,10 +195,8 @@ check_tools_status() {
 		fi
 	done
 
-	# Check brew tools
-	echo "check_tools_status:: Brew tools:"
-	for tool in "${BREW_TOOLS[@]}"; do
-		cmd_name=$(extract_cmd_name "${tool}")
+	echo "check_tools_status:: Extra tools:"
+	for cmd_name in "${EXTRA_TOOLS[@]}"; do
 		if check_tool_status "${cmd_name}"; then
 			((installed_count++)) || true
 		else
@@ -278,8 +205,7 @@ check_tools_status() {
 		fi
 	done
 
-	# Check other tools
-	echo "check_tools_status:: Other tools:"
+	echo "check_tools_status:: Script tools:"
 	for cmd_name in "${SCRIPT_TOOLS[@]}"; do
 		if check_tool_status "${cmd_name}"; then
 			((installed_count++)) || true
@@ -293,26 +219,28 @@ check_tools_status() {
 
 	if [[ ${missing_count} -gt 0 ]]; then
 		echo "check_tools_status:: Missing tools: ${missing_tools[*]}"
-		echo "check_tools_status:: Run with --spec to install missing tools"
+		echo "check_tools_status:: Run with --spec to install script-managed tools"
 		return 1
 	fi
 
 	return 0
 }
 
-# Install core tools
+# Report package-managed tools that are missing
 #
-# Core tools are essential development tools:
-# - jq (JSON processor)
-# - yq (YAML processor)
-# - bats-core (Bash Automated Testing System)
-# - kubectl (Kubernetes command-line tool)
+# Side Effects:
+# - Prints install hints for missing core and extra tools
 #
 # Returns:
 # - 0 always
-install_core_tools() {
-	for tool in "${CORE_TOOLS[@]}"; do
-		install_brew_package "${tool}"
+report_missing_package_tools() {
+	local cmd_name
+
+	for cmd_name in "${CORE_TOOLS[@]}" "${EXTRA_TOOLS[@]}"; do
+		if ! check_is_installed "${cmd_name}"; then
+			echo "report_missing_package_tools:: ${cmd_name} is missing"
+			echo "report_missing_package_tools:: Install ${cmd_name} with your OS package manager"
+		fi
 	done
 
 	return 0
@@ -321,18 +249,13 @@ install_core_tools() {
 # Validate prerequisites without installing tools
 #
 # Returns:
-# - 0 when curl is available and brew is installed or installable
+# - 0 when curl is available
 # - 1 when a required dependency is missing
 health_check() {
 	local errors=0
 
 	if ! command -v curl >/dev/null 2>&1; then
 		echo "health_check:: curl is not installed" >&2
-		errors=$((errors + 1))
-	fi
-
-	if ! command -v brew >/dev/null 2>&1; then
-		echo "health_check:: brew is not installed" >&2
 		errors=$((errors + 1))
 	fi
 
@@ -373,7 +296,7 @@ run_talent_calculator() {
 			shift
 			;;
 		*)
-			echo "run_talent_calculator:: Unknown option '$1'" >&2
+			echo "run_talent_calculator:: Unknown option '${1}'" >&2
 			echo "run_talent_calculator:: Use '$(basename "$0") --help' for usage information" >&2
 			return 1
 			;;
@@ -387,7 +310,6 @@ run_talent_calculator() {
 	export TALENT_MODE
 
 	SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-	source "${SCRIPT_DIR}/tools/brew-tools.sh"
 	source "${SCRIPT_DIR}/tools/other-tools.sh"
 
 	# Change to HOME directory
@@ -420,23 +342,11 @@ run_talent_calculator() {
 		return 1
 	fi
 
-	# Install brew prerequisite
-	if ! install_brew_prerequisite; then
-		echo "run_talent_calculator:: brew is required but failed to install" >&2
-		return 1
-	fi
-
-	if ! install_core_tools; then
-		return 1
-	fi
+	report_missing_package_tools
 
 	if ! install_other_tools; then
 		return 1
 	fi
-
-	for tool in "${BREW_TOOLS[@]}"; do
-		install_brew_package "${tool}"
-	done
 
 	echo "run_talent_calculator:: Installation complete"
 	return 0

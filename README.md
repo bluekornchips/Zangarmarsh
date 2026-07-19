@@ -1,6 +1,6 @@
 # Zangarmarsh
 
-> Shell profile setup automation that works for Bash & Zsh
+> Shell profile setup and workstation tools for Bash and Zsh
 
 <div align="center">
 
@@ -30,11 +30,8 @@ Bash loads `profile/bash/profile.sh` for history and readline options only. It d
 ## Install
 
 ```bash
-# Clone the repository
-git clone https://github.com/bluekornchips/zangarmarsh.git
-cd zangarmarsh
-
-# Source the main script
+git clone https://github.com/bluekornchips/Zangarmarsh.git
+cd Zangarmarsh
 source zangarmarsh.sh
 
 # Add to your shell profile for permanent setup
@@ -42,15 +39,20 @@ echo 'source /path/to/zangarmarsh/zangarmarsh.sh' >> ~/.bashrc
 echo 'source /path/to/zangarmarsh/zangarmarsh.sh' >> ~/.zshrc
 ```
 
-## Quick Start
+## Generate rules
+
+Quest Log sources live under `tools/quest-log/`. Generated `.cursor/` and `.agent/` trees are gitignored.
 
 ```bash
-# Run all Bats tests
-make test
-
-# Reload configuration after editing profile files
 source zangarmarsh.sh
+questlog
 ```
+
+## Notes on destructive tools
+
+- Ice Block copies `~/.ssh` into `~/.ice-block/<hostname>/` when that path exists; protect the backup tree like your SSH directory
+- Trilliax and Hearthstone `--force` can delete generated trees and caches
+- Talent Calculator `--spec` may run remote upstream installers for script-managed tools such as Bun and Helm
 
 ## Configuration
 
@@ -84,37 +86,31 @@ These apply when `profile/zsh/prompt.sh` runs:
 
 ## Features
 
-| Feature                            | Bash | Zsh |
-| ---------------------------------- | ---- | --- |
-| Shared aliases and tools           | Yes  | Yes |
-| Git branch in prompt               | No   | Yes |
-| Kubernetes context in prompt       | No   | Yes |
-| Platform PATH and brew integration | No   | Yes |
-| Python venv helpers                | Yes  | Yes |
-| Node.js via NVM                    | Yes  | Yes |
-| Oh My Zsh integration              | No   | Yes |
-| Basic completion                   | No   | Yes |
+| Feature                      | Bash | Zsh |
+| ---------------------------- | ---- | --- |
+| Shared aliases and tools     | Yes  | Yes |
+| Git branch in prompt         | No   | Yes |
+| Kubernetes context in prompt | No   | Yes |
+| Platform PATH setup          | No   | Yes |
+| Python venv helpers          | Yes  | Yes |
+| Node.js via NVM              | Yes  | Yes |
+| Oh My Zsh integration        | No   | Yes |
+| Basic completion             | No   | Yes |
 
 ## Tools
 
-Scripts under `tools/` with per-tool README files:
+After sourcing, aliases map to scripts under `tools/`:
 
-- Quest Log: Cursor rules from JSON schema, see [tools/quest-log/README.md](tools/quest-log/README.md)
-- Trilliax: cleanup for caches and artifacts, see [tools/trilliax/README.md](tools/trilliax/README.md)
-- Talent Calculator: workstation CLI installs, see [tools/talent-calculator/README.md](tools/talent-calculator/README.md)
-- Hearthstone: sync VS Code settings and quest log, optional Trilliax, see [tools/hearthstone/README.md](tools/hearthstone/README.md)
-- Ice Block: dotfile backup to `~/.ice-block/<hostname>/`, see [tools/ice-block/README.md](tools/ice-block/README.md)
-- Auras: AppImage `.desktop` launchers and `~/.local/bin` commands, see [tools/auras/README.md](tools/auras/README.md)
+| Alias         | Tool              | Role                                                                  |
+| ------------- | ----------------- | --------------------------------------------------------------------- |
+| `questlog`    | Quest Log         | Cursor and Agent rules from schema and Markdown                       |
+| `trilliax`    | Trilliax          | Cleanup for caches and artifacts                                      |
+| `talents`     | Talent Calculator | Check workstation CLIs; install script-managed tools with `--spec`    |
+| `hearthstone` | Hearthstone       | Sync VS Code settings and quest log; optional Trilliax with `--force` |
+| `iceblock`    | Ice Block         | Dotfile backup to `~/.ice-block/<hostname>/`                          |
+| `auras`       | Auras             | AppImage `.desktop` launchers and `~/.local/bin` commands             |
 
-Index and one-line commands: [tools/README.md](tools/README.md).
-
-## Development
-
-```bash
-make test
-bats profile/tests/
-bats tools/trilliax/tests/trilliax-tests.sh
-```
+Per-tool docs: [tools/README.md](tools/README.md).
 
 ## Requirements
 

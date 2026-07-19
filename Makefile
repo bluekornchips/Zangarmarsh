@@ -1,11 +1,17 @@
-TEST_FILES    := $(shell find . -name '*-tests.sh' -type f ! -path './.git/*')
-BATS_COMMAND  := bats --timing --verbose-run
+TEST_FILES   := $(shell find . -name '*-tests.sh' -type f ! -path './.git/*')
+SHELL_FILES  := $(shell find . -name '*.sh' -type f ! -path './.git/*' ! -name '*-tests.sh')
+BATS_COMMAND := bats --timing --verbose-run
 
-.PHONY: test
+.PHONY: test shellcheck lint
 
 #################################################
-# Testing
+# Testing and lint
 #################################################
 
 test:
-	clear && $(BATS_COMMAND) $(TEST_FILES)
+	$(BATS_COMMAND) $(TEST_FILES)
+
+shellcheck:
+	shellcheck --rcfile=.shellcheckrc $(SHELL_FILES)
+
+lint: shellcheck

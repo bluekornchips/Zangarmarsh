@@ -31,43 +31,33 @@ detect_platform() {
 	echo "${os_type}_${arch}"
 }
 
-export PLATFORM="${PLATFORM:-$(detect_platform)}"
+PLATFORM="${PLATFORM:-$(detect_platform)}"
+export PLATFORM
 
 # OS family for profile helpers that expect macos or linux
 case "${PLATFORM}" in
 macos*)
-	export PLATFORM_OS="${PLATFORM_OS:-macos}"
+	PLATFORM_OS="${PLATFORM_OS:-macos}"
+	export PLATFORM_OS
 	;;
 *)
-	export PLATFORM_OS="${PLATFORM_OS:-linux}"
+	PLATFORM_OS="${PLATFORM_OS:-linux}"
+	export PLATFORM_OS
 	;;
 esac
 
 case "${PLATFORM}" in
 macos_*)
-	if [[ -d "/opt/homebrew" ]]; then
-		export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:${PATH}"
-		export HOMEBREW_PREFIX="/opt/homebrew"
-	elif [[ -d "/usr/local/Homebrew" ]] || [[ -d "/usr/local/bin/brew" ]]; then
-		export PATH="/usr/local/bin:/usr/local/sbin:${PATH}"
-		export HOMEBREW_PREFIX="/usr/local"
-	fi
-
-	if command -v brew >/dev/null 2>&1; then
-		brew_prefix="$(brew --prefix 2>/dev/null)"
-		if [[ -n "${brew_prefix}" && -d "${brew_prefix}/share/zsh/site-functions" ]]; then
-			FPATH="${brew_prefix}/share/zsh/site-functions:${FPATH}"
-			autoload -Uz compinit
-			compinit -u
-		fi
-	fi
+	PATH="/usr/local/bin:/usr/local/sbin:${PATH}"
+	export PATH
 
 	if command -v gls >/dev/null 2>&1; then
 		alias ls='gls --color=auto'
 	fi
 	;;
 linux_*)
-	export PATH="/usr/local/bin:/usr/local/sbin:${PATH}"
+	PATH="/usr/local/bin:/usr/local/sbin:${PATH}"
+	export PATH
 
 	if [[ -x /usr/bin/dircolors ]]; then
 		alias ls='ls --color=auto'

@@ -140,16 +140,7 @@ install_jq() {
 
 	echo "install_jq:: jq not found, attempting to install."
 
-	if command -v brew &>/dev/null; then
-		echo "install_jq:: Using Homebrew to install jq."
-		if brew install jq; then
-			echo "install_jq:: jq installed successfully"
-			return 0
-		else
-			echo "install_jq:: Failed to install jq with brew. Please install manually: brew install jq" >&2
-			return 1
-		fi
-	elif command -v apt-get &>/dev/null; then
+	if command -v apt-get &>/dev/null; then
 		echo "install_jq:: Using apt-get to install jq."
 		echo "install_jq:: Please install jq manually: apt-get install jq" >&2
 		return 1

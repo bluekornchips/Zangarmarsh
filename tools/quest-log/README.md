@@ -47,6 +47,7 @@ The tool reads [tools/quest-log/schema.json](schema.json) and Markdown bodies fr
 | Template        | Role                                                        |
 | --------------- | ----------------------------------------------------------- |
 | `always.md`     | Universal assistant behavior, safety, and response quality  |
+| `lua.md`        | Lua and WoW addon guidance                                  |
 | `python.md`     | Python typing, errors, imports, tests, and tooling          |
 | `shell.md`      | Bash and zsh scripting, structure, and Bats testing         |
 | `typescript.md` | TypeScript and JavaScript typing, modules, async, and tests |
@@ -60,6 +61,7 @@ See the [Cursor Commands documentation](https://cursor.com/docs/agent/chat/comma
 ### Available Daily Quests
 
 - `bash-review.md`: Bash repository review checklist
+- `lua-review.md`: Lua review checklist
 - `author.md`: Documentation templates for PRs, tickets, README files, and specs
 - `python-project-setup.md`: Python project bootstrap notes
 - `typescript-review.md`: TypeScript review checklist

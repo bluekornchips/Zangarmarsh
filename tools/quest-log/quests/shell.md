@@ -56,6 +56,7 @@ These named tools may delete paths they did not create in the current run. All o
 - `tools/trilliax/trilliax.sh` may remove dev artifacts such as `.cursor`, caches, `node_modules`, and Python virtual environments.
 - `penv()` in `profile/functions.sh` may remove Python caches and `.venv` when recreating an environment.
 - `tools/hearthstone/hearthstone.sh` may invoke trilliax with `--force` as part of orchestrated setup.
+- `tools/auras/auras.sh` via buff/debuff may remove Auras-managed `.desktop` files and `~/.local/bin` symlinks created by prior Auras runs.
 - `rm -rf /`, `eval`, `exec`, or `sudo`.
 - `declare -a` for simple array assignment. Use `name=(a b)` and `"${name[@]}"`.
 - Required function comments in test scripts when names and setup are already clear.

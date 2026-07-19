@@ -1,6 +1,6 @@
-# PR and JIRA Documentation
+# PR and Issue Documentation
 
-Create two files when documenting code changes: `pr.md` (for reviewers, past tense) and `jira.md` (for JIRA, future tense). Use simple words, write clearly and directly, and keep descriptions concise. Avoid jargon, excessive quotes, parentheses, or dashes. Review the diff before writing so the docs match the code.
+Create two files when documenting code changes: `pr.md` for reviewers in past tense, and `issue.md` for the issue tracker in future tense. Use simple words, write clearly and directly, and keep descriptions concise. Avoid jargon and excessive quotes. Review the diff before writing so the docs match the code.
 
 ## pr.md
 
@@ -29,9 +29,9 @@ Key highlights:
 Use a bash code block for commands, e.g. `path/to/script/`.
 ```
 
-## jira.md
+## issue.md
 
-Short description of changes in future tense for JIRA. Use all sections for larger work; for small changes, Background, Dependencies, and Risk Assessment can be omitted or one line each.
+Short description of changes in future tense for the issue tracker. Use all sections for larger work; for small changes, Background, Dependencies, and Risk Assessment can be omitted or one line each.
 
 ### Template
 
@@ -73,5 +73,5 @@ This helps ensure accurate documentation by showing exactly what changed in the 
 - Write clearly and directly
 - Focus on what changed and why
 - Keep descriptions concise
-- Use future tense for JIRA tickets
+- Use future tense for issue tracker tickets
 - Use past tense for PR descriptions

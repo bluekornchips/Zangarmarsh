@@ -167,7 +167,7 @@ mock_commands_failure() {
 @test "build_deck:: fails when jq installation fails" {
 	command() {
 		case "$2" in
-		"jq" | "apt-get" | "brew" | "pacman") return 1 ;;
+		"jq" | "apt-get" | "pacman") return 1 ;;
 		*) builtin command "$@" ;;
 		esac
 	}

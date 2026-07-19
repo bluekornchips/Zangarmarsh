@@ -56,7 +56,8 @@ update-desktop-database "$HOME/.local/share/applications"
 Buff creates `~/.local/bin/<name>` as a symlink to the resolved AppImage. For `demoapp` to work in zsh or bash, `~/.local/bin` must be on `PATH`. Many distros add it by default. If `command -v demoapp` is empty, add this to your shell config:
 
 ```bash
-export PATH="${HOME}/.local/bin:${PATH}"
+PATH="${HOME}/.local/bin:${PATH}"
+export PATH
 ```
 
 The `.desktop` file is for application menus and desktop environments. The bin symlink is for terminal use.

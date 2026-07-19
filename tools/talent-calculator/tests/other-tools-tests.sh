@@ -6,7 +6,6 @@
 GIT_ROOT="$(git rev-parse --show-toplevel || echo "")"
 SCRIPT_DIR="$GIT_ROOT/tools/talent-calculator"
 MAIN_SCRIPT="$SCRIPT_DIR/talent-calculator.sh"
-BREW_TOOLS="$SCRIPT_DIR/tools/brew-tools.sh"
 OTHER_TOOLS="$SCRIPT_DIR/tools/other-tools.sh"
 [[ ! -f "$MAIN_SCRIPT" ]] && echo "setup:: Main script not found: $MAIN_SCRIPT" >&2 && exit 1
 [[ ! -f "$OTHER_TOOLS" ]] && echo "setup:: Other tools script not found: $OTHER_TOOLS" >&2 && exit 1
@@ -21,7 +20,6 @@ setup() {
 	set +e
 	trap - EXIT ERR
 	source "$MAIN_SCRIPT"
-	source "$BREW_TOOLS"
 	source "$OTHER_TOOLS"
 	trap - EXIT ERR
 	set +e
@@ -76,16 +74,15 @@ teardown() {
 
 	run install_aws_sso_util
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Would install pipx and aws-sso-util"
+	echo "$output" | grep -q "Would install aws-sso-util with pipx"
 }
 
-@test "install_aws_sso_util:: installs pipx first" {
-	DRY_RUN="true"
-	mock_brew_success
+@test "install_aws_sso_util:: fails when pipx is missing" {
+	mock_command_not_installed "pipx"
 
 	run install_aws_sso_util
-	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "pipx"
+	[[ "$status" -eq 1 ]]
+	echo "$output" | grep -q "pipx is required"
 }
 
 ########################################################
@@ -138,7 +135,6 @@ teardown() {
 	run install_other_tools
 	[[ "$status" -eq 0 ]]
 
-	# Verify tools are processed
 	echo "$output" | grep -q "aws-sso-util"
 	echo "$output" | grep -q "bun"
 	echo "$output" | grep -q "helm"
@@ -180,5 +176,4 @@ teardown() {
 	echo "$output" | grep -q "aws-sso-util is already installed"
 	echo "$output" | grep -q "bun is already installed"
 	echo "$output" | grep -q "helm is already installed"
-	echo "$output" | grep -q "docker with colima is already installed and running"
 }

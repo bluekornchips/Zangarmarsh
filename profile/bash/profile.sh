@@ -4,11 +4,16 @@
 
 # Bash history configuration
 [[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "Loading bash history configuration" >&2
-export HISTFILE="${HISTFILE:-$HOME/.bash_history}"
-export HISTSIZE=100000
-export HISTFILESIZE=100000
-export HISTCONTROL=ignoredups:erasedups
-export HISTIGNORE='ls:ll:cd:pwd:clear:history'
+HISTFILE="${HISTFILE:-$HOME/.bash_history}"
+export HISTFILE
+HISTSIZE=100000
+export HISTSIZE
+HISTFILESIZE=100000
+export HISTFILESIZE
+HISTCONTROL=ignoredups:erasedups
+export HISTCONTROL
+HISTIGNORE='ls:ll:cd:pwd:clear:history'
+export HISTIGNORE
 
 # Set bash options efficiently
 shopt -s histappend

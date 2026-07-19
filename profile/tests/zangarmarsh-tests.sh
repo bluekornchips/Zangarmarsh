@@ -61,13 +61,15 @@ teardown() {
 }
 
 @test "zangarmarsh:: preserve existing ZANGARMARSH_VERBOSE value" {
-	export ZANGARMARSH_VERBOSE=true
+	ZANGARMARSH_VERBOSE=true
+	export ZANGARMARSH_VERBOSE
 	source "$SCRIPT"
 	[[ "$ZANGARMARSH_VERBOSE" == "true" ]]
 }
 
 @test "zangarmarsh:: not output debug info when verbose is false" {
-	export ZANGARMARSH_VERBOSE=false
+	ZANGARMARSH_VERBOSE=false
+	export ZANGARMARSH_VERBOSE
 	run source "$SCRIPT" 2>&1
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -v -q "Loading Zangarmarsh"

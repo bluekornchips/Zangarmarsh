@@ -24,13 +24,20 @@ setup() {
 	cd "${TEST_DIR}" || return 1
 
 	export TEST_DIR
-	export USER="testuser"
-	export HOSTNAME="testhost"
-	export HOME="${TEST_DIR}"
-	export PWD="${TEST_DIR}"
-	export ZSH="${TEST_DIR}/.oh-my-zsh"
-	export ZANGARMARSH_ROOT="$GIT_ROOT"
-	export ZANGARMARSH_VERBOSE=true
+	USER="testuser"
+	export USER
+	HOSTNAME="testhost"
+	export HOSTNAME
+	HOME="${TEST_DIR}"
+	export HOME
+	PWD="${TEST_DIR}"
+	export PWD
+	ZSH="${TEST_DIR}/.oh-my-zsh"
+	export ZSH
+	ZANGARMARSH_ROOT="$GIT_ROOT"
+	export ZANGARMARSH_ROOT
+	ZANGARMARSH_VERBOSE=true
+	export ZANGARMARSH_VERBOSE
 
 	# Create mock Oh My Zsh structure
 	mkdir -p "$ZSH"

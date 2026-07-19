@@ -3,7 +3,7 @@
 # Load NVM environment when first called (lazy load).
 #
 # Inputs:
-# - None (uses PLATFORM, HOMEBREW_PREFIX, NVM_DIR from environment)
+# - None (uses NVM_DIR from environment)
 #
 # Side Effects:
 # - Exports NVM_DIR, sources nvm.sh and optional bash_completion
@@ -12,26 +12,11 @@
 # - 0 on success
 # - 1 if NVM script not found or source fails
 _nvm_load() {
-	export NVM_DIR="${HOME}/.nvm"
-	local nvm_script=""
+	NVM_DIR="${HOME}/.nvm"
+	export NVM_DIR
+	local nvm_script="${NVM_DIR}/nvm.sh"
 
-	case "${PLATFORM_OS:-${PLATFORM}}" in
-	macos)
-		if [[ -n "${HOMEBREW_PREFIX}" && -s "${HOMEBREW_PREFIX}/opt/nvm/nvm.sh" ]]; then
-			nvm_script="${HOMEBREW_PREFIX}/opt/nvm/nvm.sh"
-		else
-			nvm_script="${NVM_DIR}/nvm.sh"
-		fi
-		;;
-	linux)
-		nvm_script="${NVM_DIR}/nvm.sh"
-		;;
-	*)
-		nvm_script="${NVM_DIR}/nvm.sh"
-		;;
-	esac
-
-	if [[ -z "${nvm_script}" ]] || [[ ! -s "${nvm_script}" ]]; then
+	if [[ ! -s "${nvm_script}" ]]; then
 		echo "_nvm_load:: NVM not found at ${nvm_script}" >&2
 		echo "_nvm_load:: Install NVM from: https://github.com/nvm-sh/nvm" >&2
 		return 1
@@ -212,7 +197,7 @@ EOF
 		echo "penv:: ${python_version} not found" >&2
 		echo "penv:: Available Python versions:" >&2
 		find /usr/bin -maxdepth 1 -name "python*" -type f 2>/dev/null | head -5 || echo "penv:: No Python versions found in /usr/bin" >&2
-		[[ "${PLATFORM_OS:-${PLATFORM}}" == "macos" ]] && echo "penv:: Try installing Python via Homebrew: brew install python" >&2
+		[[ "${PLATFORM_OS:-${PLATFORM}}" == "macos" ]] && echo "penv:: Try installing Python from https://www.python.org/downloads/" >&2
 		return 1
 	fi
 

@@ -22,10 +22,14 @@ setup() {
 	cd "${TEST_DIR}" || return 1
 
 	export TEST_DIR
-	export USER="testuser"
-	export HOSTNAME="testhost"
-	export HOME="${TEST_DIR}"
-	export PWD="${TEST_DIR}"
+	USER="testuser"
+	export USER
+	HOSTNAME="testhost"
+	export HOSTNAME
+	HOME="${TEST_DIR}"
+	export HOME
+	PWD="${TEST_DIR}"
+	export PWD
 }
 
 # Clean up test environment

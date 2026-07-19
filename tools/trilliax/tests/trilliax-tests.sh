@@ -32,7 +32,8 @@ setup() {
 
 	TEST_DIR="$(mktemp -d -t trilliax-test.XXXXXX)"
 	export TEST_DIR
-	export TEST_CLEANUP_DIR="$TEST_DIR/cleanup_test"
+	TEST_CLEANUP_DIR="$TEST_DIR/cleanup_test"
+	export TEST_CLEANUP_DIR
 
 	mkdir -p "$TEST_CLEANUP_DIR"
 

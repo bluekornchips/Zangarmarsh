@@ -24,10 +24,14 @@ setup() {
 	TEST_DIR="$(mktemp -d "${base}/zangarmarsh-smoke.XXXXXX")"
 
 	export TEST_DIR
-	export HOME="${TEST_DIR}"
-	export ZDOTDIR="${TEST_DIR}"
-	export ZSH="${TEST_DIR}/.oh-my-zsh"
-	export ZANGARMARSH_VERBOSE=false
+	HOME="${TEST_DIR}"
+	export HOME
+	ZDOTDIR="${TEST_DIR}"
+	export ZDOTDIR
+	ZSH="${TEST_DIR}/.oh-my-zsh"
+	export ZSH
+	ZANGARMARSH_VERBOSE=false
+	export ZANGARMARSH_VERBOSE
 	unset ZANGARMARSH_ROOT
 
 	return 0
@@ -67,7 +71,8 @@ measure_warm_zsh_load_ms() {
 	zm_ms="$(measure_warm_zsh_load_ms)" || return 1
 
 	cat >"${HOME}/.zshrc" <<EOF
-export ZSH="${ZSH}"
+ZSH="${ZSH}"
+export ZSH
 ZSH_THEME="robbyrussell"
 plugins=(git zsh-autosuggestions)
 source "\${ZSH}/oh-my-zsh.sh"

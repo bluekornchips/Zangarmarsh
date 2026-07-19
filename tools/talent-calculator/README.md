@@ -5,8 +5,7 @@ Installs and checks CLI tools on a workstation. Supported platforms: `darwin-arm
 ## Prerequisites
 
 - Bash 3.2+
-- `curl` for Homebrew install
-- Homebrew is installed by the script when missing, before other tools
+- `curl` for script-managed installers
 
 ## After sourcing Zangarmarsh
 
@@ -19,8 +18,8 @@ talents
 ## Behavior
 
 - Default with no mode flags: **check only**. Prints what is installed and what is missing. No installs.
-- `--spec`: install missing tools.
-- `--respec`: remove then reinstall where the installers support that flow.
+- `--spec`: install missing script-managed tools. Core and extra tools are reported only; install those with your OS package manager.
+- `--respec`: reinstall script-managed tools.
 - `-r` or `--dry-run`: print actions without changing the system. Combine with `--spec` or `--respec` for a preview.
 
 ```bash
@@ -37,20 +36,21 @@ talents --help
 
 Values match [talent-calculator.sh](talent-calculator.sh).
 
-**Core, Homebrew packages**
+**Core, checked only**
 
-- `jq`, `yq`, `bats` from package `bats-core`, `kubectl` from package `kubernetes-cli`
+- `jq`, `yq`, `bats`, `kubectl`
 
-**Additional Homebrew**
+**Extra, checked only**
 
-- `shfmt`, `aws` from package `awscli`, `infracost`, `k9s` from tap `derailed/k9s/k9s`, `localstack` from tap `localstack/tap/localstack-cli`, `minikube`, `stern`, `tfenv`
+- `shfmt`, `aws`, `infracost`, `k9s`, `localstack`, `minikube`, `stern`, `tfenv`, `docker`
 
-**Other installers**
+**Script-managed installers**
 
-- `aws-sso-util`, `bun`, `helm`, `docker` via bundled install helpers in `tools/talent-calculator/tools/`
+- `aws-sso-util` via `pipx`, `bun`, `helm` via helpers in `tools/talent-calculator/tools/`
 
 ## Testing
 
 ```bash
 bats tools/talent-calculator/tests/talent-calculator-tests.sh
+bats tools/talent-calculator/tests/other-tools-tests.sh
 ```

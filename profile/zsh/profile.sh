@@ -2,7 +2,8 @@
 #
 # Zsh profile configuration with Oh My Zsh integration.
 
-export ZSH="${ZSH:-$HOME/.oh-my-zsh}"
+ZSH="${ZSH:-$HOME/.oh-my-zsh}"
+export ZSH
 ZSH_THEME="robbyrussell"
 
 plugins=(git zsh-autosuggestions)
@@ -61,9 +62,12 @@ done
 
 # Configure zsh history
 unset HISTFILE HISTSIZE HISTFILESIZE HISTCONTROL HISTIGNORE
-export HISTFILE="$HOME/.zsh_history"
-export HISTSIZE=100000
-export SAVEHIST=100000
+HISTFILE="$HOME/.zsh_history"
+export HISTFILE
+HISTSIZE=100000
+export HISTSIZE
+SAVEHIST=100000
+export SAVEHIST
 
 [[ "$ZANGARMARSH_VERBOSE" == "true" ]] && echo "Loading zsh history configuration" >&2
 [[ "$ZANGARMARSH_VERBOSE" == "true" ]] && echo "Set HISTFILE to: $HISTFILE" >&2

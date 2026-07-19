@@ -205,13 +205,15 @@ teardown() {
 }
 
 @test "penv:: handle platform-specific behavior" {
-	export PLATFORM="macos"
-	export PLATFORM_OS="macos"
+	PLATFORM="macos"
+	export PLATFORM
+	PLATFORM_OS="macos"
+	export PLATFORM_OS
 	# Mock python3 to fail
 	python3() { return 1; }
 	export -f python3
 
 	run penv python9.99
 	[[ "$status" -ne 0 ]]
-	echo "$output" | grep -q "Try installing Python via Homebrew"
+	echo "$output" | grep -q "Try installing Python from https://www.python.org/downloads/"
 }

@@ -26,8 +26,10 @@ setup() {
 	TEST_DIR="$(mktemp -d -t ice-block-tests.XXXXXX)"
 	export TEST_DIR
 
-	export ORIGINAL_HOME="$HOME"
-	export HOME="$TEST_DIR"
+	ORIGINAL_HOME="$HOME"
+	export ORIGINAL_HOME
+	HOME="$TEST_DIR"
+	export HOME
 
 	mkdir -p "$HOME/.ssh"
 	echo "alias foo='bar'" >"$HOME/.aliases"
@@ -46,7 +48,8 @@ setup() {
 
 teardown() {
 	[[ -d "$TEST_DIR" ]] && rm -rf "$TEST_DIR"
-	export HOME="$ORIGINAL_HOME"
+	HOME="$ORIGINAL_HOME"
+	export HOME
 
 	return 0
 }

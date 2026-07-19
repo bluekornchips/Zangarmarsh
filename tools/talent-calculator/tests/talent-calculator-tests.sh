@@ -6,7 +6,6 @@
 GIT_ROOT="$(git rev-parse --show-toplevel || echo "")"
 SCRIPT_DIR="$GIT_ROOT/tools/talent-calculator"
 SCRIPT="$SCRIPT_DIR/talent-calculator.sh"
-BREW_TOOLS="$SCRIPT_DIR/tools/brew-tools.sh"
 OTHER_TOOLS="$SCRIPT_DIR/tools/other-tools.sh"
 [[ ! -f "$SCRIPT" ]] && echo "setup:: Script not found: $SCRIPT" >&2 && exit 1
 
@@ -20,7 +19,6 @@ setup() {
 	set +e
 	trap - EXIT ERR
 	source "$SCRIPT"
-	source "$BREW_TOOLS"
 	source "$OTHER_TOOLS"
 	trap - EXIT ERR
 	set +e
@@ -139,104 +137,25 @@ teardown() {
 }
 
 ########################################################
-# install_brew
+# health_check
 ########################################################
-@test "install_brew:: dry-run shows what would be installed" {
-	DRY_RUN="true"
-
-	run install_brew
+@test "health_check:: passes when curl is available" {
+	run health_check
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Would install Homebrew"
-}
-
-########################################################
-# install_brew_prerequisite
-########################################################
-@test "install_brew_prerequisite:: installs brew when not present" {
-	mock_command_not_installed "brew"
-	DRY_RUN="true"
-
-	run install_brew_prerequisite
-	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Installing: brew"
-}
-
-@test "install_brew_prerequisite:: skips when brew is already installed" {
-	mock_command_installed "brew"
-	DRY_RUN="true"
-
-	run install_brew_prerequisite
-	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "brew is already installed"
-}
-
-@test "install_brew_prerequisite:: calls uninstall on respec" {
-	TALENT_MODE="respec"
-	DRY_RUN="true"
-
-	run install_brew_prerequisite
-	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Reset requested for brew"
-}
-
-########################################################
-# install_core_tools
-########################################################
-@test "install_core_tools:: installs all core tools in order" {
-	mock_command_not_installed "jq"
-	mock_command_not_installed "yq"
-	mock_command_not_installed "bats"
-	mock_command_not_installed "kubectl"
-	DRY_RUN="true"
-
-	run install_core_tools
-	[[ "$status" -eq 0 ]]
-
-	# Verify core tools are processed
-	echo "$output" | grep -q "jq"
-	echo "$output" | grep -q "yq"
-	echo "$output" | grep -q "bats"
-	echo "$output" | grep -q "kubectl"
-}
-
-@test "install_core_tools:: installs jq" {
-	mock_command_not_installed "jq"
-	DRY_RUN="true"
-
-	run install_core_tools
-	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "jq"
-}
-
-@test "install_core_tools:: installs bats-core with correct package name" {
-	mock_command_not_installed "bats"
-	DRY_RUN="true"
-
-	run install_core_tools
-	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "bats-core"
-}
-
-@test "install_core_tools:: installs kubectl with correct package name" {
-	mock_command_not_installed "kubectl"
-	DRY_RUN="true"
-
-	run install_core_tools
-	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "kubernetes-cli"
+	echo "$output" | grep -q "health_check:: passed"
 }
 
 ########################################################
 # run_talent_calculator main function
 ########################################################
 @test "run_talent_calculator:: accepts dry-run flag" {
-	run run_talent_calculator --dry-run
+	run run_talent_calculator --spec --dry-run
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Dry-run mode enabled"
 }
 
 @test "run_talent_calculator:: accepts short dry-run flag" {
-	run run_talent_calculator -r
+	run run_talent_calculator --spec -r
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Dry-run mode enabled"
 }
@@ -278,43 +197,26 @@ teardown() {
 	run run_talent_calculator
 	[[ "$status" -eq 0 ]] || [[ "$status" -eq 1 ]]
 
-	# Verify status check output
 	echo "$output" | grep -q "Core tools:"
-	echo "$output" | grep -q "Brew tools:"
-	echo "$output" | grep -q "Other tools:"
+	echo "$output" | grep -q "Extra tools:"
+	echo "$output" | grep -q "Script tools:"
 	echo "$output" | grep -q "Summary:"
 }
 
-@test "integration:: dry-run installs core tools first" {
+@test "integration:: dry-run installs script tools" {
 	run run_talent_calculator --spec --dry-run
 	[[ "$status" -eq 0 ]]
 
-	# Verify core tools are checked first
-	echo "$output" | grep -q "brew is already installed\|Would install Homebrew"
-	echo "$output" | grep -q "jq is already installed\|Would install: brew install jq"
-	echo "$output" | grep -q "yq is already installed\|Would install: brew install yq"
-	echo "$output" | grep -q "bats is already installed\|Would install: brew install bats-core"
-	echo "$output" | grep -q "kubectl is already installed\|Would install: brew install kubernetes-cli"
-}
-
-@test "integration:: dry-run installs tools" {
-	run run_talent_calculator --spec --dry-run
-	[[ "$status" -eq 0 ]]
-
-	# Verify tools are processed
-	echo "$output" | grep -q "aws"
-	echo "$output" | grep -q "bun\|bats"
-	echo "$output" | grep -q "helm"
-	echo "$output" | grep -q "stern"
-	echo "$output" | grep -q "tfenv"
+	echo "$output" | grep -q "aws-sso-util\|Would install aws-sso-util"
+	echo "$output" | grep -q "bun\|Would run Bun"
+	echo "$output" | grep -q "helm\|Would download and run Helm"
 }
 
 @test "integration:: dry-run does not make actual changes" {
 	run run_talent_calculator --spec --dry-run
 	[[ "$status" -eq 0 ]]
 
-	# All output should indicate dry-run behavior
-	echo "$output" | grep -q "Would\|already installed"
+	echo "$output" | grep -q "Would\|already installed\|is missing"
 }
 
 @test "integration:: help shows all required options" {

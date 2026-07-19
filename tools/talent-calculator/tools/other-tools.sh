@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Other Tools Installation
-# Installs development tools via non-brew methods (curl, scripts, etc.)
+# Installs development tools via curl, scripts, and pipx
 #
 
 # Install a tool using curl
@@ -54,49 +54,29 @@ install_with_curl() {
 	return 0
 }
 
-# Install Homebrew
-#
-# https://brew.sh/
-#
-# Side Effects:
-# - Installs Homebrew
-#
-# Returns:
-# - 0 on success
-# - 1 on failure
-install_brew() {
-	if [[ "${DRY_RUN}" == "true" ]]; then
-		echo "install_brew:: Would install Homebrew"
-		return 0
-	fi
-
-	echo "install_brew:: Installing Homebrew"
-	/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-	return 0
-}
-
 # Install aws-sso-util
 #
 # https://github.com/benkehoe/aws-sso-util#installation
 #
 # Side Effects:
-# - Installs pipx and aws-sso-util
+# - Installs aws-sso-util via pipx when pipx is available
 #
 # Returns:
 # - 0 on success
 # - 1 on failure
 install_aws_sso_util() {
 	if [[ "${DRY_RUN}" == "true" ]]; then
-		echo "install_aws_sso_util:: Would install pipx and aws-sso-util"
+		echo "install_aws_sso_util:: Would install aws-sso-util with pipx"
 		return 0
 	fi
 
-	echo "install_aws_sso_util:: Installing aws-sso-util"
-	if ! install_with_brew "pipx"; then
+	if ! command -v pipx >/dev/null 2>&1; then
+		echo "install_aws_sso_util:: pipx is required" >&2
+		echo "install_aws_sso_util:: Install pipx with your OS package manager, then re-run" >&2
 		return 1
 	fi
 
+	echo "install_aws_sso_util:: Installing aws-sso-util"
 	pipx ensurepath
 	pipx install aws-sso-util
 
@@ -150,125 +130,41 @@ install_helm() {
 	return 0
 }
 
-# Install Docker CLI and Colima container runtime
+# Install all script-managed tools
 #
-# https://github.com/abcxyz/colima
-# https://docs.docker.com/engine/install/
-#
-# Colima provides a lightweight Docker runtime for macOS and Linux,
-# replacing Docker Desktop. The Docker CLI connects to Colima's daemon.
-# buildx is included with modern Docker CLI installations.
-#
-# Side Effects:
-# - Installs docker CLI and colima via brew
-# - Starts colima if not already running
-#
-# Returns:
-# - 0 on success
-# - 1 on failure
-install_docker_colima() {
-	if [[ "${DRY_RUN}" == "true" ]]; then
-		echo "install_docker_colima:: Would install docker and colima, then start colima"
-		return 0
-	fi
-
-	echo "install_docker_colima:: Installing Docker CLI"
-	if ! install_with_brew "docker"; then
-		echo "install_docker_colima:: Failed to install docker" >&2
-		return 1
-	fi
-
-	echo "install_docker_colima:: Installing Colima"
-	if ! install_with_brew "colima"; then
-		echo "install_docker_colima:: Failed to install colima" >&2
-		return 1
-	fi
-
-	# Start colima if not already running
-	if ! colima status >/dev/null 2>&1; then
-		echo "install_docker_colima:: Starting Colima"
-		if ! colima start; then
-			echo "install_docker_colima:: Failed to start colima" >&2
-			return 1
-		fi
-	else
-		echo "install_docker_colima:: Colima is already running"
-	fi
-
-	return 0
-}
-
-# Install all other tools (non-brew)
-#
-# This function installs all tools that are not installed via Homebrew.
-# Note: Core tools (brew, jq, yq, bats-core, kubectl) are installed separately.
-# It expects the helper functions (check_is_installed, uninstall_with_brew, etc.)
-# to be available from the parent script.
+# This function installs tools that ship with curl or pipx installers.
+# Core and extra tools are checked separately by the parent script.
+# It expects check_is_installed from the parent script.
 #
 # Returns:
 # - 0 always
 install_other_tools() {
-	# https://github.com/benkehoe/aws-sso-util#installation
-	if [[ "${TALENT_MODE}" == "respec" ]]; then
-		echo "install_other_tools:: Reset requested for aws-sso-util"
-		uninstall_with_brew "aws-sso-util"
-	fi
+	local other_tools=(
+		"aws-sso-util:install_aws_sso_util"
+		"bun:install_bun"
+		"helm:install_helm"
+	)
+	local entry
+	local tool_name
+	local install_fn
 
-	if check_is_installed "aws-sso-util"; then
-		echo "install_other_tools:: aws-sso-util is already installed"
-	else
-		echo "install_other_tools:: Installing: aws-sso-util"
-		if ! install_aws_sso_util; then
-			echo "install_other_tools:: Failed to install aws-sso-util" >&2
+	for entry in "${other_tools[@]}"; do
+		tool_name="${entry%%:*}"
+		install_fn="${entry#*:}"
+
+		if [[ "${TALENT_MODE}" == "respec" ]]; then
+			echo "install_other_tools:: Reset requested for ${tool_name}"
 		fi
-	fi
 
-	# https://bun.sh/docs/installation
-	if [[ "${TALENT_MODE}" == "respec" ]]; then
-		echo "install_other_tools:: Reset requested for bun"
-		uninstall_with_brew "bun"
-	fi
-
-	if check_is_installed "bun"; then
-		echo "install_other_tools:: bun is already installed"
-	else
-		echo "install_other_tools:: Installing: bun"
-		if ! install_bun; then
-			echo "install_other_tools:: Failed to install bun" >&2
+		if [[ "${TALENT_MODE}" != "respec" ]] && check_is_installed "${tool_name}"; then
+			echo "install_other_tools:: ${tool_name} is already installed"
+		else
+			echo "install_other_tools:: Installing: ${tool_name}"
+			if ! "${install_fn}"; then
+				echo "install_other_tools:: Failed to install ${tool_name}" >&2
+			fi
 		fi
-	fi
-
-	# https://helm.sh/docs/intro/install/
-	if [[ "${TALENT_MODE}" == "respec" ]]; then
-		echo "install_other_tools:: Reset requested for helm"
-		uninstall_with_brew "helm"
-	fi
-
-	if check_is_installed "helm"; then
-		echo "install_other_tools:: helm is already installed"
-	else
-		echo "install_other_tools:: Installing: helm"
-		if ! install_helm; then
-			echo "install_other_tools:: Failed to install helm" >&2
-		fi
-	fi
-
-	# https://github.com/abcxyz/colima
-	# https://docs.docker.com/engine/install/
-	if [[ "${TALENT_MODE}" == "respec" ]]; then
-		echo "install_other_tools:: Reset requested for docker/colima"
-		uninstall_with_brew "docker"
-		uninstall_with_brew "colima"
-	fi
-
-	if check_is_installed "docker" && colima status >/dev/null 2>&1; then
-		echo "install_other_tools:: docker with colima is already installed and running"
-	else
-		echo "install_other_tools:: Installing: docker with colima"
-		if ! install_docker_colima; then
-			echo "install_other_tools:: Failed to install docker/colima" >&2
-		fi
-	fi
+	done
 
 	return 0
 }
