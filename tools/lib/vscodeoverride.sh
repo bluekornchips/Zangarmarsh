@@ -32,18 +32,17 @@ copy_vscode_template() {
 	return 0
 }
 
-# Copy .vscode from Zangarmarsh into GIT_ROOT when they differ
+# Copy .vscode from Zangarmarsh into GIT_ROOT
 #
 # Inputs:
 # - $1 zangarmarsh_root, optional source repository root
 #
 # Reads environment:
 # - GIT_ROOT, destination project directory, usually the current git root
-# - FORCE, when true replace existing settings in the destination
 # - ZANGARMARSH_ROOT, used when zangarmarsh_root argument is empty
 #
 # Side Effects:
-# - Creates or updates ${GIT_ROOT}/.vscode from the Zangarmarsh template
+# - Creates or replaces ${GIT_ROOT}/.vscode from the Zangarmarsh template
 #
 # Returns:
 # - 0 on success
@@ -77,16 +76,8 @@ vscodeoverride() {
 
 	mkdir -p "${GIT_ROOT}/.vscode"
 
-	if [[ "${FORCE:-}" = "true" ]]; then
-		if ! copy_vscode_template "${zangarmarsh_root}" "${GIT_ROOT}"; then
-			return 1
-		fi
-	elif [[ ! "$(ls -A "${GIT_ROOT}/.vscode" 2>/dev/null)" ]]; then
-		if ! copy_vscode_template "${zangarmarsh_root}" "${GIT_ROOT}"; then
-			return 1
-		fi
-	else
-		echo "vscodeoverride: existing settings kept, use FORCE=true to replace"
+	if ! copy_vscode_template "${zangarmarsh_root}" "${GIT_ROOT}"; then
+		return 1
 	fi
 
 	echo "vscodeoverride: complete"

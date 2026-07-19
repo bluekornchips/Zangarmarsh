@@ -20,7 +20,6 @@ and daily-quests are installed locally in the project directory.
 Baseline quests include always, python, shell, lua, and typescript.
 
 OPTIONS:
-    -f, --force         Force operations (replace existing VSCode settings)
     -h, --help          Show this help message
 
 EXAMPLES:
@@ -28,8 +27,6 @@ EXAMPLES:
     $0 /path/to/dir     # Generate rules and daily-quests in git root (if in git repo) or specified directory
 EOF
 }
-
-DEFAULT_FORCE=false
 
 # Statistics tracking
 STATS_CREATED=0
@@ -161,15 +158,10 @@ run_quest_log() {
 	export QUEST_DIR
 
 	SCHEMA_FILE=${SCHEMA_FILE:-"${SCRIPT_DIR}/schema.json"}
-	FORCE=${FORCE:-${DEFAULT_FORCE}}
 	TARGET_DIR=${TARGET_DIR:-${PWD}}
 
 	while [[ $# -gt 0 ]]; do
 		case $1 in
-		-f | --force)
-			FORCE=true
-			shift
-			;;
 		-h | --help)
 			usage
 			return 0

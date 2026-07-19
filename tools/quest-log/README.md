@@ -83,12 +83,19 @@ Each object in `schema.json` defines:
 - `description` and `keywords`: Cursor metadata for rule selection
 - `cursor.alwaysApply` and `cursor.globs`: Cursor application mode
 
+## VS Code settings
+
+`questlog` always syncs `.vscode/` from the Zangarmarsh template into the target project when the target is not the Zangarmarsh repo itself.
+
 ## Testing
 
 Install a Bats package so the `bats` binary is on your `PATH`, then run:
 
 ```bash
-bats tools/quest-log/tests/quest-log-tests.sh
+bats tools/quest-log/tests/quest-log-cli-tests.sh
+bats tools/quest-log/tests/quest-log-emit-tests.sh
+bats tools/quest-log/tests/quest-log-validate-tests.sh
+bats tools/quest-log/tests/quest-log-drift-tests.sh
 ```
 
 You can also run `bash -n tools/quest-log/quest-log.sh` and `jq empty tools/quest-log/schema.json` for quick checks without Bats.

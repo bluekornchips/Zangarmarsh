@@ -88,7 +88,6 @@ quest_log_test_setup() {
 
 	export TEST_TEMP_DIR
 	export GIT_ROOT
-	export FORCE
 
 	# Temporarily disable errexit and traps to source script safely
 	set +e

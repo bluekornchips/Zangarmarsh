@@ -26,7 +26,7 @@ hearthstone --help
 ## Options
 
 - `-y`, `--yes` — skip Hearthstone confirmation
-- `-f`, `--force` — replace VS Code settings if present, run `trilliax --all`
+- `-f`, `--force` — run `trilliax --all` before questlog
 - `-h`, `--help` — print usage
 
 ## Confirmation

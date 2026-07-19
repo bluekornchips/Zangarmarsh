@@ -116,8 +116,6 @@ teardown() {
 	test_git_root="$(mktemp -d "${base}/vscodeoverride-dest.XXXXXX")"
 	GIT_ROOT="${test_git_root}"
 	export GIT_ROOT
-	FORCE=false
-	export FORCE
 
 	run vscodeoverride
 	[[ "$status" -eq 0 ]]
@@ -127,7 +125,7 @@ teardown() {
 	cmp -s "${GIT_ROOT}/.vscode/settings.json" "${ZANGARMARSH_VSCODE_DIR}/settings.json"
 }
 
-@test 'vscodeoverride:: skips when directory exists and FORCE is false' {
+@test 'vscodeoverride:: replaces existing settings by default' {
 	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
 	local test_git_root
 	test_git_root="$(mktemp -d "${base}/vscodeoverride-dest.XXXXXX")"
@@ -136,27 +134,6 @@ teardown() {
 
 	GIT_ROOT="${test_git_root}"
 	export GIT_ROOT
-	FORCE=false
-	export FORCE
-
-	run vscodeoverride
-	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "vscodeoverride: existing settings kept, use FORCE=true to replace"
-	echo "$output" | grep -q "vscodeoverride: complete"
-	[[ "$(cat "${GIT_ROOT}/.vscode/settings.json")" == "existing" ]]
-}
-
-@test 'vscodeoverride:: replaces when FORCE is true' {
-	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
-	local test_git_root
-	test_git_root="$(mktemp -d "${base}/vscodeoverride-dest.XXXXXX")"
-	mkdir -p "${test_git_root}/.vscode"
-	echo "existing" >"${test_git_root}/.vscode/settings.json"
-
-	GIT_ROOT="${test_git_root}"
-	export GIT_ROOT
-	FORCE=true
-	export FORCE
 
 	run vscodeoverride
 	[[ "$status" -eq 0 ]]
@@ -166,8 +143,6 @@ teardown() {
 
 @test 'vscodeoverride:: fails when GIT_ROOT is not set' {
 	unset GIT_ROOT
-	FORCE=false
-	export FORCE
 
 	run vscodeoverride
 	[[ "$status" -eq 1 ]]
@@ -178,22 +153,15 @@ teardown() {
 	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
 	local test_git_root
 	test_git_root="$(mktemp -d "${base}/vscodeoverride-dest.XXXXXX")"
-	local fake_script_dir
-	fake_script_dir="$(mktemp -d "${base}/vscodeoverride-no-template.XXXXXX")"
+	local fake_root
+	fake_root="$(mktemp -d "${base}/vscodeoverride-no-template.XXXXXX")"
 
 	GIT_ROOT="${test_git_root}"
 	export GIT_ROOT
-	FORCE=false
-	export FORCE
-	SCRIPT_DIR="${fake_script_dir}"
-	export SCRIPT_DIR
 
-	run vscodeoverride
+	run vscodeoverride "${fake_root}"
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "vscodeoverride:: VSCode settings directory not found"
-
-	SCRIPT_DIR="${QUEST_LOG_ROOT}"
-	export SCRIPT_DIR
 }
 
 ########################################################
@@ -228,7 +196,7 @@ teardown() {
 	echo "$output" | grep -q "Generate agentic tool rules for Cursor"
 	echo "$output" | grep -q "lua"
 	echo "$output" | grep -q "git"
-	echo "$output" | grep -q "force"
+	echo "$output" | grep -q "\-\-help"
 }
 
 @test 'run_quest_log:: handles unknown options' {
@@ -334,21 +302,14 @@ EOF
 	[[ -f "${CURSOR_RULES_DIR}/rules-python.mdc" ]]
 }
 
-@test 'run_quest_log:: handles force flag' {
-	run run_quest_log --help
-	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "\-f, \-\-force"
-	echo "$output" | grep -q "Force operations"
-}
-
-@test 'run_quest_log:: accepts force flag' {
+@test 'run_quest_log:: rejects force flag' {
 	run run_quest_log --force
-	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "quest-log: running"
+	[[ "$status" -eq 1 ]]
+	echo "$output" | grep -q "run_quest_log:: Unknown option"
 }
 
-@test 'run_quest_log:: accepts short force flag' {
+@test 'run_quest_log:: rejects short force flag' {
 	run run_quest_log -f
-	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "quest-log: running"
+	[[ "$status" -eq 1 ]]
+	echo "$output" | grep -q "run_quest_log:: Unknown option"
 }
