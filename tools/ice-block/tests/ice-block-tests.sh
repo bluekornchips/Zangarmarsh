@@ -2,11 +2,23 @@
 #
 # Tests for ice-block.sh backup script functionality
 #
-GIT_ROOT="$(git rev-parse --show-toplevel || echo "")"
-SCRIPT="${GIT_ROOT}/tools/ice-block/ice-block.sh"
-[[ ! -f "$SCRIPT" ]] && echo "setup:: Script not found: $SCRIPT" >&2 && return 1
 
 setup_file() {
+	GIT_ROOT="$(git rev-parse --show-toplevel || echo "")"
+	if [[ -z "${GIT_ROOT}" ]]; then
+		echo "Failed to get git root" >&2
+		return 1
+	fi
+
+	SCRIPT="${GIT_ROOT}/tools/ice-block/ice-block.sh"
+	if [[ ! -f "${SCRIPT}" ]]; then
+		echo "setup:: Script not found: ${SCRIPT}" >&2
+		return 1
+	fi
+
+	export GIT_ROOT
+	export SCRIPT
+
 	return 0
 }
 
@@ -25,7 +37,6 @@ setup() {
 
 	set +e
 	trap - EXIT ERR
-	# shellcheck disable=SC1091
 	source "$SCRIPT"
 	trap - EXIT ERR
 	set +e
@@ -154,4 +165,13 @@ teardown() {
 	[[ -f "$TARGET_DIR/.aliases" ]]
 	[[ ! -e "$TARGET_DIR/.does-not-exist" ]]
 	echo "$output" | grep -q "Skipping missing path"
+}
+
+@test "main:: backs up .ssh by default" {
+	TARGET_DIR="$TEST_DIR/with_ssh_backup"
+
+	run main
+	[[ "$status" -eq 0 ]]
+	[[ -d "$TARGET_DIR/.ssh" ]]
+	[[ -f "$TARGET_DIR/.ssh/config" ]]
 }

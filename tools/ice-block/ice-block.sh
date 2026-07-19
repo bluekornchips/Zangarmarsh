@@ -6,8 +6,6 @@
 # Uses cp -a (archive mode) which preserves permissions, timestamps, and symlinks.
 #
 
-# Configuration
-# Get hostname for target directory
 HOSTNAME_VALUE="$(hostname -s 2>/dev/null || hostname 2>/dev/null || echo "default")"
 TARGET_DIR="${HOME}/.ice-block/${HOSTNAME_VALUE}"
 TARGET_DIR="${TARGET_DIR%/}"

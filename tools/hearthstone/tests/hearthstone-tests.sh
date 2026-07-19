@@ -2,9 +2,25 @@
 #
 # Test file for hearthstone.sh
 #
-GIT_ROOT="$(git rev-parse --show-toplevel || echo "")"
-SCRIPT="$GIT_ROOT/tools/hearthstone/hearthstone.sh"
-[[ ! -f "$SCRIPT" ]] && echo "Script not found: $SCRIPT" >&2 && return 1
+
+setup_file() {
+	GIT_ROOT="$(git rev-parse --show-toplevel || echo "")"
+	if [[ -z "${GIT_ROOT}" ]]; then
+		echo "Failed to get git root" >&2
+		return 1
+	fi
+
+	SCRIPT="${GIT_ROOT}/tools/hearthstone/hearthstone.sh"
+	if [[ ! -f "${SCRIPT}" ]]; then
+		echo "Script not found: ${SCRIPT}" >&2
+		return 1
+	fi
+
+	export GIT_ROOT
+	export SCRIPT
+
+	return 0
+}
 
 setup() {
 	set +e

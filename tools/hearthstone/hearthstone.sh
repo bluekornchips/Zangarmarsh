@@ -4,7 +4,7 @@
 #
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-GIT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+GIT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 DEFAULT_TRILLIAX_SCRIPT="$GIT_ROOT/tools/trilliax/trilliax.sh"
 DEFAULT_QUESTLOG_SCRIPT="$GIT_ROOT/tools/quest-log/quest-log.sh"
@@ -39,6 +39,7 @@ EOF
 health_check() {
 	local errors=0
 	local script_path
+
 	for script_path in \
 		"${TRILLIAX_SCRIPT:-${DEFAULT_TRILLIAX_SCRIPT}}" \
 		"${QUESTLOG_SCRIPT:-${DEFAULT_QUESTLOG_SCRIPT}}"; do

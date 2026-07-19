@@ -26,7 +26,6 @@ execute_clean() {
 	shift 2
 	local find_args=("$@")
 
-	# Input validation
 	if [[ -z "${function_name}" ]]; then
 		echo "execute_clean:: function_name is required" >&2
 		return 1
@@ -42,7 +41,6 @@ execute_clean() {
 		return 1
 	fi
 
-	# Path validation: ensure target_dir is absolute and exists
 	local target_dir_abs
 	target_dir_abs="$(cd "${target_dir}" && pwd 2>/dev/null)"
 	if [[ -z "${target_dir_abs}" ]] || [[ ! -d "${target_dir_abs}" ]]; then
@@ -52,10 +50,8 @@ execute_clean() {
 
 	local max_depth=10
 
-	# Dry-run mode: show what would be removed
 	if [[ "${DRY_RUN}" == "true" ]]; then
 		while IFS= read -r -d '' item || [[ -n "${item}" ]]; do
-			# Explicit path validation: ensure item is within target_dir_abs
 			if [[ -n "${item}" ]] && [[ "${item}" == "${target_dir_abs}"* ]]; then
 				echo "${function_name}:: Would remove: ${item}"
 			fi
@@ -63,9 +59,7 @@ execute_clean() {
 		return 0
 	fi
 
-	# Actual removal using rm -rf (works for both files and directories)
 	while IFS= read -r -d '' item || [[ -n "${item}" ]]; do
-		# Explicit path validation: ensure item is within target_dir_abs
 		if [[ -n "${item}" ]] && [[ "${item}" == "${target_dir_abs}"* ]]; then
 			rm -rf "${item}" 2>/dev/null || true
 		fi
@@ -248,7 +242,6 @@ validate_targets() {
 # - Uses global DRY_RUN variable to determine dry-run mode
 # - Returns 0 on success, 1 on error
 run_trilliax() {
-	# Parse command line arguments
 	local target_dir="."
 	local targets_string=""
 	local all_flag="false"
@@ -297,16 +290,13 @@ run_trilliax() {
 		esac
 	done
 
-	# Validate targets
 	if ! validate_targets "${targets_string}" "${all_flag}"; then
 		return 1
 	fi
 
-	# Set DRY_RUN default if not set
 	DRY_RUN="${DRY_RUN:-false}"
 	export DRY_RUN
 
-	# Validate target directory
 	if [[ -z "${target_dir}" ]]; then
 		echo "run_trilliax:: target_dir is required" >&2
 		return 1
@@ -314,7 +304,6 @@ run_trilliax() {
 
 	echo "run_trilliax:: Apologies for the mess master, I shall tidy up immediately."
 
-	# Set MAX_DEPTH globally so clean_fs can access it
 	MAX_DEPTH="${MAX_DEPTH:-${DEFAULT_MAX_DEPTH}}"
 
 	if [[ ! -d "${target_dir}" ]]; then
@@ -334,7 +323,6 @@ run_trilliax() {
 
 	echo "run_trilliax:: Filthy, filthy, FILTHY!"
 	local cleanup_count=0
-	# Convert space-separated string to array for safe iteration
 	local -a targets_array
 	IFS=' ' read -ra targets_array <<<"${ENABLED_TARGETS}"
 	local target

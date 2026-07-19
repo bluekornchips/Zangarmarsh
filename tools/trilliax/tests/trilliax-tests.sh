@@ -3,25 +3,34 @@
 # Test file for trilliax.sh
 # Tests the trilliax cleanup script functionality
 #
-GIT_ROOT="$(git rev-parse --show-toplevel || echo "")"
-SCRIPT="$GIT_ROOT/tools/trilliax/trilliax.sh"
-[[ ! -f "$SCRIPT" ]] && echo "Script not found: $SCRIPT" >&2 && exit 1
 
 setup_file() {
+	GIT_ROOT="$(git rev-parse --show-toplevel || echo "")"
+	if [[ -z "${GIT_ROOT}" ]]; then
+		echo "Failed to get git root" >&2
+		return 1
+	fi
+
+	SCRIPT="${GIT_ROOT}/tools/trilliax/trilliax.sh"
+	if [[ ! -f "${SCRIPT}" ]]; then
+		echo "Script not found: ${SCRIPT}" >&2
+		return 1
+	fi
+
+	export GIT_ROOT
+	export SCRIPT
+
 	return 0
 }
 
 setup() {
 	set +e
 	trap - EXIT ERR
-	# shellcheck disable=SC1091
 	source "$SCRIPT"
 	trap - EXIT ERR
 	set +e
 
-	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
-
-	TEST_DIR="$(mktemp -d "${base}/trilliax-test.XXXXXX")"
+	TEST_DIR="$(mktemp -d -t trilliax-test.XXXXXX)"
 	export TEST_DIR
 	export TEST_CLEANUP_DIR="$TEST_DIR/cleanup_test"
 
