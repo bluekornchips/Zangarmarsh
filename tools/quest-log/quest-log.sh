@@ -1,30 +1,26 @@
 #!/usr/bin/env bash
 #
-# Generate agentic tool rules for Cursor based on schema.json
+# Sync .vscode settings from Zangarmarsh into a target project, with diffs
 #
 
 _QUEST_LOG_SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
 _QUEST_LOG_SCRIPT_DIR="$(cd "$(dirname "${_QUEST_LOG_SCRIPT_PATH}")" && pwd)"
 source "${_QUEST_LOG_SCRIPT_DIR}/lib/io.sh"
-source "${_QUEST_LOG_SCRIPT_DIR}/lib/validate.sh"
-source "${_QUEST_LOG_SCRIPT_DIR}/lib/emit_rules.sh"
-source "${_QUEST_LOG_SCRIPT_DIR}/lib/emit_docs.sh"
 
 # Display usage information
 usage() {
 	cat <<EOF
 Usage: $0 [OPTIONS] [DIRECTORY]
 
-Generate agentic tool rules and daily-quests for Cursor based on schema.json. Rules
-and daily-quests are installed locally in the project directory.
-Baseline quests include always, python, shell, lua, and typescript.
+Sync .vscode settings from Zangarmarsh into a target project, printing a
+diff for every file that changes.
 
 OPTIONS:
     -h, --help          Show this help message
 
 EXAMPLES:
-    $0                  # Generate rules and daily-quests in git root (if in git repo) or current directory
-    $0 /path/to/dir     # Generate rules and daily-quests in git root (if in git repo) or specified directory
+    $0                  # Sync into git root (if in git repo) or current directory
+    $0 /path/to/dir     # Sync into git root (if in git repo) or specified directory
 EOF
 }
 
@@ -33,37 +29,21 @@ STATS_CREATED=0
 STATS_UPDATED=0
 STATS_UNCHANGED=0
 STATS_ERRORS=0
-STATS_TOTAL_LINES=0
-STATS_WARNINGS=0
 
-# Install quest-log rules for Cursor
+# Determine the target directory for the sync
 #
 # Side Effects:
-# - Creates local Cursor rules directory at TARGET_DIR/.cursor/rules/user/
-# - Installs rules from quest-log schema
-install_rules() {
-	echo "install_rules: running"
-
-	local cursor_rules_dir="${TARGET_DIR}/.cursor/rules/user"
-
-	if ! mkdir -p "${cursor_rules_dir}"; then
-		echo "install_rules:: Failed to create Cursor rules directory: ${cursor_rules_dir}" >&2
-		return 1
+# - Sets TARGET_DIR to git root if in git repo, otherwise uses provided/current directory
+# - Outputs status messages for testing
+determine_target_directory() {
+	local git_root
+	if git_root=$(git rev-parse --show-toplevel 2>/dev/null); then
+		TARGET_DIR="${git_root}"
+		echo "git_root: ${git_root}"
+	else
+		TARGET_DIR=${TARGET_DIR:-${PWD}}
+		echo "git_root: none"
 	fi
-
-	local agent_rules_dir="${TARGET_DIR}/.agent/rules"
-	if ! mkdir -p "${agent_rules_dir}"; then
-		echo "install_rules:: Failed to create Agent rules directory: ${agent_rules_dir}" >&2
-		return 1
-	fi
-
-	CURSOR_RULES_DIR="${cursor_rules_dir}"
-	AGENT_RULES_DIR="${agent_rules_dir}"
-	export CURSOR_RULES_DIR AGENT_RULES_DIR
-
-	fill_quest_log "${TARGET_DIR}"
-
-	echo "install_rules: complete"
 
 	return 0
 }
@@ -86,65 +66,34 @@ EOF
 	[[ ${STATS_UPDATED} -gt 0 ]] && echo "Updated: ${STATS_UPDATED}"
 	[[ ${STATS_UNCHANGED} -gt 0 ]] && echo "Unchanged: ${STATS_UNCHANGED}"
 	[[ ${STATS_ERRORS} -gt 0 ]] && echo "Errors: ${STATS_ERRORS}"
-	[[ ${STATS_WARNINGS} -gt 0 ]] && echo "Warnings: ${STATS_WARNINGS}"
-	[[ ${STATS_TOTAL_LINES} -gt 0 ]] && echo "Total lines: ${STATS_TOTAL_LINES}"
 	echo "Total processed: ${total_processed}"
 
 	echo ""
 
 	if ((STATS_ERRORS > 0)); then
-		echo "print_summary:: Some rules failed validation. Please review errors above." >&2
+		echo "print_summary:: Some files failed to sync. Please review errors above." >&2
 		return 1
 	fi
 
-	if ((STATS_WARNINGS > 0)); then
-		echo "print_summary:: Some warnings were generated. Please review warnings above."
-		return 0
-	fi
-
-	echo "print_summary:: All rules processed successfully."
+	echo "print_summary:: All files processed successfully."
 
 	return 0
 }
 
-# Determine the target directory for rule generation
-#
-# Side Effects:
-# - Sets TARGET_DIR to git root if in git repo, otherwise uses provided/current directory
-# - Outputs status messages for testing
-determine_target_directory() {
-	local git_root
-	if git_root=$(git rev-parse --show-toplevel 2>/dev/null); then
-		TARGET_DIR="${git_root}"
-		echo "git_root: ${git_root}"
-	else
-		TARGET_DIR=${TARGET_DIR:-${PWD}}
-		echo "git_root: none"
-	fi
-
-	return 0
-}
-
-# Main entry point for the quest log generator
+# Main entry point for quest-log
 #
 # Inputs:
 # - All command line arguments
 #
 # Side Effects:
 # - Processes command line options
-# - Generates rule files
+# - Syncs .vscode settings into the target directory
 # - Exits with appropriate status code
 run_quest_log() {
 	echo "quest-log: running"
 
-	if ! command -v jq &>/dev/null; then
-		echo "run_quest_log:: jq is required but not installed." >&2
-		return 1
-	fi
-
 	SCRIPT_PATH="${_QUEST_LOG_SCRIPT_PATH}"
 	SCRIPT_DIR="${_QUEST_LOG_SCRIPT_DIR}"
-	QUEST_LOG_ROOT="${SCRIPT_DIR}"
 	export SCRIPT_DIR
 
 	if [[ ! -f "${SCRIPT_DIR}/../lib/vscodeoverride.sh" ]]; then
@@ -154,10 +103,6 @@ run_quest_log() {
 
 	source "${SCRIPT_DIR}/../lib/vscodeoverride.sh"
 
-	QUEST_DIR="${SCRIPT_DIR}/quests"
-	export QUEST_DIR
-
-	SCHEMA_FILE=${SCHEMA_FILE:-"${SCRIPT_DIR}/schema.json"}
 	TARGET_DIR=${TARGET_DIR:-${PWD}}
 
 	while [[ $# -gt 0 ]]; do
@@ -180,31 +125,16 @@ run_quest_log() {
 
 	determine_target_directory
 
+	if [[ ! -d "${TARGET_DIR}" ]]; then
+		echo "run_quest_log:: Target directory does not exist: ${TARGET_DIR}" >&2
+		return 1
+	fi
+
 	GIT_ROOT="${TARGET_DIR}"
 
-	if ! cd "${TARGET_DIR}"; then
-		echo "run_quest_log:: Failed to change to target directory: ${TARGET_DIR}" >&2
+	if ! vscodeoverride; then
 		return 1
 	fi
-
-	if [[ ! -d "${TARGET_DIR}" ]]; then
-		echo "run_quest_log:: Target directory is required" >&2
-		return 1
-	fi
-
-	if [[ ! -r "${SCHEMA_FILE}" ]]; then
-		echo "run_quest_log:: Schema file not found: ${SCHEMA_FILE}" >&2
-		return 1
-	fi
-
-	install_rules
-
-	if [[ -d "${QUEST_LOG_ROOT}/commands" ]]; then
-		generate_commands "${TARGET_DIR}"
-		generate_workflows "${TARGET_DIR}"
-	fi
-
-	vscodeoverride
 
 	print_summary
 	local summary_exit_code=$?

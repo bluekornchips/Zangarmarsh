@@ -80,7 +80,7 @@ read_file_or_empty() {
 # Inputs:
 # - $1, file_path, destination path
 # - $2, new_content, full new file body
-# - $3, stats_mode, rule to update STATS for Cursor rules, none for Agent rules and commands
+# - $3, stats_mode, "rule" to update STATS counters, "none" to skip
 # - $4, error_label, prefix for write failure messages
 #
 # Returns:

@@ -2,12 +2,14 @@
 
 ## Overview
 
-Generate AI assistant rules for Cursor from JSON metadata and Markdown quest templates in this directory. Rules are written under the target project.
+Sync `.vscode/` settings from Zangarmarsh into a target project, printing a
+diff and a summary for every file that changes. Cursor rules, commands, and
+skills now live in the [familiar](https://github.com/bluekornchips/familiar)
+plugin instead of being generated here; Quest Log is scoped to VS Code sync.
 
 ## Prerequisites
 
 - Bash 3.2 or greater
-- `jq` for JSON parsing
 
 ## Install
 
@@ -21,71 +23,26 @@ questlog
 
 ## Features
 
-- Creates Cursor rules under `.cursor/rules/user/`
-- Creates Agent rules under `.agent/rules/`
-- Generates Cursor commands from `tools/quest-log/commands/` into `.cursor/commands/user/`
-- Generates Agent workflows into `.agent/workflows/`
-- Template-based rule generation driven by `schema.json`
+- Copies `.vscode/settings.json` and `.vscode/extensions.json` from Zangarmarsh into the target project
+- Prints a color diff and a Created/Updated/Unchanged summary for each file
+- Skips the sync when the target is the Zangarmarsh checkout itself
 
 ## Usage
 
 ```bash
-# Generate rules in the current git repository root
+# Sync .vscode into the current git repository root
 questlog
 
-# Generate rules for a specific directory tree
+# Sync .vscode for a specific directory tree
 questlog /path/to/project
 
 # Show help
 questlog --help
 ```
 
-## Configuration
-
-The tool reads [tools/quest-log/schema.json](schema.json) and Markdown bodies from [tools/quest-log/quests/](quests/). Each quest file uses `Purpose`, `Priority`, `Standards`, `Usage`, and optional `Example` headings, with `Allowed` and `Denied` nested under `Usage`.
-
-| Template        | Role                                                        |
-| --------------- | ----------------------------------------------------------- |
-| `always.md`     | Universal assistant behavior, safety, and response quality  |
-| `lua.md`        | Lua and WoW addon guidance                                  |
-| `python.md`     | Python typing, errors, imports, tests, and tooling          |
-| `shell.md`      | Bash and zsh scripting, structure, and Bats testing         |
-| `typescript.md` | TypeScript and JavaScript typing, modules, async, and tests |
-
-## Daily Quests
-
-Quest Log copies Markdown from `tools/quest-log/commands/` into `.cursor/commands/user/`. In Cursor chat you can invoke them with `/` plus the file stem, for example `/bash-review`.
-
-See the [Cursor Commands documentation](https://cursor.com/docs/agent/chat/commands) for how commands work in the product.
-
-### Available Daily Quests
-
-- `bash-review.md`: Bash repository review checklist
-- `lua-review.md`: Lua review checklist
-- `author.md`: Documentation templates for PRs, tickets, README files, and specs
-- `python-project-setup.md`: Python project bootstrap notes
-- `typescript-review.md`: TypeScript review checklist
-
 ## Files Created
 
-- `.cursor/rules/user/`: Cursor rule files named `rules-<quest>.mdc`
-- `.agent/rules/`: Agent rule files named `rules-<quest>.md`
-- `.cursor/commands/user/`: Cursor command Markdown from `commands/*.md`
-- `.agent/workflows/`: Agent workflow Markdown derived from the same command sources
-
-## Schema Format
-
-Each object in `schema.json` defines:
-
-- `name`: stem for output filenames
-- `file`: Markdown template under `quests/`
-- `icon`: leading acknowledgement line in generated rules
-- `description` and `keywords`: Cursor metadata for rule selection
-- `cursor.alwaysApply` and `cursor.globs`: Cursor application mode
-
-## VS Code settings
-
-`questlog` always syncs `.vscode/` from the Zangarmarsh template into the target project when the target is not the Zangarmarsh repo itself.
+- `.vscode/settings.json` and `.vscode/extensions.json` in the target project, copied from the Zangarmarsh template
 
 ## Testing
 
@@ -93,15 +50,11 @@ Install a Bats package so the `bats` binary is on your `PATH`, then run:
 
 ```bash
 bats tools/quest-log/tests/quest-log-cli-tests.sh
-bats tools/quest-log/tests/quest-log-emit-tests.sh
-bats tools/quest-log/tests/quest-log-validate-tests.sh
-bats tools/quest-log/tests/quest-log-drift-tests.sh
 ```
 
-You can also run `bash -n tools/quest-log/quest-log.sh` and `jq empty tools/quest-log/schema.json` for quick checks without Bats.
+You can also run `bash -n tools/quest-log/quest-log.sh` for a quick syntax check without Bats.
 
 ## Verification Steps
 
-- [ ] Rules appear under `.cursor/rules/user/` after `questlog`
-- [ ] Commands appear under `.cursor/commands/user/` when `commands/` exists
-- [ ] All schema entries generate matching Cursor and Agent rule files
+- [ ] `.vscode/settings.json` and `.vscode/extensions.json` appear in the target project after `questlog`
+- [ ] Running `questlog` again on an unchanged target reports "No changes" for each file

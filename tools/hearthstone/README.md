@@ -1,6 +1,6 @@
 # Hearthstone
 
-Runs a fixed sequence to sync a development machine with this repo: ensure `jq`, generate Cursor rules, copy VS Code settings from Zangarmarsh into the current git root. Optional cleanup runs only with `--force`.
+Runs a fixed sequence to sync a development machine with this repo: ensure `jq`, sync `.vscode` settings from Zangarmarsh into the current git root via `questlog`. Optional cleanup runs only with `--force`.
 
 ## Requirements
 
@@ -11,8 +11,8 @@ Runs a fixed sequence to sync a development machine with this repo: ensure `jq`,
 ## Operations order
 
 1. `build_deck` — ensure `jq` is available, see `install_jq` in the script
-2. `trilliax --all` — **only when `--force`** — runs before rule generation so cleanup hits the tree first
-3. `questlog` — generate rules and sync `.vscode/` into the target repo via `tools/quest-log/quest-log.sh`
+2. `trilliax --all` — **only when `--force`** — runs before the sync so cleanup hits the tree first
+3. `questlog` — sync `.vscode/` into the target repo via `tools/quest-log/quest-log.sh`
 
 ## Usage
 
