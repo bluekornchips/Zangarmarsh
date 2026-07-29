@@ -39,9 +39,9 @@ echo 'source /path/to/zangarmarsh/zangarmarsh.sh' >> ~/.bashrc
 echo 'source /path/to/zangarmarsh/zangarmarsh.sh' >> ~/.zshrc
 ```
 
-## Sync VS Code settings
+## Generate rules
 
-Quest Log sources live under `tools/quest-log/`. It copies `.vscode/settings.json` and `.vscode/extensions.json` from this repo into your current project, printing a diff for anything that changes.
+Quest Log sources live under `tools/quest-log/`. Generated `.cursor/` and `.agent/` trees are gitignored.
 
 ```bash
 source zangarmarsh.sh
@@ -102,8 +102,8 @@ These apply when `profile/zsh/prompt.sh` runs:
 After sourcing, aliases map to scripts under `tools/`:
 
 | Alias         | Tool              | Role                                                                  |
-| ------------- | ----------------- | ---------------------------------------------------------------------- |
-| `questlog`    | Quest Log         | Sync `.vscode` settings from Zangarmarsh, with diffs                   |
+| ------------- | ----------------- | --------------------------------------------------------------------- |
+| `questlog`    | Quest Log         | Cursor and Agent rules from schema and Markdown                       |
 | `trilliax`    | Trilliax          | Cleanup for caches and artifacts                                      |
 | `talents`     | Talent Calculator | Check workstation CLIs; install script-managed tools with `--spec`    |
 | `hearthstone` | Hearthstone       | Sync VS Code settings and quest log; optional Trilliax with `--force` |

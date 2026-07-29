@@ -3,8 +3,8 @@
 Short index. Full usage, options, and tests live in each tool README under this directory.
 
 | Tool              | Role                                                             | Entry                                                                     |
-| ----------------- | ----------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| Quest Log         | Sync `.vscode` settings from Zangarmarsh, with diffs             | `./tools/quest-log/quest-log.sh` or `questlog` after sourcing Zangarmarsh |
+| ----------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Quest Log         | Cursor rules from `schema.json`                                  | `./tools/quest-log/quest-log.sh` or `questlog` after sourcing Zangarmarsh |
 | Trilliax          | Remove caches and build artifacts                                | `./tools/trilliax/trilliax.sh --all`                                      |
 | Talent Calculator | Check or install workstation CLIs                                | `./tools/talent-calculator/talent-calculator.sh` then `--help`            |
 | Hearthstone       | jq, questlog with VS Code sync, optional Trilliax with `--force` | `./tools/hearthstone/hearthstone.sh`                                      |

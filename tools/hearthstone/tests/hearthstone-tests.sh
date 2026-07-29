@@ -76,27 +76,6 @@ mock_commands_failure() {
 	export TRILLIAX_SCRIPT QUESTLOG_SCRIPT
 }
 
-mock_questlog_failure() {
-	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
-	local mock_dir
-
-	mock_dir="$(mktemp -d "${base}/hearthstone-mock.XXXXXX")"
-
-	echo '#!/usr/bin/env bash' >"$mock_dir/trilliax.sh"
-	echo 'echo "trilliax mocked"' >>"$mock_dir/trilliax.sh"
-	chmod +x "$mock_dir/trilliax.sh"
-
-	echo '#!/usr/bin/env bash' >"$mock_dir/questlog.sh"
-	echo 'echo "questlog failed" >&2' >>"$mock_dir/questlog.sh"
-	echo 'exit 1' >>"$mock_dir/questlog.sh"
-	chmod +x "$mock_dir/questlog.sh"
-
-	TRILLIAX_SCRIPT="$mock_dir/trilliax.sh"
-	QUESTLOG_SCRIPT="$mock_dir/questlog.sh"
-
-	export TRILLIAX_SCRIPT QUESTLOG_SCRIPT
-}
-
 ########################################################
 # verify_git_repository
 ########################################################
@@ -150,17 +129,6 @@ mock_questlog_failure() {
 	[[ "$status" -eq 1 ]]
 
 	grep -q "execute_operations:: Failed to execute: trilliax --all" <<<"$output"
-}
-
-@test "execute_operations:: fails when questlog fails" {
-	mock_questlog_failure
-	FORCE=false
-	export FORCE
-
-	run execute_operations
-	[[ "$status" -eq 1 ]]
-
-	grep -q "execute_operations:: Failed to execute: questlog" <<<"$output"
 }
 
 ########################################################

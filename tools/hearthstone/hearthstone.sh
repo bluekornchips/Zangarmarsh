@@ -75,7 +75,7 @@ health_check() {
 # - 1 if user declines or provides invalid input
 confirm_proceed() {
 	local build_deck_msg="build_deck: Build the deck, install packages, etc."
-	local questlog_msg="questlog: Sync .vscode settings from Zangarmarsh into this repo"
+	local questlog_msg="questlog: Generate agentic tool rules and sync VSCode settings"
 	local trilliax_msg="trilliax --all: Clean generated files and directories"
 
 	cat <<EOF
