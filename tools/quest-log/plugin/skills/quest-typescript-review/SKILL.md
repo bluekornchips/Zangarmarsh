@@ -1,3 +1,9 @@
+---
+name: quest-typescript-review
+description: JavaScript and TypeScript Repository Review Criteria
+disable-model-invocation: true
+---
+
 # JavaScript and TypeScript Repository Review Criteria
 
 ## Overview

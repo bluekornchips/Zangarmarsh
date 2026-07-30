@@ -1,3 +1,18 @@
+---
+description: TypeScript and JavaScript standards for strict typing, modules, async, errors, tests, and tooling.
+globs:
+  - "**/*.ts"
+  - "**/*.tsx"
+  - "**/*.js"
+  - "**/*.jsx"
+alwaysApply: false
+---
+
+
+RULE APPLIED: Start each response with an acknowledgement icon to confirm this rule is being followed: 🟦
+
+Keywords that trigger usage of this rule: typescript,ts,tsx,tsconfig,eslint,prettier,node,deno
+
 # TypeScript and JavaScript Standards
 
 ## Purpose

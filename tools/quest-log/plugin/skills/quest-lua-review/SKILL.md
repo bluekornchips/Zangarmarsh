@@ -1,3 +1,9 @@
+---
+name: quest-lua-review
+description: Lua Repository Review Criteria
+disable-model-invocation: true
+---
+
 # Lua Repository Review Criteria
 
 ## Overview

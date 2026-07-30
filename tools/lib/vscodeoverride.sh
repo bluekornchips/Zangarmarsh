@@ -2,8 +2,11 @@
 #
 # Sync VSCode settings from the Zangarmarsh repo into a target project directory
 #
+# Requires write_if_changed and the STATS_* counters from
+# tools/quest-log/lib/io.sh, already sourced by the caller before this file.
+#
 
-# Copy .vscode template files into a destination project
+# Copy .vscode template files into a destination project, reporting diffs
 #
 # Inputs:
 # - $1 zangarmarsh_root, source repository root
@@ -11,10 +14,11 @@
 #
 # Side Effects:
 # - Writes files under ${dest_root}/.vscode
+# - Prints a diff and updates STATS_* counters for each file via write_if_changed
 #
 # Returns:
 # - 0 on success
-# - 1 when copy fails
+# - 1 when a template file cannot be read or written
 copy_vscode_template() {
 	local zangarmarsh_root="$1"
 	local dest_root="$2"
@@ -24,10 +28,19 @@ copy_vscode_template() {
 		return 1
 	fi
 
-	if ! cp -rf "${zangarmarsh_root}/.vscode/"* "${dest_root}/.vscode/" 2>/dev/null; then
-		echo "copy_vscode_template:: Failed to copy VSCode settings" >&2
-		return 1
-	fi
+	local template_file
+	while IFS= read -r -d '' template_file; do
+		local file_name
+		file_name="$(basename "${template_file}")"
+
+		local new_content
+		if ! new_content="$(cat "${template_file}")"; then
+			echo "copy_vscode_template:: Failed to read ${template_file}" >&2
+			return 1
+		fi
+
+		write_if_changed "${dest_root}/.vscode/${file_name}" "${new_content}" "rule" "copy_vscode_template" || return 1
+	done < <(find "${zangarmarsh_root}/.vscode" -maxdepth 1 -type f -print0)
 
 	return 0
 }
@@ -42,11 +55,11 @@ copy_vscode_template() {
 # - ZANGARMARSH_ROOT, used when zangarmarsh_root argument is empty
 #
 # Side Effects:
-# - Creates or replaces ${GIT_ROOT}/.vscode from the Zangarmarsh template
+# - Creates ${GIT_ROOT}/.vscode from the Zangarmarsh template, file by file
 #
 # Returns:
 # - 0 on success
-# - 1 when GIT_ROOT is unset, source is missing, or copy fails
+# - 1 when GIT_ROOT is unset, source is missing, or a file write fails
 vscodeoverride() {
 	local zangarmarsh_root="${1:-${ZANGARMARSH_ROOT:-}}"
 
@@ -74,11 +87,9 @@ vscodeoverride() {
 		return 0
 	fi
 
-	mkdir -p "${GIT_ROOT}/.vscode"
+	ensure_dir "${GIT_ROOT}/.vscode" "vscodeoverride" || return 1
 
-	if ! copy_vscode_template "${zangarmarsh_root}" "${GIT_ROOT}"; then
-		return 1
-	fi
+	copy_vscode_template "${zangarmarsh_root}" "${GIT_ROOT}" || return 1
 
 	echo "vscodeoverride: complete"
 

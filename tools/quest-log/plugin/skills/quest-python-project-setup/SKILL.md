@@ -1,3 +1,9 @@
+---
+name: quest-python-project-setup
+description: Python Project Setup
+disable-model-invocation: true
+---
+
 # Python Project Setup
 
 Create a barebones Python project that explicitly follows the Python coding standards defined in `.cursor/rules/rules-python.mdc`.

@@ -1,3 +1,9 @@
+---
+name: quest-author
+description: PR and Issue Documentation
+disable-model-invocation: true
+---
+
 # PR and Issue Documentation
 
 Create two files when documenting code changes: `pr.md` for reviewers in past tense, and `issue.md` for the issue tracker in future tense. Use simple words, write clearly and directly, and keep descriptions concise. Avoid jargon and excessive quotes. Review the diff before writing so the docs match the code.

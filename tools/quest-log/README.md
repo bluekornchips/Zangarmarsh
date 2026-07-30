@@ -2,12 +2,13 @@
 
 ## Overview
 
-Generate AI assistant rules for Cursor from JSON metadata and Markdown quest templates in this directory. Rules are written under the target project.
+Install the tracked plugin tree in this directory under
+`~/.cursor/plugins/local/quest-log`, and sync `.vscode/` settings into the
+target project. There is no generation step: `plugin/` is the plugin.
 
 ## Prerequisites
 
 - Bash 3.2 or greater
-- `jq` for JSON parsing
 
 ## Install
 
@@ -21,67 +22,59 @@ questlog
 
 ## Features
 
-- Creates Cursor rules under `.cursor/rules/user/`
-- Creates Agent rules under `.agent/rules/`
-- Generates Cursor commands from `tools/quest-log/commands/` into `.cursor/commands/user/`
-- Generates Agent workflows into `.agent/workflows/`
-- Template-based rule generation driven by `schema.json`
+- Replaces `~/.cursor/plugins/local/quest-log` with a fresh copy of `tools/quest-log/plugin/` on every run, so stale files never survive
+- Syncs `.vscode/` from Zangarmarsh into the target project when the target is not this repo
 
 ## Usage
 
 ```bash
-# Generate rules in the current git repository root
+# Install plugin locally, sync .vscode in the current git repository root
 questlog
 
-# Generate rules for a specific directory tree
+# Same, syncing .vscode for a specific directory tree
 questlog /path/to/project
 
 # Show help
 questlog --help
 ```
 
-## Configuration
+## Plugin source layout
 
-The tool reads [tools/quest-log/schema.json](schema.json) and Markdown bodies from [tools/quest-log/quests/](quests/). Each quest file uses `Purpose`, `Priority`, `Standards`, `Usage`, and optional `Example` headings, with `Allowed` and `Denied` nested under `Usage`.
+`tools/quest-log/plugin/` is committed, hand-authored, and installed as-is:
 
-| Template        | Role                                                        |
-| --------------- | ----------------------------------------------------------- |
-| `always.md`     | Universal assistant behavior, safety, and response quality  |
-| `lua.md`        | Lua and WoW addon guidance                                  |
-| `python.md`     | Python typing, errors, imports, tests, and tooling          |
-| `shell.md`      | Bash and zsh scripting, structure, and Bats testing         |
-| `typescript.md` | TypeScript and JavaScript typing, modules, async, and tests |
+```
+plugin/
+  .cursor-plugin/plugin.json   # plugin manifest
+  rules/*.mdc                  # Cursor rules, loaded in every window
+  skills/quest-*/SKILL.md      # quest-* skills
+```
 
-## Daily Quests
+| Rule             | Role                                                        |
+| ---------------- | ----------------------------------------------------------- |
+| `always.mdc`     | Universal assistant behavior, safety, and response quality  |
+| `lua.mdc`        | Lua and WoW addon guidance                                  |
+| `python.mdc`     | Python typing, errors, imports, tests, and tooling          |
+| `shell.mdc`      | Bash and zsh scripting, structure, and Bats testing         |
+| `typescript.mdc` | TypeScript and JavaScript typing, modules, async, and tests |
 
-Quest Log copies Markdown from `tools/quest-log/commands/` into `.cursor/commands/user/`. In Cursor chat you can invoke them with `/` plus the file stem, for example `/bash-review`.
+## Skills
 
-See the [Cursor Commands documentation](https://cursor.com/docs/agent/chat/commands) for how commands work in the product.
+| Skill                        | Role                                                              |
+| ---------------------------- | ----------------------------------------------------------------- |
+| `quest-author`               | Documentation templates for PRs, tickets, README files, and specs |
+| `quest-bash-review`          | Bash repository review checklist                                  |
+| `quest-lua-review`           | Lua review checklist                                              |
+| `quest-python-project-setup` | Python project bootstrap notes                                    |
+| `quest-review`               | Strict maintainability review                                     |
+| `quest-typescript-review`    | TypeScript review checklist                                       |
 
-### Available Daily Quests
+To add or change a rule or skill, edit the files under `plugin/` directly and
+run `questlog` to install the update.
 
-- `bash-review.md`: Bash repository review checklist
-- `lua-review.md`: Lua review checklist
-- `author.md`: Documentation templates for PRs, tickets, README files, and specs
-- `python-project-setup.md`: Python project bootstrap notes
-- `typescript-review.md`: TypeScript review checklist
+## Install layout
 
-## Files Created
-
-- `.cursor/rules/user/`: Cursor rule files named `rules-<quest>.mdc`
-- `.agent/rules/`: Agent rule files named `rules-<quest>.md`
-- `.cursor/commands/user/`: Cursor command Markdown from `commands/*.md`
-- `.agent/workflows/`: Agent workflow Markdown derived from the same command sources
-
-## Schema Format
-
-Each object in `schema.json` defines:
-
-- `name`: stem for output filenames
-- `file`: Markdown template under `quests/`
-- `icon`: leading acknowledgement line in generated rules
-- `description` and `keywords`: Cursor metadata for rule selection
-- `cursor.alwaysApply` and `cursor.globs`: Cursor application mode
+- `tools/quest-log/plugin/`: tracked plugin source, installed as-is
+- `~/.cursor/plugins/local/quest-log/`: live local install refreshed every run
 
 ## VS Code settings
 
@@ -93,15 +86,13 @@ Install a Bats package so the `bats` binary is on your `PATH`, then run:
 
 ```bash
 bats tools/quest-log/tests/quest-log-cli-tests.sh
-bats tools/quest-log/tests/quest-log-emit-tests.sh
-bats tools/quest-log/tests/quest-log-validate-tests.sh
-bats tools/quest-log/tests/quest-log-drift-tests.sh
 ```
 
-You can also run `bash -n tools/quest-log/quest-log.sh` and `jq empty tools/quest-log/schema.json` for quick checks without Bats.
+You can also run `bash -n tools/quest-log/quest-log.sh` for a quick syntax check without Bats.
 
 ## Verification Steps
 
-- [ ] Rules appear under `.cursor/rules/user/` after `questlog`
-- [ ] Commands appear under `.cursor/commands/user/` when `commands/` exists
-- [ ] All schema entries generate matching Cursor and Agent rule files
+- [ ] `~/.cursor/plugins/local/quest-log/rules/always.mdc` exists after `questlog`
+- [ ] `~/.cursor/plugins/local/quest-log/skills/quest-review/SKILL.md` exists after `questlog`
+- [ ] Running `questlog` again on an unchanged tree reports "No changes" for `.vscode` files
+- [ ] `.vscode/settings.json` appears in an external target project after `questlog`

@@ -39,9 +39,9 @@ echo 'source /path/to/zangarmarsh/zangarmarsh.sh' >> ~/.bashrc
 echo 'source /path/to/zangarmarsh/zangarmarsh.sh' >> ~/.zshrc
 ```
 
-## Generate rules
+## Install the quest-log plugin
 
-Quest Log sources live under `tools/quest-log/`. Generated `.cursor/` and `.agent/` trees are gitignored.
+The quest-log Cursor plugin lives under `tools/quest-log/plugin/` as tracked files. Each `questlog` run installs that tree into `~/.cursor/plugins/local/quest-log` and syncs `.vscode/` into the target project.
 
 ```bash
 source zangarmarsh.sh
@@ -103,7 +103,7 @@ After sourcing, aliases map to scripts under `tools/`:
 
 | Alias         | Tool              | Role                                                                  |
 | ------------- | ----------------- | --------------------------------------------------------------------- |
-| `questlog`    | Quest Log         | Cursor and Agent rules from schema and Markdown                       |
+| `questlog`    | Quest Log         | Install the local quest-log plugin; sync `.vscode` |
 | `trilliax`    | Trilliax          | Cleanup for caches and artifacts                                      |
 | `talents`     | Talent Calculator | Check workstation CLIs; install script-managed tools with `--spec`    |
 | `hearthstone` | Hearthstone       | Sync VS Code settings and quest log; optional Trilliax with `--force` |

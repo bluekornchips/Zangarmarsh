@@ -1,69 +1,77 @@
 #!/usr/bin/env bash
 #
-# Generate agentic tool rules for Cursor based on schema.json
+# Install the quest-log Cursor plugin and sync .vscode settings
 #
 
 _QUEST_LOG_SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
 _QUEST_LOG_SCRIPT_DIR="$(cd "$(dirname "${_QUEST_LOG_SCRIPT_PATH}")" && pwd)"
 source "${_QUEST_LOG_SCRIPT_DIR}/lib/io.sh"
-source "${_QUEST_LOG_SCRIPT_DIR}/lib/validate.sh"
-source "${_QUEST_LOG_SCRIPT_DIR}/lib/emit_rules.sh"
-source "${_QUEST_LOG_SCRIPT_DIR}/lib/emit_docs.sh"
 
 # Display usage information
 usage() {
 	cat <<EOF
 Usage: $0 [OPTIONS] [DIRECTORY]
 
-Generate agentic tool rules and daily-quests for Cursor based on schema.json. Rules
-and daily-quests are installed locally in the project directory.
-Baseline quests include always, python, shell, lua, and typescript.
+Install the quest-log Cursor plugin from tools/quest-log/plugin under
+~/.cursor/plugins/local/quest-log, and sync .vscode settings into the
+target project directory.
 
 OPTIONS:
     -h, --help          Show this help message
 
 EXAMPLES:
-    $0                  # Generate rules and daily-quests in git root (if in git repo) or current directory
-    $0 /path/to/dir     # Generate rules and daily-quests in git root (if in git repo) or specified directory
+    $0                  # Install plugin, sync .vscode in git root
+    $0 /path/to/dir     # Same, syncing .vscode into the given directory tree
 EOF
 }
 
-# Statistics tracking
+# Statistics tracking, updated by write_if_changed during .vscode sync
 STATS_CREATED=0
 STATS_UPDATED=0
 STATS_UNCHANGED=0
 STATS_ERRORS=0
-STATS_TOTAL_LINES=0
-STATS_WARNINGS=0
 
-# Install quest-log rules for Cursor
+DEFAULT_QUEST_LOG_PLUGIN_DIR="${HOME}/.cursor/plugins/local/quest-log"
+
+# Copy the tracked quest-log plugin tree into the local Cursor plugins path
+#
+# Inputs:
+# - $1, plugin_source_dir, the tracked plugin tree under tools/quest-log/plugin
+#
+# Reads environment:
+# - QUEST_LOG_PLUGIN_DIR, optional install destination
 #
 # Side Effects:
-# - Creates local Cursor rules directory at TARGET_DIR/.cursor/rules/user/
-# - Installs rules from quest-log schema
-install_rules() {
-	echo "install_rules: running"
+# - Removes the install directory and recreates it from plugin_source_dir,
+#   so stale files never survive a run
+#
+# Returns:
+# - 0 on success
+# - 1 when plugin_source_dir is missing its manifest, or the copy fails
+install_quest_plugin() {
+	local plugin_source_dir="$1"
+	local install_dir="${QUEST_LOG_PLUGIN_DIR:-${DEFAULT_QUEST_LOG_PLUGIN_DIR}}"
 
-	local cursor_rules_dir="${TARGET_DIR}/.cursor/rules/user"
-
-	if ! mkdir -p "${cursor_rules_dir}"; then
-		echo "install_rules:: Failed to create Cursor rules directory: ${cursor_rules_dir}" >&2
+	[[ -f "${plugin_source_dir}/.cursor-plugin/plugin.json" ]] || {
+		echo "install_quest_plugin:: plugin manifest not found: ${plugin_source_dir}/.cursor-plugin/plugin.json" >&2
 		return 1
-	fi
+	}
 
-	local agent_rules_dir="${TARGET_DIR}/.agent/rules"
-	if ! mkdir -p "${agent_rules_dir}"; then
-		echo "install_rules:: Failed to create Agent rules directory: ${agent_rules_dir}" >&2
+	echo "install_quest_plugin: running"
+
+	rm -rf "${install_dir}" || {
+		echo "install_quest_plugin:: Failed to remove ${install_dir}" >&2
 		return 1
-	fi
+	}
 
-	CURSOR_RULES_DIR="${cursor_rules_dir}"
-	AGENT_RULES_DIR="${agent_rules_dir}"
-	export CURSOR_RULES_DIR AGENT_RULES_DIR
+	ensure_dir "${install_dir}" "install_quest_plugin" || return 1
 
-	fill_quest_log "${TARGET_DIR}"
+	cp -r "${plugin_source_dir}/." "${install_dir}/" || {
+		echo "install_quest_plugin:: copy failed" >&2
+		return 1
+	}
 
-	echo "install_rules: complete"
+	echo "install_quest_plugin: complete"
 
 	return 0
 }
@@ -86,28 +94,21 @@ EOF
 	[[ ${STATS_UPDATED} -gt 0 ]] && echo "Updated: ${STATS_UPDATED}"
 	[[ ${STATS_UNCHANGED} -gt 0 ]] && echo "Unchanged: ${STATS_UNCHANGED}"
 	[[ ${STATS_ERRORS} -gt 0 ]] && echo "Errors: ${STATS_ERRORS}"
-	[[ ${STATS_WARNINGS} -gt 0 ]] && echo "Warnings: ${STATS_WARNINGS}"
-	[[ ${STATS_TOTAL_LINES} -gt 0 ]] && echo "Total lines: ${STATS_TOTAL_LINES}"
 	echo "Total processed: ${total_processed}"
 
 	echo ""
 
 	if ((STATS_ERRORS > 0)); then
-		echo "print_summary:: Some rules failed validation. Please review errors above." >&2
+		echo "print_summary:: Some files failed to sync. Please review errors above." >&2
 		return 1
 	fi
 
-	if ((STATS_WARNINGS > 0)); then
-		echo "print_summary:: Some warnings were generated. Please review warnings above."
-		return 0
-	fi
-
-	echo "print_summary:: All rules processed successfully."
+	echo "print_summary:: All files processed successfully."
 
 	return 0
 }
 
-# Determine the target directory for rule generation
+# Determine the target directory for .vscode sync
 #
 # Side Effects:
 # - Sets TARGET_DIR to git root if in git repo, otherwise uses provided/current directory
@@ -125,39 +126,36 @@ determine_target_directory() {
 	return 0
 }
 
-# Main entry point for the quest log generator
+# Main entry point for quest-log
 #
 # Inputs:
 # - All command line arguments
 #
 # Side Effects:
-# - Processes command line options
-# - Generates rule files
+# - Installs the plugin, syncs .vscode, prints summary
 # - Exits with appropriate status code
 run_quest_log() {
 	echo "quest-log: running"
 
-	if ! command -v jq &>/dev/null; then
-		echo "run_quest_log:: jq is required but not installed." >&2
-		return 1
-	fi
-
 	SCRIPT_PATH="${_QUEST_LOG_SCRIPT_PATH}"
 	SCRIPT_DIR="${_QUEST_LOG_SCRIPT_DIR}"
 	QUEST_LOG_ROOT="${SCRIPT_DIR}"
+	PLUGIN_SOURCE_DIR="${PLUGIN_SOURCE_DIR:-${QUEST_LOG_ROOT}/plugin}"
 	export SCRIPT_DIR
+	export QUEST_LOG_ROOT
+	export PLUGIN_SOURCE_DIR
 
-	if [[ ! -f "${SCRIPT_DIR}/../lib/vscodeoverride.sh" ]]; then
+	[[ -f "${SCRIPT_DIR}/../lib/vscodeoverride.sh" ]] || {
 		echo "run_quest_log:: vscodeoverride library not found" >&2
 		return 1
-	fi
-
+	}
 	source "${SCRIPT_DIR}/../lib/vscodeoverride.sh"
 
-	QUEST_DIR="${SCRIPT_DIR}/quests"
-	export QUEST_DIR
+	[[ -d "${PLUGIN_SOURCE_DIR}" ]] || {
+		echo "run_quest_log:: plugin source not found: ${PLUGIN_SOURCE_DIR}" >&2
+		return 1
+	}
 
-	SCHEMA_FILE=${SCHEMA_FILE:-"${SCRIPT_DIR}/schema.json"}
 	TARGET_DIR=${TARGET_DIR:-${PWD}}
 
 	while [[ $# -gt 0 ]]; do
@@ -182,27 +180,17 @@ run_quest_log() {
 
 	GIT_ROOT="${TARGET_DIR}"
 
-	if ! cd "${TARGET_DIR}"; then
+	cd "${TARGET_DIR}" || {
 		echo "run_quest_log:: Failed to change to target directory: ${TARGET_DIR}" >&2
 		return 1
-	fi
+	}
 
-	if [[ ! -d "${TARGET_DIR}" ]]; then
+	[[ -d "${TARGET_DIR}" ]] || {
 		echo "run_quest_log:: Target directory is required" >&2
 		return 1
-	fi
+	}
 
-	if [[ ! -r "${SCHEMA_FILE}" ]]; then
-		echo "run_quest_log:: Schema file not found: ${SCHEMA_FILE}" >&2
-		return 1
-	fi
-
-	install_rules
-
-	if [[ -d "${QUEST_LOG_ROOT}/commands" ]]; then
-		generate_commands "${TARGET_DIR}"
-		generate_workflows "${TARGET_DIR}"
-	fi
+	install_quest_plugin "${PLUGIN_SOURCE_DIR}" || return 1
 
 	vscodeoverride
 

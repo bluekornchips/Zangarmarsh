@@ -1,3 +1,16 @@
+---
+description: Lua standards from the LuaRocks style guide for modules, locals, errors, LDoc, tables, luacheck, and tests.
+globs:
+  - "**/*.lua"
+  - "**/*.rockspec"
+alwaysApply: false
+---
+
+
+RULE APPLIED: Start each response with an acknowledgement icon to confirm this rule is being followed: 🌙
+
+Keywords that trigger usage of this rule: lua,luajit,luarocks,rockspec,luacheck,busted
+
 # Lua Standards
 
 Keywords when this doc applies: lua, luajit, luarocks, rockspec, luacheck, busted

@@ -25,7 +25,6 @@ Thumbs.db
 # Personal configuration files
 *.profile/
 CLAUDE.md
-.claude/
 
 # Test artifacts
 test_*

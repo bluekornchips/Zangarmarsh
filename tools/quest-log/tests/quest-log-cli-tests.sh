@@ -1,6 +1,7 @@
 #!/usr/bin/env bats
 #
-# Tests for determine_target_directory, print_summary, vscodeoverride, run_quest_log
+# Tests for determine_target_directory, print_summary, vscodeoverride,
+# install_quest_plugin, and run_quest_log
 #
 
 source "$(dirname "${BATS_TEST_FILENAME}")/fixtures.sh"
@@ -62,8 +63,6 @@ teardown() {
 	STATS_UPDATED=3
 	STATS_UNCHANGED=1
 	STATS_ERRORS=0
-	STATS_WARNINGS=0
-	STATS_TOTAL_LINES=100
 
 	run print_summary
 	[[ "$status" -eq 0 ]]
@@ -71,11 +70,8 @@ teardown() {
 	echo "$output" | grep -q "Created: 2"
 	echo "$output" | grep -q "Updated: 3"
 	echo "$output" | grep -q "Unchanged: 1"
-	echo "$output" | grep -q "Errors: 0"
-	echo "$output" | grep -q "Warnings: 0"
 	echo "$output" | grep -q "Total processed: 6"
-	echo "$output" | grep -q "Total lines: 100"
-	echo "$output" | grep -q "print_summary:: All rules processed successfully"
+	echo "$output" | grep -q "print_summary:: All files processed successfully"
 }
 
 @test 'print_summary:: returns error status when errors exist' {
@@ -83,27 +79,11 @@ teardown() {
 	STATS_UPDATED=0
 	STATS_UNCHANGED=0
 	STATS_ERRORS=1
-	STATS_WARNINGS=0
-	STATS_TOTAL_LINES=50
 
 	run print_summary
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "Errors: 1"
-	echo "$output" | grep -q "print_summary:: Some rules failed validation"
-}
-
-@test 'print_summary:: returns success status with warnings' {
-	STATS_CREATED=1
-	STATS_UPDATED=0
-	STATS_UNCHANGED=0
-	STATS_ERRORS=0
-	STATS_WARNINGS=1
-	STATS_TOTAL_LINES=50
-
-	run print_summary
-	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Warnings: 1"
-	echo "$output" | grep -q "print_summary:: Some warnings were generated"
+	echo "$output" | grep -q "print_summary:: Some files failed to sync"
 }
 
 ########################################################
@@ -165,6 +145,54 @@ teardown() {
 }
 
 ########################################################
+# install_quest_plugin
+########################################################
+
+@test 'install_quest_plugin:: fails when plugin manifest is missing' {
+	rm -f "${PLUGIN_SOURCE_DIR}/.cursor-plugin/plugin.json"
+
+	run install_quest_plugin "${PLUGIN_SOURCE_DIR}"
+	[[ "$status" -eq 1 ]]
+	echo "$output" | grep -q "install_quest_plugin:: plugin manifest not found"
+}
+
+@test 'install_quest_plugin:: installs plugin files into an empty directory' {
+	run install_quest_plugin "${PLUGIN_SOURCE_DIR}"
+	[[ "$status" -eq 0 ]]
+	[[ -f "${QUEST_LOG_PLUGIN_DIR}/.cursor-plugin/plugin.json" ]]
+	[[ -f "${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc" ]]
+	[[ -f "${QUEST_LOG_PLUGIN_DIR}/skills/quest-author/SKILL.md" ]]
+	cmp -s "${PLUGIN_SOURCE_DIR}/rules/always.mdc" "${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc"
+}
+
+@test 'install_quest_plugin:: updates changed files' {
+	run install_quest_plugin "${PLUGIN_SOURCE_DIR}"
+	[[ "$status" -eq 0 ]]
+
+	echo "new rule" >"${PLUGIN_SOURCE_DIR}/rules/always.mdc"
+	run install_quest_plugin "${PLUGIN_SOURCE_DIR}"
+	[[ "$status" -eq 0 ]]
+	grep -q "new rule" "${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc"
+}
+
+@test 'install_quest_plugin:: prunes removed rules and skills' {
+	echo "drop-me" >"${PLUGIN_SOURCE_DIR}/rules/stale.mdc"
+
+	run install_quest_plugin "${PLUGIN_SOURCE_DIR}"
+	[[ "$status" -eq 0 ]]
+	[[ -f "${QUEST_LOG_PLUGIN_DIR}/rules/stale.mdc" ]]
+
+	rm -f "${PLUGIN_SOURCE_DIR}/rules/stale.mdc"
+	rm -rf "${PLUGIN_SOURCE_DIR}/skills/quest-author"
+
+	run install_quest_plugin "${PLUGIN_SOURCE_DIR}"
+	[[ "$status" -eq 0 ]]
+	[[ ! -f "${QUEST_LOG_PLUGIN_DIR}/rules/stale.mdc" ]]
+	[[ ! -f "${QUEST_LOG_PLUGIN_DIR}/skills/quest-author/SKILL.md" ]]
+	[[ -f "${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc" ]]
+}
+
+########################################################
 # Main
 ########################################################
 
@@ -176,43 +204,24 @@ teardown() {
 	echo "$output" | grep -q "run_quest_log:: Failed to change to target directory"
 }
 
-@test 'run_quest_log:: requires readable schema file' {
-	SCHEMA_FILE="/tmp/does-not-exist"
-	export SCHEMA_FILE
+@test 'run_quest_log:: fails when plugin source is missing' {
+	PLUGIN_SOURCE_DIR="/tmp/does-not-exist-plugin"
+	export PLUGIN_SOURCE_DIR
 
 	run run_quest_log
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "run_quest_log:: Schema file not found"
-}
-
-@test 'run_quest_log:: validates schema file exists and is readable' {
-	[[ -f "$SCHEMA_FILE" ]]
-	[[ -r "$SCHEMA_FILE" ]]
+	echo "$output" | grep -q "run_quest_log:: plugin source not found"
 }
 
 @test 'run_quest_log:: displays help message' {
 	run run_quest_log --help
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Generate agentic tool rules for Cursor"
-	echo "$output" | grep -q "lua"
-	echo "$output" | grep -q "git"
+	echo "$output" | grep -q "Install the quest-log Cursor plugin"
 	echo "$output" | grep -q "\-\-help"
 }
 
 @test 'run_quest_log:: handles unknown options' {
 	run run_quest_log --unknown-option
-	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "run_quest_log:: Unknown option"
-}
-
-@test 'run_quest_log:: handles help option' {
-	run run_quest_log --help
-	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Generate agentic tool rules"
-}
-
-@test 'run_quest_log:: handles invalid options' {
-	run run_quest_log --invalid-option
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "run_quest_log:: Unknown option"
 }
@@ -233,21 +242,15 @@ teardown() {
 	echo "$output" | grep -q "git_root: none"
 }
 
-@test 'run_quest_log:: creates files in git root directory when in git repo' {
+@test 'run_quest_log:: installs plugin under QUEST_LOG_PLUGIN_DIR and syncs vscode' {
 	mock_git_in_repo
 
 	run run_quest_log
 	[[ "$status" -eq 0 ]]
-	[[ -f "$TEST_TEMP_DIR/.cursor/rules/user/rules-always.mdc" ]]
-	[[ -f "$TEST_TEMP_DIR/.cursor/rules/user/rules-typescript.mdc" ]]
-	[[ -f "$TEST_TEMP_DIR/.cursor/rules/user/rules-lua.mdc" ]]
-	[[ -f "$TEST_TEMP_DIR/.agent/rules/rules-always.md" ]]
-	[[ -f "$TEST_TEMP_DIR/.agent/rules/rules-typescript.md" ]]
-	[[ -f "$TEST_TEMP_DIR/.agent/rules/rules-lua.md" ]]
-	[[ -f "$TEST_TEMP_DIR/.cursor/commands/user/author.md" ]]
-	[[ -f "$TEST_TEMP_DIR/.cursor/commands/user/lua-review.md" ]]
-	[[ -f "$TEST_TEMP_DIR/.agent/workflows/author.md" ]]
-	[[ -f "$TEST_TEMP_DIR/.agent/workflows/lua-review.md" ]]
+	[[ -f "${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc" ]]
+	[[ -f "${QUEST_LOG_PLUGIN_DIR}/skills/quest-author/SKILL.md" ]]
+	[[ -f "${QUEST_LOG_PLUGIN_DIR}/.cursor-plugin/plugin.json" ]]
+	[[ -f "$TEST_TEMP_DIR/.vscode/settings.json" ]]
 }
 
 @test 'run_quest_log:: displays summary at end of execution' {
@@ -255,51 +258,15 @@ teardown() {
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Summary"
 	echo "$output" | grep -q "Total processed:"
-	echo "$output" | grep -q "Total lines:"
 }
 
-@test 'run_quest_log:: validation prevents creation of invalid rules' {
-	local invalid_schema
-	invalid_schema=$(
-		cat <<EOF
-[
-  {
-    "name": "invalid-rule",
-    "file": "always.md",
-    "icon": "💡",
-    "description": "",
-    "keywords": ["test"],
-    "cursor": {
-      "alwaysApply": false,
-      "globs": []
-    }
-  }
-]
-EOF
-	)
-	local invalid_schema_file
-	invalid_schema_file=$(mktemp)
-	echo "${invalid_schema}" >"${invalid_schema_file}"
-
-	SCHEMA_FILE="${invalid_schema_file}"
-	QUEST_DIR="${QUEST_LOG_ROOT}/quests"
-
-	STATS_ERRORS=0
-
-	run run_quest_log
-	[[ "$STATS_ERRORS" -gt 0 ]]
-	echo "$output" | grep -q "validate_rule:: Error"
-}
-
-@test 'run_quest_log:: tracks statistics correctly across multiple rules' {
+@test 'run_quest_log:: reports no changes on a second identical run' {
 	run run_quest_log
 	[[ "$status" -eq 0 ]]
 
-	echo "$output" | grep -q "Summary"
-	echo "$output" | grep -q "Created:"
-	echo "$output" | grep -q "Total processed:"
-	[[ -f "${CURSOR_RULES_DIR}/rules-always.mdc" ]]
-	[[ -f "${CURSOR_RULES_DIR}/rules-python.mdc" ]]
+	run run_quest_log
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "No changes:"
 }
 
 @test 'run_quest_log:: rejects force flag' {

@@ -1,3 +1,17 @@
+---
+description: Bash and zsh standards for structure, strict mode, quoting, traps, Bats tests, and safe scripting.
+globs:
+  - "**/*.sh"
+  - "**/*.bash"
+  - "**/*.zsh"
+alwaysApply: false
+---
+
+
+RULE APPLIED: Start each response with an acknowledgement icon to confirm this rule is being followed: 🐚
+
+Keywords that trigger usage of this rule: shell,bash,zsh,sh,script,bats,command,terminal,cli,pipefail,trap,exit,return,redirection,pipeline,process
+
 # Shell Standards
 
 ## Purpose

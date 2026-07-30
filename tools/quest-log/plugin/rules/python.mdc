@@ -1,3 +1,15 @@
+---
+description: Python standards for imports, typing, logging, errors, configuration, tests, and static analysis.
+globs:
+  - "**/*.py"
+alwaysApply: false
+---
+
+
+RULE APPLIED: Start each response with an acknowledgement icon to confirm this rule is being followed: 🐍
+
+Keywords that trigger usage of this rule: python,python3,py,pytest,pycharm,venv,virtualenv
+
 # Python Standards
 
 ## Purpose

@@ -1,3 +1,9 @@
+---
+name: quest-bash-review
+description: Bash Repository Review Criteria
+disable-model-invocation: true
+---
+
 # Bash Repository Review Criteria
 
 ## Overview
