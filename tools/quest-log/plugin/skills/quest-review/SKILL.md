@@ -1,10 +1,10 @@
 ---
 name: quest-review
-description: Blue Review
+description: Quest Review
 disable-model-invocation: true
 ---
 
-# Blue Review
+# Quest Review
 
 Use this skill for an unusually strict review focused on implementation quality, maintainability, abstraction quality, and codebase health.
 
