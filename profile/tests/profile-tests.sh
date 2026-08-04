@@ -51,47 +51,30 @@ teardown() {
 	rm -rf "$TEST_DIR"
 }
 
-# Core loading tests
-@test "profile:: load successfully in zsh" {
-	run zsh -c "source '$SCRIPT'"
+@test "profile:: configures zsh session" {
+	run zsh -c "
+		source '$SCRIPT' || exit 1
+		printf 'ZSH=%s\n' \"\$ZSH\"
+		printf 'THEME=%s\n' \"\$ZSH_THEME\"
+		printf 'PLUGINS=%s\n' \"\${plugins[*]}\"
+		printf 'HISTFILE=%s\n' \"\$HISTFILE\"
+		printf 'HISTSIZE=%s\n' \"\$HISTSIZE\"
+		printf 'SAVEHIST=%s\n' \"\$SAVEHIST\"
+		printf 'STYLE=%s\n' \"\$ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE\"
+		printf 'ROOT=%s\n' \"\$ZANGARMARSH_ROOT\"
+		printf 'COMP=%s\n' \"\$_comp_setup\"
+	"
 	[ "$status" -eq 0 ]
-}
-
-@test "profile:: set ZSH environment variable" {
-	run zsh -c "source '$SCRIPT' && echo \$ZSH"
-	[ "$status" -eq 0 ]
-	[[ -n "$output" ]]
-}
-
-@test "profile:: set ZSH_THEME variable" {
-	run zsh -c "source '$SCRIPT' && echo \$ZSH_THEME"
-	[ "$status" -eq 0 ]
-	echo "$output" | grep -q "robbyrussell"
-}
-
-@test "profile:: set plugins array" {
-	run zsh -c "source '$SCRIPT' && echo \${plugins[@]}"
-	[ "$status" -eq 0 ]
+	echo "$output" | grep -q "^ZSH=."
+	echo "$output" | grep -q "^THEME=robbyrussell$"
 	echo "$output" | grep -q "git"
 	echo "$output" | grep -q "zsh-autosuggestions"
-}
-
-@test "profile:: set HISTFILE variable" {
-	run zsh -c "source '$SCRIPT' && echo \$HISTFILE"
-	[ "$status" -eq 0 ]
-	echo "$output" | grep -q ".zsh_history"
-}
-
-@test "profile:: set HISTSIZE variable" {
-	run zsh -c "source '$SCRIPT' && echo \$HISTSIZE"
-	[ "$status" -eq 0 ]
-	echo "$output" | grep -q "100000"
-}
-
-@test "profile:: set SAVEHIST variable" {
-	run zsh -c "source '$SCRIPT' && echo \$SAVEHIST"
-	[ "$status" -eq 0 ]
-	echo "$output" | grep -q "100000"
+	echo "$output" | grep -q "\.zsh_history"
+	echo "$output" | grep -q "^HISTSIZE=100000$"
+	echo "$output" | grep -q "^SAVEHIST=100000$"
+	echo "$output" | grep -q "fg=#00ffff,bg=#2d2f40,bold"
+	echo "$output" | grep -q "^ROOT=."
+	echo "$output" | grep -q "^COMP=1$"
 }
 
 @test "profile:: handle missing Oh My Zsh gracefully" {
@@ -106,22 +89,4 @@ teardown() {
 	run zsh -c "source '$SCRIPT'"
 	[ "$status" -eq 0 ]
 	echo "$output" | grep -q "zsh-autosuggestions plugin is not installed"
-}
-
-@test "profile:: set ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE when plugin is available" {
-	run zsh -c "source '$SCRIPT' && echo \$ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE"
-	[ "$status" -eq 0 ]
-	echo "$output" | grep -q "fg=#00ffff,bg=#2d2f40,bold"
-}
-
-@test "profile:: load custom zsh files" {
-	run zsh -c "source '$SCRIPT' && echo \$ZANGARMARSH_ROOT"
-	[ "$status" -eq 0 ]
-	[[ -n "$output" ]]
-}
-
-@test "profile:: set _comp_setup variable after completion setup" {
-	run zsh -c "source '$SCRIPT' && echo \$_comp_setup"
-	[ "$status" -eq 0 ]
-	echo "$output" | grep -q "1"
 }

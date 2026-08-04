@@ -36,6 +36,29 @@ EOF
 	esac
 }
 
+# Stub python3 -m venv so tests do not pay real venv creation cost, which can be a lot on my lapto.
+mock_fast_venv() {
+	python3() {
+		if [[ "${1:-}" == "-m" && "${2:-}" == "venv" ]]; then
+			local env_dir="${3:-.venv}"
+			mkdir -p "${env_dir}/bin"
+			cat >"${env_dir}/bin/activate" <<'EOF'
+VIRTUAL_ENV="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd)"
+export VIRTUAL_ENV
+PATH="${VIRTUAL_ENV}/bin:${PATH}"
+export PATH
+EOF
+			printf '#!/usr/bin/env bash\necho "Python 3.12.0"\n' >"${env_dir}/bin/python"
+			printf '#!/usr/bin/env bash\necho "pip 24.0 from fake"\n' >"${env_dir}/bin/pip"
+			chmod +x "${env_dir}/bin/python" "${env_dir}/bin/pip"
+			ln -sf python "${env_dir}/bin/python3"
+			return 0
+		fi
+		command python3 "$@"
+	}
+	export -f python3
+}
+
 # Setup test environment for Python virtual environment testing
 setup() {
 	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
@@ -44,6 +67,7 @@ setup() {
 	cd "${TEST_DIR}" || return 1
 
 	source "$SCRIPT"
+	mock_fast_venv
 
 	PLATFORM="linux"
 	PLATFORM_OS="linux"
@@ -139,6 +163,9 @@ teardown() {
 
 @test "penv:: install dependencies from pyproject.toml" {
 	create_mock_dependency_file "pyproject"
+	pip() { return 0; }
+	export -f pip
+
 	run penv
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Found pyproject.toml. Installing with pip"
@@ -146,6 +173,9 @@ teardown() {
 
 @test "penv:: install dependencies from requirements.txt" {
 	create_mock_dependency_file "requirements"
+	pip() { return 0; }
+	export -f pip
+
 	run penv
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Found requirements.txt. Installing dependencies"
