@@ -12,7 +12,7 @@ HISTFILESIZE=100000
 export HISTFILESIZE
 HISTCONTROL=ignoredups:erasedups
 export HISTCONTROL
-HISTIGNORE='ls:ll:cd:pwd:clear:history'
+HISTIGNORE='ls:ll:cd:pwd:clear:history:set *'
 export HISTIGNORE
 
 # Set bash options efficiently
