@@ -1,12 +1,11 @@
 ---
 description: Bash and zsh standards for structure, strict mode, quoting, traps, Bats tests, and safe scripting.
 globs:
-  - "**/*.sh"
-  - "**/*.bash"
-  - "**/*.zsh"
+  - '**/*.sh'
+  - '**/*.bash'
+  - '**/*.zsh'
 alwaysApply: false
 ---
-
 
 RULE APPLIED: Start each response with an acknowledgement icon to confirm this rule is being followed: 🐚
 
@@ -17,10 +16,6 @@ Keywords that trigger usage of this rule: shell,bash,zsh,sh,script,bats,command,
 ## Purpose
 
 Keep bash and zsh scripts safe to run, easy to read, and consistent about errors and cleanup.
-
-## Priority
-
-- Level 2 of 2
 
 ## Standards
 
@@ -63,6 +58,7 @@ Keep bash and zsh scripts safe to run, easy to read, and consistent about errors
 - Hoisting all `local` declarations to the top of a function away from first use.
 - Declaring the same `local` name more than once in a function.
 - `local name=$(cmd)`, `local name="$(cmd)"`, `export name=$(cmd)`, or `export name="$(cmd)"`, which masks the command return value. ShellCheck: SC2155.
+
 ### Cleanup tool exception
 
 These named tools may delete paths they did not create in the current run. All other scripts must still use `trap` for script-created temp dirs only.

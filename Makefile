@@ -3,11 +3,9 @@ SHELL_FILES  := $(shell find . -name '*.sh' -type f ! -path './.git/*' ! -name '
 BATS_JOBS    ?= $(shell nproc 2>/dev/null || echo 4)
 BATS_COMMAND := bats --timing --verbose-run --formatter pretty --jobs $(BATS_JOBS) --no-parallelize-within-files
 
-.PHONY: test shellcheck lint
+.PHONY: test shellcheck
 
-#################################################
-# Testing and lint
-#################################################
+.DEFAULT_GOAL := ci
 
 test:
 	@$(BATS_COMMAND) $(TEST_FILES)
@@ -15,4 +13,4 @@ test:
 shellcheck:
 	shellcheck --rcfile=.shellcheckrc $(SHELL_FILES)
 
-lint: shellcheck
+ci: shellcheck test

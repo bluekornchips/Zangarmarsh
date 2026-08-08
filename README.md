@@ -41,7 +41,7 @@ echo 'source /path/to/zangarmarsh/zangarmarsh.sh' >> ~/.zshrc
 
 ## Install the quest-log plugin
 
-The quest-log Cursor plugin lives under `tools/quest-log/plugin/` as tracked files. Each `questlog` run installs that tree into `~/.cursor/plugins/local/quest-log` and syncs `.vscode/` into the target project.
+The quest-log Cursor plugin lives under `tools/quest-log/plugin/` as tracked files and is the canonical agent configuration for this repository. Each `questlog` run installs that tree into `~/.cursor/plugins/local/quest-log` and syncs `.vscode/` into the target project.
 
 ```bash
 source zangarmarsh.sh

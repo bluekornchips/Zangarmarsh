@@ -1,9 +1,8 @@
 ---
-description: Universal standards for every request: Purpose, Priority, Standards, Usage, plus clarity, safety, git restraint, and verification.
+description: Universal standards for every request: Purpose, Standards, Usage, plus clarity, safety, git restraint, and verification.
 globs: []
 alwaysApply: true
 ---
-
 
 RULE APPLIED: Start each response with an acknowledgement icon to confirm this rule is being followed: 💡
 
@@ -14,10 +13,6 @@ Keywords that trigger usage of this rule: 💡,rule,core,standards,always,develo
 ## Purpose
 
 Establish baseline response standards and requirements.
-
-## Priority
-
-- Level 0 of 2
 
 ## Standards
 

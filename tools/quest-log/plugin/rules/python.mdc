@@ -1,10 +1,9 @@
 ---
 description: Python standards for imports, typing, logging, errors, configuration, tests, and static analysis.
 globs:
-  - "**/*.py"
+  - '**/*.py'
 alwaysApply: false
 ---
-
 
 RULE APPLIED: Start each response with an acknowledgement icon to confirm this rule is being followed: 🐍
 
@@ -14,15 +13,11 @@ Keywords that trigger usage of this rule: python,python3,py,pytest,pycharm,venv,
 
 ## Purpose
 
-Base level structure for Python for types, failures, and boundaries.
-
-## Priority
-
-- Level 1 of 2
+Core structure for Python types, failures, and boundaries.
 
 ## Standards
 
-- Catch specific exception types. Re-raise or wrap when callers need a higher-level error.
+- Catch specific exception types. Re-raise or wrap when callers need a more useful error.
 - Use `logging` with `logger = logging.getLogger(__name__)` instead of `print` for runtime messages.
 - Use context managers for files, sockets, locks, and other scoped resources.
 - Type hints on public functions and at module boundaries. Add docstrings when names and types are not enough.

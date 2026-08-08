@@ -1,12 +1,14 @@
 {
   "name": "quest-log",
   "displayName": "Quest Log",
-  "version": "0.1.0",
-  "description": "Personal Cursor rules and skills. Language standards for Python, shell, Lua, and TypeScript, plus quest-* review and setup skills. Loads in every Cursor window with one install.",
+  "version": "0.2.0",
+  "description": "Tracked Cursor rules and skills for Python, shell, Lua, and TypeScript, plus focused review and project setup workflows.",
   "author": {
     "name": "bluekornchips"
   },
   "repository": "https://github.com/bluekornchips/Zangarmarsh",
-  "license": "MIT",
-  "keywords": ["rules", "code-review", "standards", "skills"]
+  "license": "GPL-3.0-only",
+  "rules": ["rules"],
+  "skills": ["skills"],
+  "keywords": ["rules", "code-review", "standards", "skills", "workflows"]
 }

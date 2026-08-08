@@ -1,0 +1,26 @@
+---
+description: Universal prohibitions for Python, legacy support, backward compatibility, and prior-work records.
+globs: []
+alwaysApply: true
+---
+
+# Never Rules
+
+## Python
+
+- Under no circumstances write or execute any form of Python.
+- Python is not permitted on this computer. Never write or execute Python code.
+- Reject Python-based implementations, scripts, tests, tooling, and dependencies.
+- Use an approved non-Python alternative only when the user explicitly asks for
+  a replacement.
+
+## Compatibility and history
+
+- Do not maintain backward compatibility unless the user explicitly requires it.
+- Do not maintain legacy interfaces, paths, formats, behavior, or migration
+  shims.
+- Do not document, plan, summarize, or keep records of prior work.
+- Do not add changelogs, migration notes, deprecation notes, historical
+  records, or compatibility plans unless the user explicitly requires them.
+- Prefer the current design and remove obsolete paths instead of preserving
+  them.

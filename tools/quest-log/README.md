@@ -44,12 +44,17 @@ questlog --dry-run /path/to/project
 
 `tools/quest-log/plugin/` is committed, hand-authored, and installed as-is:
 
-```
+```text
 plugin/
   .cursor-plugin/plugin.json   # plugin manifest
   rules/*.mdc                  # Cursor rules, loaded in every window
   skills/quest-*/SKILL.md      # quest-* skills
+  MCP.md                       # optional MCP setup guidance
 ```
+
+This tracked plugin is the canonical agent configuration for this repository.
+The old ignored `.agent/` directory is not a source tree and should not be
+recreated. The plugin follows this repository's GPL-3.0-only license.
 
 | Rule             | Role                                                        |
 | ---------------- | ----------------------------------------------------------- |
@@ -77,6 +82,9 @@ run `questlog` to install the update.
 
 - `tools/quest-log/plugin/`: tracked plugin source, installed as-is
 - `~/.cursor/plugins/local/quest-log/`: live local install refreshed every run
+
+The live install is disposable. Edit the tracked source, validate it with
+`make plugin-check`, then run `questlog` to refresh the local copy.
 
 ## VS Code settings
 
