@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-# Test file for zsh profile functionality in profile/zsh/profile.sh
+# Test file for zsh profile functionality in profile/zsh/profile.zsh
 
 if ! command -v zsh >/dev/null 2>&1; then
 	echo "zsh not available, skipping profile tests" >&2
@@ -8,7 +8,7 @@ if ! command -v zsh >/dev/null 2>&1; then
 fi
 
 GIT_ROOT="$(git rev-parse --show-toplevel)"
-SCRIPT="$GIT_ROOT/profile/zsh/profile.sh"
+SCRIPT="$GIT_ROOT/profile/zsh/profile.zsh"
 [[ -f "$SCRIPT" ]] || {
 	echo "Script not found: $SCRIPT" >&2
 	exit 1

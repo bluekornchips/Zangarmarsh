@@ -46,8 +46,8 @@ if [[ -z "$ZANGARMARSH_ROOT" ]]; then
 fi
 
 ZSH_FILES=(
-	"platform.sh"
-	"prompt.sh"
+	"platform.zsh"
+	"prompt.zsh"
 )
 
 for file in "${ZSH_FILES[@]}"; do

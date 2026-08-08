@@ -24,8 +24,11 @@ jobs:
             brew install bats-core shellcheck jq shfmt
           fi
 
+      - name: Zsh syntax
+        run: zsh -n profile/zsh/*.zsh
+
       - name: Repository checks
-        run: make check
+        run: make ci
 
       - name: Secret scan
         uses: gitleaks/gitleaks-action@v2

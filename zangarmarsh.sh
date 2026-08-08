@@ -59,9 +59,9 @@ if [[ -z "${ZSH_VERSION:-}" && -z "${BASH_VERSION:-}" ]]; then
 fi
 [[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "Shell detection: ZSH_VERSION='${ZSH_VERSION:-}', BASH_VERSION='${BASH_VERSION:-}', SHELL_NAME='${SHELL_NAME}'" >&2
 if [[ -n "${ZSH_VERSION:-}" ]] || [[ "${SHELL_NAME}" == *zsh* ]]; then
-	[[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "Sourcing profile/zsh/profile.sh" >&2
+	[[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "Sourcing profile/zsh/profile.zsh" >&2
 
-	source "${ZANGARMARSH_ROOT}/profile/zsh/profile.sh"
+	source "${ZANGARMARSH_ROOT}/profile/zsh/profile.zsh"
 elif [[ -n "${BASH_VERSION:-}" ]] || [[ "${SHELL_NAME}" == *bash* ]]; then
 	[[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "Loading bash components" >&2
 	source "${ZANGARMARSH_ROOT}/profile/bash/profile.sh"

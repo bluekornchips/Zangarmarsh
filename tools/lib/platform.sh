@@ -2,7 +2,7 @@
 #
 # Shared platform detection for Zangarmarsh tools
 #
-# Profile zsh keeps its own detect_platform in profile/zsh/platform.sh
+# Profile zsh keeps its own detect_platform in profile/zsh/platform.zsh
 # and uses macos_arm64 style ids. This helper returns darwin-arm64 style
 # ids for bash tools such as talent-calculator.
 #

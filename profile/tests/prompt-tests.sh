@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-# Test file for zsh prompt functionality in profile/zsh/prompt.sh
+# Test file for zsh prompt functionality in profile/zsh/prompt.zsh
 
 if ! command -v zsh >/dev/null 2>&1; then
 	echo "zsh not available, skipping prompt tests" >&2
@@ -8,7 +8,7 @@ if ! command -v zsh >/dev/null 2>&1; then
 fi
 
 GIT_ROOT="$(git rev-parse --show-toplevel)"
-SCRIPT="$GIT_ROOT/profile/zsh/prompt.sh"
+SCRIPT="$GIT_ROOT/profile/zsh/prompt.zsh"
 [[ -f "$SCRIPT" ]] || {
 	echo "Script not found: $SCRIPT" >&2
 	exit 1
