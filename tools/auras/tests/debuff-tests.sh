@@ -18,12 +18,9 @@ source "$(dirname "${BATS_TEST_FILENAME}")/fixtures.sh"
 }
 
 @test "debuff_appimage:: removes matching managed bin symlink" {
-	local appdir
-	local appimage
-
-	appdir="${AURAS_TEST_HOME}/apps"
+	local appdir="${AURAS_TEST_HOME}/apps"
 	make_appimage "${appdir}" "demoapp.AppImage"
-	appimage="${appdir}/demoapp.AppImage"
+	local appimage="${appdir}/demoapp.AppImage"
 	make_managed_desktop "demoapp" "${appimage}"
 	make_managed_bin_link "demoapp" "${appimage}"
 
@@ -35,12 +32,9 @@ source "$(dirname "${BATS_TEST_FILENAME}")/fixtures.sh"
 }
 
 @test "debuff_appimage:: fails when bin symlink target does not match desktop Exec" {
-	local appdir
-	local appimage
-
-	appdir="${AURAS_TEST_HOME}/apps"
+	local appdir="${AURAS_TEST_HOME}/apps"
 	make_appimage "${appdir}" "demoapp.AppImage"
-	appimage="${appdir}/demoapp.AppImage"
+	local appimage="${appdir}/demoapp.AppImage"
 	make_managed_desktop "demoapp" "${appimage}"
 	make_managed_bin_link "demoapp" "/tmp/other.AppImage"
 
@@ -82,12 +76,9 @@ source "$(dirname "${BATS_TEST_FILENAME}")/fixtures.sh"
 }
 
 @test "main:: debuff mode removes managed desktop entry and bin symlink" {
-	local appdir
-	local appimage
-
-	appdir="${AURAS_TEST_HOME}/apps"
+	local appdir="${AURAS_TEST_HOME}/apps"
 	make_appimage "${appdir}" "demoapp.AppImage"
-	appimage="${appdir}/demoapp.AppImage"
+	local appimage="${appdir}/demoapp.AppImage"
 	make_managed_desktop "demoapp" "${appimage}"
 	make_managed_bin_link "demoapp" "${appimage}"
 

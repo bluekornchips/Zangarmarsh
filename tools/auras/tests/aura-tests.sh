@@ -26,14 +26,10 @@ source "$(dirname "${BATS_TEST_FILENAME}")/fixtures.sh"
 # resolve_appimage_path
 ########################################################
 @test "resolve_appimage_path:: resolves relative AppImage directory" {
-	local appdir
-	local appimage
-	local expected
-
-	appdir="${AURAS_TEST_HOME}/apps"
+	local appdir="${AURAS_TEST_HOME}/apps"
 	make_appimage "${appdir}" "demoapp.AppImage"
-	appimage="apps/demoapp.AppImage"
-	expected="${appdir}/demoapp.AppImage"
+	local appimage="apps/demoapp.AppImage"
+	local expected="${appdir}/demoapp.AppImage"
 
 	cd "${AURAS_TEST_HOME}"
 
@@ -43,10 +39,8 @@ source "$(dirname "${BATS_TEST_FILENAME}")/fixtures.sh"
 }
 
 @test "resolve_appimage_path:: resolves AppImage name in current directory" {
-	local expected
-
 	make_appimage "${AURAS_TEST_HOME}" "demoapp.AppImage"
-	expected="${AURAS_TEST_HOME}/demoapp.AppImage"
+	local expected="${AURAS_TEST_HOME}/demoapp.AppImage"
 
 	cd "${AURAS_TEST_HOME}"
 
@@ -67,12 +61,9 @@ source "$(dirname "${BATS_TEST_FILENAME}")/fixtures.sh"
 # validate_appimage_path
 ########################################################
 @test "validate_appimage_path:: accepts executable absolute AppImage path" {
-	local appdir
-	local appimage
-
-	appdir="${AURAS_TEST_HOME}/apps"
+	local appdir="${AURAS_TEST_HOME}/apps"
 	make_appimage "${appdir}" "demoapp.AppImage"
-	appimage="${appdir}/demoapp.AppImage"
+	local appimage="${appdir}/demoapp.AppImage"
 
 	run validate_appimage_path "${appimage}" "validate_appimage_path"
 	[[ "$status" -eq 0 ]]
@@ -87,12 +78,9 @@ source "$(dirname "${BATS_TEST_FILENAME}")/fixtures.sh"
 }
 
 @test "validate_appimage_path:: rejects non-AppImage extension" {
-	local appdir
-	local appimage
-
-	appdir="${AURAS_TEST_HOME}/apps"
+	local appdir="${AURAS_TEST_HOME}/apps"
 	mkdir -p "${appdir}"
-	appimage="${appdir}/demoapp.bin"
+	local appimage="${appdir}/demoapp.bin"
 	: >"${appimage}"
 	chmod +x "${appimage}"
 
@@ -103,12 +91,9 @@ source "$(dirname "${BATS_TEST_FILENAME}")/fixtures.sh"
 }
 
 @test "validate_appimage_path:: rejects non-executable AppImage" {
-	local appdir
-	local appimage
-
-	appdir="${AURAS_TEST_HOME}/apps"
+	local appdir="${AURAS_TEST_HOME}/apps"
 	mkdir -p "${appdir}"
-	appimage="${appdir}/demoapp.AppImage"
+	local appimage="${appdir}/demoapp.AppImage"
 	: >"${appimage}"
 
 	run validate_appimage_path "${appimage}" "validate_appimage_path"
@@ -121,14 +106,10 @@ source "$(dirname "${BATS_TEST_FILENAME}")/fixtures.sh"
 # prepare_appimage_path
 ########################################################
 @test "prepare_appimage_path:: resolves relative AppImage path" {
-	local appdir
-	local appimage
-	local expected
-
-	appdir="${AURAS_TEST_HOME}/apps"
+	local appdir="${AURAS_TEST_HOME}/apps"
 	make_appimage "${appdir}" "demoapp.AppImage"
-	appimage="apps/demoapp.AppImage"
-	expected="${appdir}/demoapp.AppImage"
+	local appimage="apps/demoapp.AppImage"
+	local expected="${appdir}/demoapp.AppImage"
 
 	cd "${AURAS_TEST_HOME}"
 
@@ -212,12 +193,9 @@ source "$(dirname "${BATS_TEST_FILENAME}")/fixtures.sh"
 }
 
 @test "main:: accepts short mode flags -b and -d" {
-	local appdir
-	local appimage
-
-	appdir="${AURAS_TEST_HOME}/apps"
+	local appdir="${AURAS_TEST_HOME}/apps"
 	make_appimage "${appdir}" "demoapp.AppImage"
-	appimage="${appdir}/demoapp.AppImage"
+	local appimage="${appdir}/demoapp.AppImage"
 
 	run bash "$SCRIPT" -b demoapp -a "${appimage}"
 	[[ "$status" -eq 0 ]]

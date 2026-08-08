@@ -210,6 +210,55 @@ teardown() {
 }
 
 ########################################################
+# uninstall_quest_plugin
+########################################################
+
+@test 'uninstall_quest_plugin:: reports not installed when absent' {
+	run uninstall_quest_plugin
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "not installed"
+}
+
+@test 'uninstall_quest_plugin:: removes an installed plugin directory' {
+	install_quest_plugin "${PLUGIN_SOURCE_DIR}" >/dev/null
+
+	run uninstall_quest_plugin
+	[[ "$status" -eq 0 ]]
+	[[ ! -e "${QUEST_LOG_PLUGIN_DIR}" ]]
+	echo "$output" | grep -q "removed"
+}
+
+@test 'uninstall_quest_plugin:: dry-run leaves the plugin directory in place' {
+	install_quest_plugin "${PLUGIN_SOURCE_DIR}" >/dev/null
+	DRY_RUN=true
+
+	run uninstall_quest_plugin
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "would remove"
+	[[ -d "${QUEST_LOG_PLUGIN_DIR}" ]]
+}
+
+@test 'uninstall_quest_plugin:: rejects an install path outside the Cursor local plugin directory' {
+	QUEST_LOG_PLUGIN_DIR="${TEST_TEMP_DIR}/unsafe-install"
+	mkdir -p "${QUEST_LOG_PLUGIN_DIR}"
+
+	run uninstall_quest_plugin
+	[[ "$status" -eq 1 ]]
+	echo "$output" | grep -q "install path must be below"
+	[[ -d "${QUEST_LOG_PLUGIN_DIR}" ]]
+}
+
+@test 'uninstall_quest_plugin:: rejects path traversal in the install directory' {
+	QUEST_LOG_PLUGIN_DIR="${HOME}/.cursor/plugins/local/quest-log/../../unsafe-install"
+	mkdir -p "${HOME}/.cursor/plugins/local/unsafe-install"
+
+	run uninstall_quest_plugin
+	[[ "$status" -eq 1 ]]
+	echo "$output" | grep -q "path traversal is not allowed"
+	[[ -d "${HOME}/.cursor/plugins/local/unsafe-install" ]]
+}
+
+########################################################
 # Main
 ########################################################
 
@@ -337,13 +386,13 @@ teardown() {
 ########################################################
 @test 'tracked plugin:: ships the declared rules and skills' {
 	local tracked_plugin="${GIT_ROOT}/tools/quest-log/plugin"
-	local rule
-	local skill
 
 	[[ -f "${tracked_plugin}/.cursor-plugin/plugin.json" ]]
+	local rule
 	for rule in always never shell bash zsh python lua javascript typescript; do
 		[[ -f "${tracked_plugin}/rules/${rule}.mdc" ]]
 	done
+	local skill
 	for skill in quest-author quest-review quest-bash-review quest-lua-review quest-typescript-review quest-python-project-setup; do
 		[[ -f "${tracked_plugin}/skills/${skill}/SKILL.md" ]]
 	done

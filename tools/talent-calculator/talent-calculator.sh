@@ -93,13 +93,12 @@ EOF
 # - 0 on success
 # - 1 if platform is unsupported
 detect_platform() {
-	local platform
 	local os
-	local arch
-
 	os="$(uname -s | tr '[:upper:]' '[:lower:]')"
+	local arch
 	arch="$(uname -m)"
 
+	local platform
 	platform="$(_detect_platform)" || {
 		echo "detect_platform:: Unsupported platform: ${os}-${arch}" >&2
 		echo "detect_platform:: Supported: darwin-arm64, linux-amd64" >&2

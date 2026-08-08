@@ -22,12 +22,9 @@ source "$(dirname "${BATS_TEST_FILENAME}")/fixtures.sh"
 # write_application_desktop
 ########################################################
 @test "write_application_desktop:: writes managed desktop entry with expected fields" {
-	local appdir
-	local appimage
-
-	appdir="${AURAS_TEST_HOME}/apps"
+	local appdir="${AURAS_TEST_HOME}/apps"
 	make_appimage "${appdir}" "demoapp.AppImage"
-	appimage="${appdir}/demoapp.AppImage"
+	local appimage="${appdir}/demoapp.AppImage"
 
 	run write_application_desktop "demoapp" "${appimage}" "demoapp"
 	[[ "$status" -eq 0 ]]
@@ -41,12 +38,9 @@ source "$(dirname "${BATS_TEST_FILENAME}")/fixtures.sh"
 }
 
 @test "write_application_desktop:: rejects relative AppImage path" {
-	local appdir
-	local appimage
-
-	appdir="${AURAS_TEST_HOME}/apps"
+	local appdir="${AURAS_TEST_HOME}/apps"
 	make_appimage "${appdir}" "demoapp.AppImage"
-	appimage="apps/demoapp.AppImage"
+	local appimage="apps/demoapp.AppImage"
 
 	cd "${AURAS_TEST_HOME}"
 
@@ -57,12 +51,9 @@ source "$(dirname "${BATS_TEST_FILENAME}")/fixtures.sh"
 }
 
 @test "write_application_desktop:: overwrites existing Auras-managed desktop file" {
-	local appdir
-	local appimage
-
-	appdir="${AURAS_TEST_HOME}/apps"
+	local appdir="${AURAS_TEST_HOME}/apps"
 	make_appimage "${appdir}" "demoapp.AppImage"
-	appimage="${appdir}/demoapp.AppImage"
+	local appimage="${appdir}/demoapp.AppImage"
 	make_managed_desktop "demoapp"
 
 	run write_application_desktop "demoapp" "${appimage}" "demoapp"
@@ -72,12 +63,9 @@ source "$(dirname "${BATS_TEST_FILENAME}")/fixtures.sh"
 }
 
 @test "write_application_desktop:: refuses to overwrite unmanaged desktop file" {
-	local appdir
-	local appimage
-
-	appdir="${AURAS_TEST_HOME}/apps"
+	local appdir="${AURAS_TEST_HOME}/apps"
 	make_appimage "${appdir}" "demoapp.AppImage"
-	appimage="${appdir}/demoapp.AppImage"
+	local appimage="${appdir}/demoapp.AppImage"
 	mkdir -p "${HOME}/.local/share/applications"
 	: >"${HOME}/.local/share/applications/demoapp.desktop"
 
@@ -88,12 +76,9 @@ source "$(dirname "${BATS_TEST_FILENAME}")/fixtures.sh"
 }
 
 @test "write_application_desktop:: rejects stem containing slash" {
-	local appdir
-	local appimage
-
-	appdir="${AURAS_TEST_HOME}/apps"
+	local appdir="${AURAS_TEST_HOME}/apps"
 	make_appimage "${appdir}" "demoapp.AppImage"
-	appimage="${appdir}/demoapp.AppImage"
+	local appimage="${appdir}/demoapp.AppImage"
 
 	run write_application_desktop "evil/name" "${appimage}" "Label"
 	[[ "$status" -eq 1 ]]
@@ -115,12 +100,9 @@ source "$(dirname "${BATS_TEST_FILENAME}")/fixtures.sh"
 # write_application_bin_link
 ########################################################
 @test "write_application_bin_link:: creates symlink to AppImage" {
-	local appdir
-	local appimage
-
-	appdir="${AURAS_TEST_HOME}/apps"
+	local appdir="${AURAS_TEST_HOME}/apps"
 	make_appimage "${appdir}" "demoapp.AppImage"
-	appimage="${appdir}/demoapp.AppImage"
+	local appimage="${appdir}/demoapp.AppImage"
 
 	run write_application_bin_link "demoapp" "${appimage}"
 	[[ "$status" -eq 0 ]]
@@ -130,12 +112,9 @@ source "$(dirname "${BATS_TEST_FILENAME}")/fixtures.sh"
 }
 
 @test "write_application_bin_link:: refuses unmanaged existing regular file" {
-	local appdir
-	local appimage
-
-	appdir="${AURAS_TEST_HOME}/apps"
+	local appdir="${AURAS_TEST_HOME}/apps"
 	make_appimage "${appdir}" "demoapp.AppImage"
-	appimage="${appdir}/demoapp.AppImage"
+	local appimage="${appdir}/demoapp.AppImage"
 	mkdir -p "${HOME}/.local/bin"
 	: >"${HOME}/.local/bin/demoapp"
 
@@ -201,12 +180,9 @@ source "$(dirname "${BATS_TEST_FILENAME}")/fixtures.sh"
 }
 
 @test "main:: rejects legacy positional buff form" {
-	local appdir
-	local appimage
-
-	appdir="${AURAS_TEST_HOME}/apps"
+	local appdir="${AURAS_TEST_HOME}/apps"
 	make_appimage "${appdir}" "demoapp.AppImage"
-	appimage="${appdir}/demoapp.AppImage"
+	local appimage="${appdir}/demoapp.AppImage"
 
 	run bash "$SCRIPT" --buff "${appimage}" demoapp
 	[[ "$status" -eq 1 ]]
@@ -215,12 +191,9 @@ source "$(dirname "${BATS_TEST_FILENAME}")/fixtures.sh"
 }
 
 @test "main:: buff accepts flags in any order" {
-	local appdir
-	local appimage
-
-	appdir="${AURAS_TEST_HOME}/apps"
+	local appdir="${AURAS_TEST_HOME}/apps"
 	make_appimage "${appdir}" "demoapp.AppImage"
-	appimage="${appdir}/demoapp.AppImage"
+	local appimage="${appdir}/demoapp.AppImage"
 
 	run bash "$SCRIPT" --appimage "${appimage}" --buff demoapp
 	[[ "$status" -eq 0 ]]

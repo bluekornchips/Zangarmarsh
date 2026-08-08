@@ -34,7 +34,6 @@ COMMON_FILES=(
 load_common_components() {
 	local file
 	local file_path
-
 	for file in "${COMMON_FILES[@]}"; do
 		file_path="${ZANGARMARSH_ROOT}/profile/${file}"
 		if [[ -f "${file_path}" ]]; then
