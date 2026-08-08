@@ -135,53 +135,66 @@ mock_commands_failure() {
 # build_deck
 ########################################################
 @test "build_deck:: succeeds when jq is installed" {
-	install_jq() {
-		echo "install_jq:: jq installed"
+	ensure_jq() {
+		echo "ensure_jq:: jq installed"
 		return 0
 	}
-	export -f install_jq
+	export -f ensure_jq
 
 	run build_deck
 	[[ "$status" -eq 0 ]]
 }
 
-@test "build_deck:: succeeds when jq needs installation but succeeds" {
-	command() {
-		case "$2" in
-		"jq") return 1 ;;
-		*) builtin command "$@" ;;
-		esac
-	}
-	export -f command
-
-	install_jq() {
-		echo "install_jq:: jq installed"
+@test "build_deck:: succeeds when ensure_jq succeeds after missing PATH check" {
+	ensure_jq() {
+		echo "ensure_jq:: jq installed"
 		return 0
 	}
-	export -f install_jq
+	export -f ensure_jq
 
 	run build_deck
 	[[ "$status" -eq 0 ]]
 }
 
-@test "build_deck:: fails when jq installation fails" {
-	command() {
-		case "$2" in
-		"jq" | "apt-get" | "pacman") return 1 ;;
-		*) builtin command "$@" ;;
-		esac
-	}
-	export -f command
-
-	install_jq() {
-		echo "install_jq:: jq not found, attempting to install."
-		echo "install_jq:: No supported package manager found. Please install jq manually for your system." >&2
+@test "build_deck:: fails when jq is missing" {
+	ensure_jq() {
+		echo "ensure_jq:: jq not found" >&2
+		echo "ensure_jq:: Install jq with your OS package manager, then re-run" >&2
 		return 1
 	}
-	export -f install_jq
+	export -f ensure_jq
 
 	run build_deck
 	[[ "$status" -eq 1 ]]
+	grep -q "build_deck:: Failed to ensure jq" <<<"$output"
+}
+
+@test "execute_operations:: passes GIT_ROOT to trilliax and questlog" {
+	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
+	local mock_dir
+	mock_dir="$(mktemp -d "${base}/hearthstone-args.XXXXXX")"
+
+	cat >"$mock_dir/trilliax.sh" <<'EOF'
+#!/usr/bin/env bash
+printf 'trilliax args:%s\n' "$*"
+EOF
+	chmod +x "$mock_dir/trilliax.sh"
+
+	cat >"$mock_dir/questlog.sh" <<'EOF'
+#!/usr/bin/env bash
+printf 'questlog args:%s\n' "$*"
+EOF
+	chmod +x "$mock_dir/questlog.sh"
+
+	TRILLIAX_SCRIPT="$mock_dir/trilliax.sh"
+	QUESTLOG_SCRIPT="$mock_dir/questlog.sh"
+	FORCE=true
+	export TRILLIAX_SCRIPT QUESTLOG_SCRIPT FORCE
+
+	run execute_operations
+	[[ "$status" -eq 0 ]]
+	grep -Fq "trilliax args:--all ${GIT_ROOT}" <<<"$output"
+	grep -Fq "questlog args:${GIT_ROOT}" <<<"$output"
 }
 
 ########################################################
@@ -198,7 +211,7 @@ mock_commands_failure() {
 	run bash "$SCRIPT" --unknown
 	[[ "$status" -eq 1 ]]
 
-	grep -q "main:: Unknown option '--unknown'" <<<"$output"
+	grep -q "run_hearthstone:: Unknown option '--unknown'" <<<"$output"
 }
 
 @test "main:: script handles yes flag to skip confirmation" {

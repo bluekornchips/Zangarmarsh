@@ -123,35 +123,32 @@ verify_git_repository() {
 	return 0
 }
 
-# Install jq package using available package manager
+# Ensure jq is available on PATH
 #
 # Outputs:
-# - Status messages to stdout
-# - Error messages to stderr if installation fails
+# - Status messages to stdout when jq is present
+# - Guidance to stderr when jq is missing
 #
 # Returns:
-# - 0 if jq is already installed or installation succeeds
-# - 1 if no supported package manager is found or installation fails
-install_jq() {
+# - 0 if jq is already installed
+# - 1 if jq is missing
+ensure_jq() {
 	if command -v jq &>/dev/null; then
-		echo "install_jq:: jq installed"
+		echo "ensure_jq:: jq installed"
 		return 0
 	fi
 
-	echo "install_jq:: jq not found, attempting to install."
+	echo "ensure_jq:: jq not found" >&2
 
 	if command -v apt-get &>/dev/null; then
-		echo "install_jq:: Using apt-get to install jq."
-		echo "install_jq:: Please install jq manually: apt-get install jq" >&2
-		return 1
+		echo "ensure_jq:: Install with: apt-get install jq" >&2
 	elif command -v pacman &>/dev/null; then
-		echo "install_jq:: Using pacman to install jq."
-		echo "install_jq:: Please install jq manually: pacman -S jq" >&2
-		return 1
+		echo "ensure_jq:: Install with: pacman -S jq" >&2
 	else
-		echo "install_jq:: No supported package manager found. Please install jq manually for your system." >&2
-		return 1
+		echo "ensure_jq:: Install jq with your OS package manager, then re-run" >&2
 	fi
+
+	return 1
 }
 
 # Build the deck by ensuring required dependencies are installed
@@ -162,12 +159,12 @@ install_jq() {
 #
 # Returns:
 # - 0 if all dependencies are successfully installed
-# - 1 if jq installation fails
+# - 1 if jq is missing
 build_deck() {
-	if ! install_jq; then
-		echo "build_deck:: Failed to install jq" >&2
+	ensure_jq || {
+		echo "build_deck:: Failed to ensure jq" >&2
 		return 1
-	fi
+	}
 
 	return 0
 }
@@ -187,25 +184,30 @@ execute_operations() {
 		return 1
 	fi
 
+	if [[ -z "${GIT_ROOT:-}" ]]; then
+		echo "execute_operations:: GIT_ROOT is not set" >&2
+		return 1
+	fi
+
 	echo "execute_operations:: Running: build_deck"
-	if ! build_deck; then
+	build_deck || {
 		echo "execute_operations:: Failed to execute: build_deck" >&2
 		return 1
-	fi
+	}
 
 	if [[ "${FORCE:-}" = "true" ]]; then
-		echo "execute_operations:: Running: trilliax --all"
-		if ! "${TRILLIAX_SCRIPT}" --all; then
+		echo "execute_operations:: Running: trilliax --all ${GIT_ROOT}"
+		"${TRILLIAX_SCRIPT}" --all "${GIT_ROOT}" || {
 			echo "execute_operations:: Failed to execute: trilliax --all" >&2
 			return 1
-		fi
+		}
 	fi
 
-	echo "execute_operations:: Running: questlog"
-	if ! "${QUESTLOG_SCRIPT}"; then
+	echo "execute_operations:: Running: questlog ${GIT_ROOT}"
+	"${QUESTLOG_SCRIPT}" "${GIT_ROOT}" || {
 		echo "execute_operations:: Failed to execute: questlog" >&2
 		return 1
-	fi
+	}
 
 	return 0
 }
