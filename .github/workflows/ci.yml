@@ -7,17 +7,27 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: Install dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y bats shellcheck jq
+          if [ "${RUNNER_OS}" = "Linux" ]; then
+            sudo apt-get update
+            sudo apt-get install -y bats shellcheck jq shfmt zsh
+          else
+            brew install bats-core shellcheck jq shfmt
+          fi
 
-      - name: ShellCheck
-        run: make shellcheck
+      - name: Repository checks
+        run: make check
 
-      - name: Bats tests
-        run: make test
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

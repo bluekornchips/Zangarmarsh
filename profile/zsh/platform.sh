@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
 #
 # Platform detection and configuration for Zsh
 # Detects macOS and Linux environments

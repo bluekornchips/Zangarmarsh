@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
 #
 # Zsh profile configuration with Oh My Zsh integration.
 

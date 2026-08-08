@@ -39,7 +39,7 @@ _nvm_load() {
 # - None (reads from current directory)
 #
 # Side Effects:
-# - Installs dependencies using pip if pyproject.toml or requirements.txt found
+# - Requires uv when dependency files are present
 # - Sets dependency_installed flag
 #
 # Returns:
@@ -50,27 +50,27 @@ _penv_install_dependencies() {
 	local install_failed=false
 
 	if [[ -f "pyproject.toml" ]]; then
-		echo "Found pyproject.toml. Installing with pip."
-		if pip install -e ".[dev]" 2>/dev/null; then
-			dependency_installed=true
-		elif pip install -e . 2>/dev/null; then
-			dependency_installed=true
-		else
-			echo "_penv_install_dependencies:: pip install failed, you may need to install dependencies manually" >&2
-			install_failed=true
+		if ! command -v uv >/dev/null 2>&1; then
+			echo "_penv_install_dependencies:: uv is required for pyproject.toml" >&2
+			return 1
 		fi
-	elif [[ -f "requirements.txt" ]]; then
-		echo "Found requirements.txt. Installing dependencies."
-		if pip install -r requirements.txt 2>/dev/null; then
+
+		echo "Found pyproject.toml. Installing with uv."
+		if [[ -f "uv.lock" ]]; then
+			if uv sync --active --locked 2>/dev/null; then
+				dependency_installed=true
+			fi
+		elif uv sync --active 2>/dev/null; then
 			dependency_installed=true
-		else
-			echo "_penv_install_dependencies:: Failed to install requirements.txt dependencies" >&2
-			install_failed=true
 		fi
+
 	fi
 
-	if [[ "${dependency_installed}" != true ]] && [[ "${install_failed}" != true ]]; then
-		echo "No dependency files found (pyproject.toml, requirements.txt)"
+	if [[ "${dependency_installed}" != true && -f "pyproject.toml" ]]; then
+		install_failed=true
+		echo "_penv_install_dependencies:: Dependency installation failed" >&2
+	elif [[ "${dependency_installed}" != true ]]; then
+		echo "_penv_install_dependencies:: No pyproject.toml found"
 	fi
 
 	[[ "${install_failed}" == true ]] && return 1
@@ -154,7 +154,7 @@ gw() {
 # - Creates/activates .venv in the current directory
 # - Removes existing .venv if -d is passed
 # - Cleans __pycache__, .mypy_cache, .pytest_cache, and .pyc files
-# - Installs dependencies from pyproject.toml or requirements.txt if present
+# - Installs dependencies from pyproject.toml with uv
 #
 # Returns:
 # - 0 on success
@@ -196,7 +196,16 @@ EOF
 	if ! command -v "${python_version}" >/dev/null 2>&1; then
 		echo "penv:: ${python_version} not found" >&2
 		echo "penv:: Available Python versions:" >&2
-		find /usr/bin -maxdepth 1 -name "python*" -type f 2>/dev/null | head -5 || echo "penv:: No Python versions found in /usr/bin" >&2
+		local python_candidate
+		local python_count=0
+		for python_candidate in /usr/bin/python* /usr/local/bin/python* /opt/homebrew/bin/python*; do
+			if [[ -x "${python_candidate}" ]]; then
+				echo "${python_candidate}" >&2
+				python_count=$((python_count + 1))
+				[[ "${python_count}" -ge 5 ]] && break
+			fi
+		done
+		[[ "${python_count}" -eq 0 ]] && echo "penv:: No Python versions found in common paths" >&2
 		[[ "${PLATFORM_OS:-${PLATFORM}}" == "macos" ]] && echo "penv:: Try installing Python from https://www.python.org/downloads/" >&2
 		return 1
 	fi
@@ -215,7 +224,7 @@ EOF
 	fi
 
 	# Explicit path validation: ensure we're only removing .venv in current directory
-	if [[ -d "${env_name}" ]] && [[ "$(realpath "${env_name}" 2>/dev/null || echo "${env_name}")" == "$(realpath "$(pwd)/${env_name}" 2>/dev/null || echo "$(pwd)/${env_name}")" ]]; then
+	if [[ -d "${env_name}" ]]; then
 		echo "Removing existing virtual environment: ${env_name}"
 		rm -rf "${env_name}" 2>/dev/null || {
 			echo "penv:: Failed to remove existing environment" >&2
@@ -242,18 +251,18 @@ EOF
 	local cache_files
 	cache_files=("*.pyc")
 	for cache_dir in "${cache_dirs[@]}"; do
-		find "${current_dir}" -maxdepth 10 -type d -name "${cache_dir}" -exec rm -rf {} + 2>/dev/null || true
+		find "${current_dir}" -type d -name "${cache_dir}" -prune -exec rm -rf {} + 2>/dev/null || true
 	done
 
 	for cache_file in "${cache_files[@]}"; do
-		find "${current_dir}" -maxdepth 10 -type f -name "${cache_file}" -exec rm -f {} + 2>/dev/null || true
+		find "${current_dir}" -type f -name "${cache_file}" -exec rm -f {} + 2>/dev/null || true
 	done
 
 	echo "Creating virtual environment with ${python_version}: ${env_name}"
 	if ! "${python_version}" -m venv "${env_name}" 2>/dev/null; then
 		echo "penv:: Failed to create virtual environment" >&2
 		echo "penv:: Make sure ${python_version} has venv module installed" >&2
-		echo "penv:: Try: ${python_version} -m pip install --user virtualenv" >&2
+		echo "penv:: Install Python with a working venv module, then retry" >&2
 		return 1
 	fi
 
@@ -269,7 +278,6 @@ EOF
 ========================================
 Virtual environment setup complete!
 Python version: $(python --version 2>/dev/null || echo "Version info unavailable")
-Pip version: $(pip --version 2>/dev/null || echo "Pip not available")
 Environment: $PWD/$env_name
 ========================================
 

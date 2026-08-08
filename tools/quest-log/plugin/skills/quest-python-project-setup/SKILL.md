@@ -6,13 +6,16 @@ disable-model-invocation: true
 
 # Python Project Setup
 
-Create a barebones Python project that explicitly follows the Python coding standards defined in `.cursor/rules/rules-python.mdc`.
+Create a small Python project that follows the Python coding standards defined in
+`.cursor/rules/rules-python.mdc`. Use `uv` for project creation, dependency
+resolution, virtual environments, and lock files. Require `uv` for dependency
+installation.
 
 ## Project Structure
 
 Create the following directory structure:
 
-```
+```text
 project-name/
 ├── src/
 │   └── project_name/
@@ -35,66 +38,52 @@ mkdir -p project-name/tests
 cd project-name
 ```
 
-### 2. Create `pyproject.toml`
+### 2. Create the project with `uv`
 
-This file configures the required tools: black, isort, mypy, and pytest.
+For a new application or library, start with:
+
+```bash
+uv init --package project-name
+cd project-name
+uv add --dev ruff pytest pytest-cov
+uv lock
+```
+
+For an existing project, preserve its build backend and add the tools with:
+
+```bash
+uv add --dev ruff pytest pytest-cov
+uv lock
+```
+
+Keep `uv.lock` in version control for applications and reproducible
+development environments. Use `--locked` in CI.
+
+If the project needs strict static typing, add mypy separately:
+
+```bash
+uv add --dev mypy
+```
+
+The project should declare a supported Python range in `pyproject.toml`, for
+example `requires-python = ">=3.11"`.
+
+Recommended tool configuration:
 
 ```toml
-[build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+[tool.ruff]
+line-length = 100
+target-version = "py311"
 
-[project]
-name = "project-name"
-version = "0.1.0"
-description = "A Python project following strict coding standards"
-requires-python = ">=3.10"
-dependencies = []
-
-[project.optional-dependencies]
-dev = [
-    "black>=23.0.0",
-    "isort>=5.12.0",
-    "pytest>=7.0.0",
-    "pytest-cov>=4.0.0",
-    "mypy>=1.0.0",
-]
-
-[tool.black]
-line-length = 80
-target-version = ["py310"]
-
-[tool.isort]
-profile = "black"
-line_length = 80
-
-[tool.mypy]
-python_version = "3.10"
-strict = true
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-check_untyped_defs = true
-disallow_untyped_decorators = true
-no_implicit_optional = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-warn_no_return = true
-warn_unreachable = true
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = [
-    "--cov=src",
-    "--cov-report=term-missing",
-    "--cov-report=html",
-    "--cov-fail-under=90",
-    "-v",
-]
+addopts = ["--cov=src", "--cov-report=term-missing", "-v"]
 ```
 
 ### 3. Create `src/project_name/main.py`
@@ -275,39 +264,29 @@ def test_validate_input_raises_value_error_for_negative() -> None:
 
 ### 5. Create `Makefile`
 
-Create a `Makefile` with targets for virtual environment setup, formatting, import sorting, and testing:
+If a project wants a Makefile, keep it as a thin wrapper around `uv`:
 
 ```makefile
-.PHONY: venv install format isort lint typecheck test all
+.PHONY: install format lint typecheck test all
 
-VENV = .venv
-PYTHON = $(VENV)/bin/python
-PIP = $(VENV)/bin/pip
-
-venv:
-	python3 -m venv $(VENV)
-
-install: venv
-	$(PIP) install -e ".[dev]"
+install:
+	uv sync
 
 format:
-	$(VENV)/bin/black src/ tests/
-
-isort:
-	$(VENV)/bin/isort src/ tests/
+	uv run ruff format src/ tests/
 
 lint:
-	$(VENV)/bin/mypy src/
+	uv run ruff check src/ tests/
 
 test:
-	$(VENV)/bin/pytest
+	uv run pytest
 
-all: format isort lint test
+all: format lint test
 ```
 
 ### 6. Create `.gitignore`
 
-```
+```gitignore
 .venv/
 __pycache__/
 *.pyc
@@ -329,7 +308,7 @@ Brief description of the project.
 
 ## Requirements
 
-- Python 3.10 or greater
+- Python 3.11 or greater
 
 ## Setup
 
@@ -348,9 +327,8 @@ python -m project_name.main
 ## Development
 
 ```bash
-make format   # Format with black
-make isort    # Sort imports
-make lint     # Type check with mypy
+make format   # Format with Ruff
+make lint     # Lint with Ruff
 make test     # Run tests with coverage
 make all      # Run all of the above
 ```
@@ -362,36 +340,33 @@ make all      # Run all of the above
 After setup, run these commands to verify everything works:
 
 ```bash
-# Create virtual environment and install dependencies
-make install
+# Create the environment and install locked dependencies
+uv sync --locked
 
-# Format code with black
-make format
+# Format code with Ruff
+uv run ruff format src/ tests/
 
-# Sort imports with isort
-make isort
+# Lint code with Ruff
+uv run ruff check src/ tests/
 
-# Type check with mypy
-make lint
+# Type check with mypy when configured
+uv run mypy src/
 
 # Run tests with coverage
-make test
+uv run pytest
 
-# Or run all formatting, import sorting, type checking, and tests
+# Or run all formatting, linting, typing, and tests
 make all
 ````
 
-Alternatively, activate the virtual environment and run commands directly:
+For projects that cannot use `uv`, stop and document that requirement rather
+than adding another installer path:
 
 ```bash
-# Activate virtual environment
-source .venv/bin/activate
-
-# Then run commands directly
-black src/ tests/
-isort src/ tests/
-mypy src/
-pytest
+# Install uv, then use the locked project environment
+curl -LsSf https://astral.sh/uv/install.sh | sh
+uv sync --locked
+uv run pytest
 ```
 
 All commands should pass without errors.

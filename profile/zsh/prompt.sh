@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
 
 # Zsh prompt configuration
 # This script configures the zsh prompt with git branch, kubectl context, and custom formatting

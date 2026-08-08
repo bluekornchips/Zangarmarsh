@@ -23,9 +23,6 @@ version = "0.1.0"
 dev = ["pytest"]
 EOF
 		;;
-	"requirements")
-		echo "pytest" >requirements.txt
-		;;
 	"invalid")
 		cat >pyproject.toml <<EOF
 [project]
@@ -49,8 +46,6 @@ PATH="${VIRTUAL_ENV}/bin:${PATH}"
 export PATH
 EOF
 			printf '#!/usr/bin/env bash\necho "Python 3.12.0"\n' >"${env_dir}/bin/python"
-			printf '#!/usr/bin/env bash\necho "pip 24.0 from fake"\n' >"${env_dir}/bin/pip"
-			chmod +x "${env_dir}/bin/python" "${env_dir}/bin/pip"
 			ln -sf python "${env_dir}/bin/python3"
 			return 0
 		fi
@@ -163,35 +158,35 @@ teardown() {
 
 @test "penv:: install dependencies from pyproject.toml" {
 	create_mock_dependency_file "pyproject"
-	pip() { return 0; }
-	export -f pip
+	uv() { return 0; }
+	export -f uv
 
 	run penv
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Found pyproject.toml. Installing with pip"
+	echo "$output" | grep -q "Found pyproject.toml. Installing with uv"
 }
 
-@test "penv:: install dependencies from requirements.txt" {
-	create_mock_dependency_file "requirements"
-	pip() { return 0; }
-	export -f pip
+@test "penv:: uses locked uv sync when uv.lock exists" {
+	create_mock_dependency_file "pyproject"
+	touch uv.lock
+	uv() { return 0; }
+	export -f uv
 
 	run penv
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Found requirements.txt. Installing dependencies"
+	echo "$output" | grep -q "Found pyproject.toml. Installing with uv"
 }
 
 @test "penv:: handle missing dependency files gracefully" {
 	run penv
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "No dependency files found"
+	echo "$output" | grep -q "No pyproject.toml found"
 }
 
-@test "penv:: show Python and pip versions in output" {
+@test "penv:: show Python version in output" {
 	run penv
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Python version:"
-	echo "$output" | grep -q "Pip version:"
 }
 
 @test "penv:: handle failed virtual environment creation" {
