@@ -3,12 +3,6 @@
 # Hearthstone setup and sync tool
 #
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-GIT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-
-DEFAULT_TRILLIAX_SCRIPT="$GIT_ROOT/tools/trilliax/trilliax.sh"
-DEFAULT_QUESTLOG_SCRIPT="$GIT_ROOT/tools/quest-log/quest-log.sh"
-
 # Default values
 DEFAULT_FORCE=false
 
@@ -41,8 +35,8 @@ health_check() {
 	local script_path
 
 	for script_path in \
-		"${TRILLIAX_SCRIPT:-${DEFAULT_TRILLIAX_SCRIPT}}" \
-		"${QUESTLOG_SCRIPT:-${DEFAULT_QUESTLOG_SCRIPT}}"; do
+		"${TRILLIAX_SCRIPT}" \
+		"${QUESTLOG_SCRIPT}"; do
 		if [[ ! -f "${script_path}" ]]; then
 			echo "health_check:: script not found: ${script_path}" >&2
 			errors=$((errors + 1))
@@ -110,12 +104,12 @@ EOF
 # - 1 if git root directory is missing
 # - 1 if tools directory is missing
 verify_git_repository() {
-	if [[ ! -d "${GIT_ROOT:-}" ]]; then
-		echo "verify_git_repository:: Zangarmarsh root directory not found: ${GIT_ROOT:-}" >&2
+	if [[ ! -d "${ZANGARMARSH_ROOT:-}" ]]; then
+		echo "verify_git_repository:: Zangarmarsh root directory not found: ${ZANGARMARSH_ROOT:-}" >&2
 		return 1
 	fi
 
-	if [[ ! -d "${GIT_ROOT}/tools" ]]; then
+	if [[ ! -d "${ZANGARMARSH_ROOT}/tools" ]]; then
 		echo "verify_git_repository:: Invalid Zangarmarsh structure: tools directory not found" >&2
 		return 1
 	fi
@@ -184,11 +178,6 @@ execute_operations() {
 		return 1
 	fi
 
-	if [[ -z "${GIT_ROOT:-}" ]]; then
-		echo "execute_operations:: GIT_ROOT is not set" >&2
-		return 1
-	fi
-
 	echo "execute_operations:: Running: build_deck"
 	build_deck || {
 		echo "execute_operations:: Failed to execute: build_deck" >&2
@@ -196,15 +185,15 @@ execute_operations() {
 	}
 
 	if [[ "${FORCE:-}" = "true" ]]; then
-		echo "execute_operations:: Running: trilliax --all ${GIT_ROOT}"
-		"${TRILLIAX_SCRIPT}" --all "${GIT_ROOT}" || {
+		echo "execute_operations:: Running: trilliax --all ${ZANGARMARSH_ROOT}"
+		"${TRILLIAX_SCRIPT}" --all "${ZANGARMARSH_ROOT}" || {
 			echo "execute_operations:: Failed to execute: trilliax --all" >&2
 			return 1
 		}
 	fi
 
-	echo "execute_operations:: Running: questlog ${GIT_ROOT}"
-	"${QUESTLOG_SCRIPT}" "${GIT_ROOT}" || {
+	echo "execute_operations:: Running: questlog ${ZANGARMARSH_ROOT}"
+	"${QUESTLOG_SCRIPT}" "${ZANGARMARSH_ROOT}" || {
 		echo "execute_operations:: Failed to execute: questlog" >&2
 		return 1
 	}
@@ -213,11 +202,15 @@ execute_operations() {
 }
 
 run_hearthstone() {
-	local trilliax_script="${TRILLIAX_SCRIPT:-${DEFAULT_TRILLIAX_SCRIPT}}"
-	local questlog_script="${QUESTLOG_SCRIPT:-${DEFAULT_QUESTLOG_SCRIPT}}"
+	local do_health_check=false
 	FORCE="${FORCE:-${DEFAULT_FORCE}}"
-
 	SKIP_CONFIRMATION=false
+
+	if [[ -z "${ZANGARMARSH_ROOT:-}" ]]; then
+		printf 'hearthstone:: ZANGARMARSH_ROOT is required\n' >&2
+		return 1
+	fi
+
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
 		-y | --yes)
@@ -233,8 +226,8 @@ run_hearthstone() {
 			return 0
 			;;
 		--health-check)
-			health_check
-			return $?
+			do_health_check=true
+			shift
 			;;
 		*)
 			echo "run_hearthstone:: Unknown option '${1}'" >&2
@@ -244,13 +237,19 @@ run_hearthstone() {
 		esac
 	done
 
-	TRILLIAX_SCRIPT="${trilliax_script}"
-	QUESTLOG_SCRIPT="${questlog_script}"
+	SCRIPT_DIR="${ZANGARMARSH_ROOT}/tools/hearthstone"
+	TRILLIAX_SCRIPT="${TRILLIAX_SCRIPT:-${ZANGARMARSH_ROOT}/tools/trilliax/trilliax.sh}"
+	QUESTLOG_SCRIPT="${QUESTLOG_SCRIPT:-${ZANGARMARSH_ROOT}/tools/quest-log/quest-log.sh}"
 
 	export FORCE
 	export SKIP_CONFIRMATION
 	export TRILLIAX_SCRIPT
 	export QUESTLOG_SCRIPT
+
+	if [[ "${do_health_check}" == true ]]; then
+		health_check
+		return $?
+	fi
 
 	if ! verify_git_repository; then
 		return 1

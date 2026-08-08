@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Sync VSCode settings from the Zangarmarsh repo into a target project directory
+# Sync VSCode settings from Zangarmarsh into a target git project root
 #
 # Requires write_if_changed and the STATS_* counters from
 # tools/quest-log/lib/io.sh, already sourced by the caller before this file.
@@ -58,7 +58,7 @@ copy_vscode_template() {
 # - $1 zangarmarsh_root, optional source repository root
 #
 # Reads environment:
-# - GIT_ROOT, destination project directory, usually the current git root
+# - GIT_ROOT, destination git project root
 # - ZANGARMARSH_ROOT, used when zangarmarsh_root argument is empty
 #
 # Side Effects:
@@ -76,10 +76,8 @@ vscodeoverride() {
 	fi
 
 	if [[ -z "${zangarmarsh_root}" ]]; then
-		if ! zangarmarsh_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)" 2>/dev/null; then
-			echo "vscodeoverride:: could not resolve Zangarmarsh root" >&2
-			return 1
-		fi
+		echo "vscodeoverride:: ZANGARMARSH_ROOT is required" >&2
+		return 1
 	fi
 
 	echo "vscodeoverride: running"
@@ -90,6 +88,7 @@ vscodeoverride() {
 	fi
 
 	if [[ "${GIT_ROOT}" == "${zangarmarsh_root}" ]]; then
+		echo "vscodeoverride: skipped, target is the Zangarmarsh root"
 		echo "vscodeoverride: complete"
 		return 0
 	fi

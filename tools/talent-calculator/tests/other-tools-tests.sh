@@ -3,44 +3,119 @@
 # Test file for other-tools.sh
 # Tests the other tools installation functions
 #
-GIT_ROOT="$(git rev-parse --show-toplevel || echo "")"
-SCRIPT_DIR="$GIT_ROOT/tools/talent-calculator"
-MAIN_SCRIPT="$SCRIPT_DIR/talent-calculator.sh"
-OTHER_TOOLS="$SCRIPT_DIR/tools/other-tools.sh"
-[[ ! -f "$MAIN_SCRIPT" ]] && echo "setup:: Main script not found: $MAIN_SCRIPT" >&2 && exit 1
-[[ ! -f "$OTHER_TOOLS" ]] && echo "setup:: Other tools script not found: $OTHER_TOOLS" >&2 && exit 1
-
-source "${SCRIPT_DIR}/tests/fixtures.sh"
 
 setup_file() {
+	if ! GIT_ROOT="$(git rev-parse --show-toplevel)"; then
+		echo "setup_file:: Failed to get git root" >&2
+		return 1
+	fi
+	source "${GIT_ROOT}/tests/fixtures.sh"
+	SCRIPT_DIR="${ZANGARMARSH_ROOT}/tools/talent-calculator"
+	SCRIPT="${SCRIPT_DIR}/talent-calculator.sh"
+	OTHER_TOOLS="${SCRIPT_DIR}/tools/other-tools.sh"
+	[[ -f "${SCRIPT}" ]] || {
+		echo "setup_file:: Script not found: ${SCRIPT}" >&2
+		return 1
+	}
+	[[ -f "${OTHER_TOOLS}" ]] || {
+		echo "setup_file:: Other tools script not found: ${OTHER_TOOLS}" >&2
+		return 1
+	}
+	export SCRIPT_DIR
+	export SCRIPT
+	export OTHER_TOOLS
+
 	return 0
 }
 
 setup() {
 	set +e
 	trap - EXIT ERR
-	source "$MAIN_SCRIPT"
-	source "$OTHER_TOOLS"
+	source "${SCRIPT}"
+	source "${OTHER_TOOLS}"
 	trap - EXIT ERR
 	set +e
 
+	talent_test_home_setup
+
+	return 0
+}
+
+teardown() {
+	talent_test_home_teardown
+
+	return 0
+}
+
+teardown_file() {
+	return 0
+}
+
+talent_test_home_setup() {
 	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
 
-	TEST_DIR="$(mktemp -d "${base}/other-tools-test.XXXXXX")"
-	export TEST_DIR
-
+	TEST_DIR="$(mktemp -d "${base}/talent-calculator-test.XXXXXX")"
 	DRY_RUN="false"
 	TALENT_MODE="check"
+	export TEST_DIR
 	export DRY_RUN
 	export TALENT_MODE
 
 	return 0
 }
 
-teardown() {
-	[[ -d "$TEST_DIR" ]] && rm -rf "$TEST_DIR"
+talent_test_home_teardown() {
+	[[ -n "${TEST_DIR:-}" && -d "${TEST_DIR}" ]] && rm -rf "${TEST_DIR}"
+	TEST_DIR=""
 
 	return 0
+}
+
+mock_curl_success() {
+	curl() {
+		echo "curl $*"
+		return 0
+	}
+	export -f curl
+}
+
+mock_curl_failure() {
+	curl() {
+		echo "curl $*" >&2
+		return 1
+	}
+	export -f curl
+}
+
+mock_command_installed() {
+	local cmd_name="$1"
+	command() {
+		if [[ "$1" == "-v" ]] && [[ "$2" == "${cmd_name}" ]]; then
+			echo "/usr/local/bin/${cmd_name}"
+			return 0
+		fi
+		builtin command "$@"
+	}
+	export -f command
+}
+
+mock_command_not_installed() {
+	local cmd_name="$1"
+	command() {
+		if [[ "$1" == "-v" ]] && [[ "$2" == "${cmd_name}" ]]; then
+			return 1
+		fi
+		builtin command "$@"
+	}
+	export -f command
+}
+
+mock_all_other_tools_installed() {
+	check_is_installed() {
+		[[ -n "$1" ]] || return 1
+		return 0
+	}
+	export -f check_is_installed
 }
 
 ########################################################

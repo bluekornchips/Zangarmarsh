@@ -2,10 +2,15 @@
 #
 # Quest-log Cursor plugin install and uninstall helpers
 #
+# Requires:
+# - ZANGARMARSH_ROOT set to the Zangarmarsh repository root before sourcing
+#
 
-_QUEST_LOG_PLUGIN_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=lib/io.sh
-source "${_QUEST_LOG_PLUGIN_LIB_DIR}/io.sh"
+if [[ -z "${ZANGARMARSH_ROOT:-}" ]]; then
+	printf 'plugin.sh:: ZANGARMARSH_ROOT is required\n' >&2
+	return 1
+fi
+source "${ZANGARMARSH_ROOT}/tools/quest-log/lib/io.sh"
 
 # Resolve the local Cursor plugin install directory
 #

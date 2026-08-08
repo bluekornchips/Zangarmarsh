@@ -11,7 +11,10 @@ else
 	SCRIPT_PATH="$(cd "$(dirname "${0}")" && pwd)/$(basename "${0}")"
 fi
 
-ZANGARMARSH_ROOT="$(cd "$(dirname "${SCRIPT_PATH}")" && pwd)"
+ZANGARMARSH_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || true
+if [[ -z "${ZANGARMARSH_ROOT}" ]]; then
+	ZANGARMARSH_ROOT="$(cd "$(dirname "${SCRIPT_PATH}")" && pwd)"
+fi
 export ZANGARMARSH_ROOT
 
 # Common configuration files to load

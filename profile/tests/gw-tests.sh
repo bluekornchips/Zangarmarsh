@@ -3,17 +3,27 @@
 # Test file for gw function in profile/functions.sh
 # Uses isolated temp git repos only. Never run gw shortcut tests from the real checkout cwd.
 
-GIT_ROOT="$(git rev-parse --show-toplevel)"
-SCRIPT="$GIT_ROOT/profile/functions.sh"
-[[ -f "$SCRIPT" ]] || {
-	echo "Script not found: $SCRIPT" >&2
-	exit 1
-}
+setup_file() {
+	if ! GIT_ROOT="$(git rev-parse --show-toplevel)"; then
+		echo "setup_file:: Failed to get git root" >&2
+		return 1
+	fi
+	source "${GIT_ROOT}/tests/fixtures.sh"
 
-source "$GIT_ROOT/profile/tests/fixtures.sh"
+	SCRIPT="${ZANGARMARSH_ROOT}/profile/functions.sh"
+	if [[ ! -f "${SCRIPT}" ]]; then
+		echo "Script not found: ${SCRIPT}" >&2
+		return 1
+	fi
+	export SCRIPT
+
+	return 0
+}
 
 setup() {
 	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
+
+	source "${GIT_ROOT}/tests/fixtures.sh"
 
 	TEST_DIR="$(mktemp -d "${base}/gw-test.XXXXXX")"
 	cd "${TEST_DIR}" || return 1
@@ -21,6 +31,8 @@ setup() {
 	source "$SCRIPT"
 
 	export TEST_DIR
+
+	return 0
 }
 
 teardown() {
@@ -37,6 +49,12 @@ teardown() {
 		fi
 		rm -rf "${TEST_DIR}"
 	fi
+
+	return 0
+}
+
+teardown_file() {
+	return 0
 }
 
 @test "gw:: returns 1 when not in a git repository" {

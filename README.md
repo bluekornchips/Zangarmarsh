@@ -21,7 +21,7 @@ Zangarmarsh is a zone in World of Warcraft overwhelmed by blue ambiance, dampnes
 
 After you `source zangarmarsh.sh`, both shells load shared files under `profile/`:
 
-- `aliases.sh` and `functions.sh`: tool aliases, `penv`, `nvm` lazy load when enabled, `gw`, `list_changed_files`, and related helpers
+- `aliases.sh` and `functions.sh`: tool aliases, `penv`, `nvm` lazy load when enabled, `gw`, and related helpers
 
 Zsh also loads `profile/zsh/profile.zsh`, which pulls in Oh My Zsh, `profile/zsh/platform.zsh` for macOS and Linux PATH and aliases, and `profile/zsh/prompt.zsh` for the customizable prompt with Git branch and kubectl context.
 
@@ -35,9 +35,9 @@ cd Zangarmarsh
 make install
 ```
 
-`make install` appends a source line to `~/.aliases` and installs the tracked
-quest-log plugin. This setup expects `~/.bashrc` and `~/.zshrc` to source
-`~/.aliases`.
+`make install` appends a source line to `~/.zshrc` and `~/.bashrc` and installs
+the tracked quest-log plugin. Pass `--zsh` or `--bash` to target only one shell
+rc file.
 
 Dry-run first with:
 

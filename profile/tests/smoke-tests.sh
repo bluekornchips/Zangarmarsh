@@ -4,16 +4,20 @@
 #
 
 setup_file() {
-	command -v zsh >/dev/null 2>&1 || exit 0
+	command -v zsh >/dev/null 2>&1 || skip "zsh not available"
 
-	GIT_ROOT="$(git rev-parse --show-toplevel || echo "")"
-	ZANGARMARSH_SCRIPT="${GIT_ROOT}/zangarmarsh.sh"
+	if ! GIT_ROOT="$(git rev-parse --show-toplevel)"; then
+		echo "setup_file:: Failed to get git root" >&2
+		return 1
+	fi
+	source "${GIT_ROOT}/tests/fixtures.sh"
+	ZANGARMARSH_SCRIPT="${ZANGARMARSH_ROOT}/zangarmarsh.sh"
 	[[ -f "${ZANGARMARSH_SCRIPT}" ]] || {
 		echo "setup_file:: script not found: ${ZANGARMARSH_SCRIPT}" >&2
 		return 1
 	}
 
-	export GIT_ROOT ZANGARMARSH_SCRIPT
+	export ZANGARMARSH_SCRIPT
 
 	return 0
 }
@@ -40,6 +44,10 @@ setup() {
 teardown() {
 	[[ -n "${TEST_DIR}" && -d "${TEST_DIR}" ]] && rm -rf "${TEST_DIR}"
 
+	return 0
+}
+
+teardown_file() {
 	return 0
 }
 

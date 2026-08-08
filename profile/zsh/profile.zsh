@@ -36,13 +36,9 @@ if [[ -z "$ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE" ]] && [[ -f "${ZSH}/plugins/zsh-auto
 	ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#00ffff,bg=#2d2f40,bold"
 fi
 
-# Load custom zsh files
-if [[ -z "$ZANGARMARSH_ROOT" ]]; then
-	ZANGARMARSH_ROOT="$(cd "$(dirname -- "${0:A}")/../.." 2>/dev/null && pwd)"
-	if [[ ! -d "$ZANGARMARSH_ROOT" ]]; then
-		# Fallback to current directory if detection fails
-		ZANGARMARSH_ROOT="$(pwd)"
-	fi
+if [[ -z "${ZANGARMARSH_ROOT:-}" ]]; then
+	echo "profile.zsh:: ZANGARMARSH_ROOT is required" >&2
+	return 1
 fi
 
 ZSH_FILES=(

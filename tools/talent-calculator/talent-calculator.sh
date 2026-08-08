@@ -5,9 +5,6 @@
 # Installs and manages CLI tools for development workstations
 #
 
-_TC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${_TC_DIR}/../lib/platform.sh"
-
 CORE_TOOLS=(
 	"jq"      # https://jqlang.org/download/
 	"yq"      # https://github.com/mikefarah/yq
@@ -272,6 +269,15 @@ run_talent_calculator() {
 	# Parse arguments
 	local dry_run="false"
 	local talent_mode="check"
+
+	if [[ -z "${ZANGARMARSH_ROOT:-}" ]]; then
+		echo "talent-calculator:: ZANGARMARSH_ROOT is required" >&2
+		return 1
+	fi
+
+	source "${ZANGARMARSH_ROOT}/tools/lib/platform.sh"
+	source "${ZANGARMARSH_ROOT}/tools/talent-calculator/tools/other-tools.sh"
+
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
 		-h | --help)
@@ -307,9 +313,6 @@ run_talent_calculator() {
 
 	export DRY_RUN
 	export TALENT_MODE
-
-	SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-	source "${SCRIPT_DIR}/tools/other-tools.sh"
 
 	# Change to HOME directory
 	pushd "${HOME}" >/dev/null || {

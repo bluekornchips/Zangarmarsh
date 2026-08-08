@@ -3,40 +3,60 @@
 # Test file for zangarmarsh.sh
 # Tests the main zangarmarsh script functionality and shell compatibility
 
-REPO_ROOT="$(git rev-parse --show-toplevel)"
-SCRIPT="${REPO_ROOT}/zangarmarsh.sh"
-[[ -f "${SCRIPT}" ]] || {
-	echo "Script not found: ${SCRIPT}" >&2
-	exit 1
-}
+setup_file() {
+	if ! GIT_ROOT="$(git rev-parse --show-toplevel)"; then
+		echo "setup_file:: Failed to get git root" >&2
+		return 1
+	fi
+	source "${GIT_ROOT}/tests/fixtures.sh"
 
-source "${REPO_ROOT}/profile/tests/fixtures.sh"
+	SCRIPT="${ZANGARMARSH_ROOT}/zangarmarsh.sh"
+	if [[ ! -f "${SCRIPT}" ]]; then
+		echo "Script not found: ${SCRIPT}" >&2
+		return 1
+	fi
+	export SCRIPT
+
+	return 0
+}
 
 # Setup test environment with mock git repository
 setup() {
 	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
+
+	source "${GIT_ROOT}/tests/fixtures.sh"
 
 	TEST_DIR="$(mktemp -d "${base}/zangarmarsh-test.XXXXXX")"
 	cd "${TEST_DIR}" || return 1
 
 	# Create a mock git repository for testing using fixtures
 	create_mock_git_repo "${TEST_DIR}"
-	ZANGARMARSH_ROOT="${TEST_DIR}"
 	ZANGARMARSH_VERBOSE=true
 
 	# Copy the profile and tools directories to the test directory
-	cp -r "${REPO_ROOT}/profile" "${TEST_DIR}"
-	cp -r "${REPO_ROOT}/tools" "${TEST_DIR}"
-	cp "${REPO_ROOT}/zangarmarsh.sh" "${TEST_DIR}"
+	cp -r "${ZANGARMARSH_ROOT}/profile" "${TEST_DIR}"
+	cp -r "${ZANGARMARSH_ROOT}/tools" "${TEST_DIR}"
+	cp "${ZANGARMARSH_ROOT}/zangarmarsh.sh" "${TEST_DIR}"
+
+	# Isolate product root under the temp tree for this test.
+	ZANGARMARSH_ROOT="${TEST_DIR}"
 
 	export TEST_DIR
 	export ZANGARMARSH_ROOT
 	export ZANGARMARSH_VERBOSE
+
+	return 0
 }
 
 # Clean up test environment
 teardown() {
 	rm -rf "$TEST_DIR"
+
+	return 0
+}
+
+teardown_file() {
+	return 0
 }
 
 @test "zangarmarsh:: load successfully with default settings" {
@@ -89,7 +109,7 @@ teardown() {
 
 	run bash -c "source '${SCRIPT}' && printf '%s\n' \"\${ZANGARMARSH_ROOT}\""
 	[[ "${status}" -eq 0 ]]
-	echo "${output}" | grep -q "${REPO_ROOT}"
+	echo "${output}" | grep -q "$(dirname "${SCRIPT}")"
 
 	cd - >/dev/null || return 1
 	rm -rf "${temp_dir}"

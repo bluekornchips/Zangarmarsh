@@ -1,34 +1,22 @@
 #!/usr/bin/env bash
 #
-# Shared fixtures for auras Bats tests
+# Shared auras fixtures for aura, buff, and debuff tests.
+# Requires GIT_ROOT / ZANGARMARSH_ROOT from the calling setup_file.
 #
 
-setup_file() {
-	GIT_ROOT="$(git rev-parse --show-toplevel || echo "")"
-	SCRIPT="${GIT_ROOT}/tools/auras/auras.sh"
-	if [[ ! -f "${SCRIPT}" ]]; then
-		echo "Script not found: ${SCRIPT}" >&2
-		return 1
-	fi
-
-	export GIT_ROOT
-	export SCRIPT
-
-	return 0
-}
-
-setup() {
-	source "${SCRIPT}"
-
+auras_home_setup() {
 	local bats_tmp="${BATS_TMPDIR:-/tmp}"
+
 	AURAS_TEST_HOME="$(mktemp -d "${bats_tmp}/auras_test_home.XXXXXX")"
 	HOME="${AURAS_TEST_HOME}"
+	export HOME
+	export AURAS_TEST_HOME
 
 	return 0
 }
 
-teardown() {
-	[[ -n "${AURAS_TEST_HOME}" && -d "${AURAS_TEST_HOME}" ]] && rm -rf "${AURAS_TEST_HOME}"
+auras_home_teardown() {
+	[[ -n "${AURAS_TEST_HOME:-}" && -d "${AURAS_TEST_HOME}" ]] && rm -rf "${AURAS_TEST_HOME}"
 	AURAS_TEST_HOME=""
 
 	return 0
@@ -66,23 +54,4 @@ make_managed_bin_link() {
 
 	mkdir -p "${HOME}/.local/bin"
 	ln -sf "${target}" "${HOME}/.local/bin/${name}"
-}
-
-setup_appimage_fixture() {
-	local stem="${1:-demoapp}"
-	local relative="${2:-false}"
-
-	APPIMAGE_APPDIR="${AURAS_TEST_HOME}/apps"
-	make_appimage "${APPIMAGE_APPDIR}" "${stem}.AppImage"
-	APPIMAGE_PATH="${APPIMAGE_APPDIR}/${stem}.AppImage"
-
-	if [[ "${relative}" == "true" ]]; then
-		APPIMAGE_ARG="apps/${stem}.AppImage"
-		APPIMAGE_EXPECTED="${APPIMAGE_PATH}"
-	else
-		APPIMAGE_ARG="${APPIMAGE_PATH}"
-		APPIMAGE_EXPECTED="${APPIMAGE_PATH}"
-	fi
-
-	export APPIMAGE_APPDIR APPIMAGE_PATH APPIMAGE_ARG APPIMAGE_EXPECTED
 }

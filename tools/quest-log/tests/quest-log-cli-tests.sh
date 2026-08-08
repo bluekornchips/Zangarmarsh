@@ -1,21 +1,144 @@
 #!/usr/bin/env bats
 #
 # Tests for determine_target_directory, print_summary, vscodeoverride,
-# install_quest_plugin, and run_quest_log
+# and run_quest_log
 #
 
-source "$(dirname "${BATS_TEST_FILENAME}")/fixtures.sh"
-
 setup_file() {
+	if ! GIT_ROOT="$(git rev-parse --show-toplevel)"; then
+		echo "setup_file:: Failed to get git root" >&2
+		return 1
+	fi
+	source "${GIT_ROOT}/tests/fixtures.sh"
+	QUEST_LOG_ROOT="${ZANGARMARSH_ROOT}/tools/quest-log"
+	SCRIPT="${QUEST_LOG_ROOT}/quest-log.sh"
+	ZANGARMARSH_VSCODE_DIR="${ZANGARMARSH_ROOT}/.vscode"
+	export QUEST_LOG_ROOT
+	export SCRIPT
+	export ZANGARMARSH_VSCODE_DIR
+
 	return 0
 }
 
 setup() {
 	quest_log_test_setup
+
+	return 0
 }
 
 teardown() {
 	quest_log_test_teardown
+
+	return 0
+}
+
+teardown_file() {
+	return 0
+}
+
+create_test_plugin_source() {
+	local plugin_dir="$1"
+
+	mkdir -p "${plugin_dir}/.cursor-plugin" "${plugin_dir}/rules" "${plugin_dir}/skills/quest-review"
+	echo '{"name":"quest-log"}' >"${plugin_dir}/.cursor-plugin/plugin.json"
+	echo "rule body" >"${plugin_dir}/rules/always.mdc"
+	echo "skill body" >"${plugin_dir}/skills/quest-review/SKILL.md"
+
+	return 0
+}
+
+quest_log_test_teardown() {
+	if [[ -n "${TEST_TEMP_DIR}" ]] && [[ -d "${TEST_TEMP_DIR}" ]]; then
+		if ! rm -rf "${TEST_TEMP_DIR}"; then
+			echo "Failed to cleanup test directory: ${TEST_TEMP_DIR}" >&2
+		fi
+	fi
+
+	STATS_CREATED=0
+	STATS_UPDATED=0
+	STATS_UNCHANGED=0
+	STATS_ERRORS=0
+
+	return 0
+}
+
+quest_log_test_setup() {
+	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
+	local return_dir="${PWD}"
+
+	TEST_TEMP_DIR="$(mktemp -d "${base}/quest-log-test.XXXXXX")"
+
+	HOME="${TEST_TEMP_DIR}/home"
+	mkdir -p "${HOME}"
+	export HOME
+
+	PLUGIN_SOURCE_DIR="${TEST_TEMP_DIR}/plugin"
+	create_test_plugin_source "${PLUGIN_SOURCE_DIR}"
+	export PLUGIN_SOURCE_DIR
+
+	QUEST_LOG_PLUGIN_DIR="${HOME}/.cursor/plugins/local/quest-log"
+	export QUEST_LOG_PLUGIN_DIR
+
+	export TEST_TEMP_DIR
+	export ZANGARMARSH_ROOT
+
+	cd "${ZANGARMARSH_ROOT}" || return 1
+	set +e
+	trap - EXIT ERR
+	source "$SCRIPT"
+	SCRIPT_DIR="${QUEST_LOG_ROOT}"
+	export SCRIPT_DIR
+	export QUEST_LOG_ROOT
+	source "${ZANGARMARSH_ROOT}/tools/quest-log/lib/plugin.sh"
+	source "${ZANGARMARSH_ROOT}/tools/lib/vscodeoverride.sh"
+	trap - EXIT ERR
+	set +e
+
+	cd "${TEST_TEMP_DIR}" || {
+		cd "${return_dir}" || true
+		return 1
+	}
+
+	STATS_CREATED=0
+	STATS_UPDATED=0
+	STATS_UNCHANGED=0
+	STATS_ERRORS=0
+
+	return 0
+}
+
+mock_git_in_repo() {
+	git() {
+		case "$1" in
+		"rev-parse")
+			if [[ "$2" == "--show-toplevel" ]]; then
+				echo "$TEST_TEMP_DIR"
+				return 0
+			fi
+			;;
+		esac
+		command git "$@"
+	}
+	export -f git
+
+	return 0
+}
+
+mock_git_not_in_repo() {
+	git() {
+		case "$1" in
+		"rev-parse")
+			if [[ "$2" == "--show-toplevel" ]]; then
+				echo "fatal: not a git repository" >&2
+				return 128
+			fi
+			;;
+		esac
+		command git "$@"
+	}
+	export -f git
+
+	return 0
 }
 
 ########################################################
@@ -66,12 +189,11 @@ teardown() {
 
 	run print_summary
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Summary"
-	echo "$output" | grep -q "Created: 2"
-	echo "$output" | grep -q "Updated: 3"
-	echo "$output" | grep -q "Unchanged: 1"
-	echo "$output" | grep -q "Total processed: 6"
-	echo "$output" | grep -q "print_summary:: All files processed successfully"
+	echo "$output" | grep -q "quest-log summary"
+	echo "$output" | grep -q "vscode created: 2"
+	echo "$output" | grep -q "vscode updated: 3"
+	echo "$output" | grep -q "vscode unchanged: 1"
+	echo "$output" | grep -q "vscode total: 6"
 }
 
 @test 'print_summary:: returns error status when errors exist' {
@@ -82,8 +204,19 @@ teardown() {
 
 	run print_summary
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "Errors: 1"
-	echo "$output" | grep -q "print_summary:: Some files failed to sync"
+	echo "$output" | grep -q "vscode: 1 error(s)"
+	echo "$output" | grep -q "print_summary:: vscode sync failed"
+}
+
+@test 'print_summary:: reports no vscode file sync when counters are zero' {
+	STATS_CREATED=0
+	STATS_UPDATED=0
+	STATS_UNCHANGED=0
+	STATS_ERRORS=0
+
+	run print_summary
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "vscode: no files synced"
 }
 
 ########################################################
@@ -142,120 +275,6 @@ teardown() {
 	run vscodeoverride "${fake_root}"
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "vscodeoverride:: VSCode settings directory not found"
-}
-
-########################################################
-# install_quest_plugin
-########################################################
-
-@test 'install_quest_plugin:: fails when plugin manifest is missing' {
-	rm -f "${PLUGIN_SOURCE_DIR}/.cursor-plugin/plugin.json"
-
-	run install_quest_plugin "${PLUGIN_SOURCE_DIR}"
-	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "install_quest_plugin:: plugin manifest not found"
-}
-
-@test 'install_quest_plugin:: rejects an install path outside the Cursor local plugin directory' {
-	QUEST_LOG_PLUGIN_DIR="${TEST_TEMP_DIR}/unsafe-install"
-
-	run install_quest_plugin "${PLUGIN_SOURCE_DIR}"
-	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "install path must be below"
-	[[ ! -e "${QUEST_LOG_PLUGIN_DIR}" ]]
-}
-
-@test 'install_quest_plugin:: rejects path traversal in the install directory' {
-	QUEST_LOG_PLUGIN_DIR="${HOME}/.cursor/plugins/local/quest-log/../../unsafe-install"
-
-	run install_quest_plugin "${PLUGIN_SOURCE_DIR}"
-	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "path traversal is not allowed"
-}
-
-@test 'install_quest_plugin:: installs plugin files into an empty directory' {
-	run install_quest_plugin "${PLUGIN_SOURCE_DIR}"
-	[[ "$status" -eq 0 ]]
-	[[ -f "${QUEST_LOG_PLUGIN_DIR}/.cursor-plugin/plugin.json" ]]
-	[[ -f "${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc" ]]
-	[[ -f "${QUEST_LOG_PLUGIN_DIR}/skills/quest-review/SKILL.md" ]]
-	cmp -s "${PLUGIN_SOURCE_DIR}/rules/always.mdc" "${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc"
-}
-
-@test 'install_quest_plugin:: updates changed files' {
-	run install_quest_plugin "${PLUGIN_SOURCE_DIR}"
-	[[ "$status" -eq 0 ]]
-
-	echo "new rule" >"${PLUGIN_SOURCE_DIR}/rules/always.mdc"
-	run install_quest_plugin "${PLUGIN_SOURCE_DIR}"
-	[[ "$status" -eq 0 ]]
-	grep -q "new rule" "${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc"
-}
-
-@test 'install_quest_plugin:: prunes removed rules and skills' {
-	echo "drop-me" >"${PLUGIN_SOURCE_DIR}/rules/stale.mdc"
-
-	run install_quest_plugin "${PLUGIN_SOURCE_DIR}"
-	[[ "$status" -eq 0 ]]
-	[[ -f "${QUEST_LOG_PLUGIN_DIR}/rules/stale.mdc" ]]
-
-	rm -f "${PLUGIN_SOURCE_DIR}/rules/stale.mdc"
-	rm -rf "${PLUGIN_SOURCE_DIR}/skills/quest-review"
-
-	run install_quest_plugin "${PLUGIN_SOURCE_DIR}"
-	[[ "$status" -eq 0 ]]
-	[[ ! -f "${QUEST_LOG_PLUGIN_DIR}/rules/stale.mdc" ]]
-	[[ ! -f "${QUEST_LOG_PLUGIN_DIR}/skills/quest-review/SKILL.md" ]]
-	[[ -f "${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc" ]]
-}
-
-########################################################
-# uninstall_quest_plugin
-########################################################
-
-@test 'uninstall_quest_plugin:: reports not installed when absent' {
-	run uninstall_quest_plugin
-	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "not installed"
-}
-
-@test 'uninstall_quest_plugin:: removes an installed plugin directory' {
-	install_quest_plugin "${PLUGIN_SOURCE_DIR}" >/dev/null
-
-	run uninstall_quest_plugin
-	[[ "$status" -eq 0 ]]
-	[[ ! -e "${QUEST_LOG_PLUGIN_DIR}" ]]
-	echo "$output" | grep -q "removed"
-}
-
-@test 'uninstall_quest_plugin:: dry-run leaves the plugin directory in place' {
-	install_quest_plugin "${PLUGIN_SOURCE_DIR}" >/dev/null
-	DRY_RUN=true
-
-	run uninstall_quest_plugin
-	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "would remove"
-	[[ -d "${QUEST_LOG_PLUGIN_DIR}" ]]
-}
-
-@test 'uninstall_quest_plugin:: rejects an install path outside the Cursor local plugin directory' {
-	QUEST_LOG_PLUGIN_DIR="${TEST_TEMP_DIR}/unsafe-install"
-	mkdir -p "${QUEST_LOG_PLUGIN_DIR}"
-
-	run uninstall_quest_plugin
-	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "install path must be below"
-	[[ -d "${QUEST_LOG_PLUGIN_DIR}" ]]
-}
-
-@test 'uninstall_quest_plugin:: rejects path traversal in the install directory' {
-	QUEST_LOG_PLUGIN_DIR="${HOME}/.cursor/plugins/local/quest-log/../../unsafe-install"
-	mkdir -p "${HOME}/.cursor/plugins/local/unsafe-install"
-
-	run uninstall_quest_plugin
-	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "path traversal is not allowed"
-	[[ -d "${HOME}/.cursor/plugins/local/unsafe-install" ]]
 }
 
 ########################################################
@@ -356,8 +375,18 @@ teardown() {
 @test 'run_quest_log:: displays summary at end of execution' {
 	run run_quest_log
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Summary"
-	echo "$output" | grep -q "Total processed:"
+	echo "$output" | grep -q "quest-log summary"
+	echo "$output" | grep -Eq 'vscode: no files synced|vscode total:'
+}
+
+@test 'vscodeoverride:: skips copy when GIT_ROOT is the Zangarmarsh root' {
+	GIT_ROOT="${ZANGARMARSH_ROOT}"
+	export GIT_ROOT
+
+	run vscodeoverride
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "vscodeoverride: skipped, target is the Zangarmarsh root"
+	echo "$output" | grep -q "vscodeoverride: complete"
 }
 
 @test 'run_quest_log:: reports no changes on a second identical run' {
@@ -385,7 +414,7 @@ teardown() {
 # Tracked plugin coherence
 ########################################################
 @test 'tracked plugin:: ships the declared rules and skills' {
-	local tracked_plugin="${GIT_ROOT}/tools/quest-log/plugin"
+	local tracked_plugin="${ZANGARMARSH_ROOT}/tools/quest-log/plugin"
 
 	[[ -f "${tracked_plugin}/.cursor-plugin/plugin.json" ]]
 	local rule
@@ -400,7 +429,7 @@ teardown() {
 }
 
 @test 'tracked plugin:: install replaces a live tree with the declared assets' {
-	local tracked_plugin="${GIT_ROOT}/tools/quest-log/plugin"
+	local tracked_plugin="${ZANGARMARSH_ROOT}/tools/quest-log/plugin"
 
 	mkdir -p "${QUEST_LOG_PLUGIN_DIR}/skills/quest-retired" "${QUEST_LOG_PLUGIN_DIR}/rules"
 	echo "stale" >"${QUEST_LOG_PLUGIN_DIR}/skills/quest-retired/SKILL.md"

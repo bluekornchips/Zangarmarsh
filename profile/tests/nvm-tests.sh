@@ -2,8 +2,18 @@
 
 # Test file for nvm function
 
-GIT_ROOT="$(git rev-parse --show-toplevel)"
-SCRIPT="$GIT_ROOT/profile/functions.sh"
+setup_file() {
+	if ! GIT_ROOT="$(git rev-parse --show-toplevel)"; then
+		echo "setup_file:: Failed to get git root" >&2
+		return 1
+	fi
+	source "${GIT_ROOT}/tests/fixtures.sh"
+
+	SCRIPT="${ZANGARMARSH_ROOT}/profile/functions.sh"
+	export SCRIPT
+
+	return 0
+}
 
 # Setup test environment with NVM configuration
 setup() {
@@ -23,11 +33,19 @@ setup() {
 	export PLATFORM
 	export NVM_DIR
 	export ZANGARMARSH_VERBOSE
+
+	return 0
 }
 
 # Clean up test environment
 teardown() {
 	rm -rf "$TEST_DIR"
+
+	return 0
+}
+
+teardown_file() {
+	return 0
 }
 
 @test "nvm:: load successfully" {

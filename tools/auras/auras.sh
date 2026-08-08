@@ -395,14 +395,18 @@ desktop_entry_exec_path() {
 	return 0
 }
 
-AURAS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${AURAS_DIR}/buff.sh"
-source "${AURAS_DIR}/debuff.sh"
-
 main() {
 	local mode=""
 	local appimage_path=""
 	local app_stem=""
+
+	if [[ -z "${ZANGARMARSH_ROOT:-}" ]]; then
+		printf 'auras:: ZANGARMARSH_ROOT is required\n' >&2
+		return 1
+	fi
+
+	source "${ZANGARMARSH_ROOT}/tools/auras/buff.sh"
+	source "${ZANGARMARSH_ROOT}/tools/auras/debuff.sh"
 
 	while [[ $# -gt 0 ]]; do
 		case "$1" in

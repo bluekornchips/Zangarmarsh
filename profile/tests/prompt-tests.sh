@@ -2,16 +2,23 @@
 
 # Test file for zsh prompt functionality in profile/zsh/prompt.zsh
 
-if ! command -v zsh >/dev/null 2>&1; then
-	echo "zsh not available, skipping prompt tests" >&2
-	exit 0
-fi
+setup_file() {
+	command -v zsh >/dev/null 2>&1 || skip "zsh not available"
 
-GIT_ROOT="$(git rev-parse --show-toplevel)"
-SCRIPT="$GIT_ROOT/profile/zsh/prompt.zsh"
-[[ -f "$SCRIPT" ]] || {
-	echo "Script not found: $SCRIPT" >&2
-	exit 1
+	if ! GIT_ROOT="$(git rev-parse --show-toplevel)"; then
+		echo "setup_file:: Failed to get git root" >&2
+		return 1
+	fi
+	source "${GIT_ROOT}/tests/fixtures.sh"
+
+	SCRIPT="${ZANGARMARSH_ROOT}/profile/zsh/prompt.zsh"
+	[[ -f "$SCRIPT" ]] || {
+		echo "Script not found: $SCRIPT" >&2
+		return 1
+	}
+	export SCRIPT
+
+	return 0
 }
 
 # Setup test environment for zsh prompt testing
@@ -30,11 +37,19 @@ setup() {
 	export HOME
 	PWD="${TEST_DIR}"
 	export PWD
+
+	return 0
 }
 
 # Clean up test environment
 teardown() {
 	rm -rf "$TEST_DIR"
+
+	return 0
+}
+
+teardown_file() {
+	return 0
 }
 
 # Core loading tests

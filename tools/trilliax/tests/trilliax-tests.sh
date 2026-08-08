@@ -5,19 +5,17 @@
 #
 
 setup_file() {
-	GIT_ROOT="$(git rev-parse --show-toplevel || echo "")"
-	if [[ -z "${GIT_ROOT}" ]]; then
-		echo "Failed to get git root" >&2
+	if ! GIT_ROOT="$(git rev-parse --show-toplevel)"; then
+		echo "setup_file:: Failed to get git root" >&2
 		return 1
 	fi
+	source "${GIT_ROOT}/tests/fixtures.sh"
 
-	SCRIPT="${GIT_ROOT}/tools/trilliax/trilliax.sh"
+	SCRIPT="${ZANGARMARSH_ROOT}/tools/trilliax/trilliax.sh"
 	if [[ ! -f "${SCRIPT}" ]]; then
 		echo "Script not found: ${SCRIPT}" >&2
 		return 1
 	fi
-
-	export GIT_ROOT
 	export SCRIPT
 
 	return 0
@@ -58,6 +56,11 @@ setup() {
 
 teardown() {
 	[[ -d "$TEST_DIR" ]] && rm -rf "$TEST_DIR"
+
+	return 0
+}
+
+teardown_file() {
 	return 0
 }
 
@@ -346,9 +349,9 @@ teardown() {
 @test "run_trilliax:: fails with relative path without targets" {
 	local relative_path="tools/trilliax/tests"
 	local absolute_path
-	absolute_path="$(cd "$GIT_ROOT/$relative_path" && pwd)"
+	absolute_path="$(cd "${ZANGARMARSH_ROOT}/${relative_path}" && pwd)"
 
-	run run_trilliax "$GIT_ROOT/$relative_path"
+	run run_trilliax "${ZANGARMARSH_ROOT}/${relative_path}"
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "run_trilliax:: No targets selected for cleanup."
 }

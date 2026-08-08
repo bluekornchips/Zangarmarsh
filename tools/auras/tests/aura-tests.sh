@@ -3,7 +3,42 @@
 # Tests for shared auras helpers and CLI dispatch in auras.sh
 #
 
-source "$(dirname "${BATS_TEST_FILENAME}")/fixtures.sh"
+setup_file() {
+	if ! GIT_ROOT="$(git rev-parse --show-toplevel)"; then
+		echo "setup_file:: Failed to get git root" >&2
+		return 1
+	fi
+	source "${GIT_ROOT}/tests/fixtures.sh"
+
+	SCRIPT="${ZANGARMARSH_ROOT}/tools/auras/auras.sh"
+	[[ -f "${SCRIPT}" ]] || {
+		echo "setup_file:: Script not found: ${SCRIPT}" >&2
+		return 1
+	}
+	export SCRIPT
+
+	return 0
+}
+
+setup() {
+	source "$(dirname "${BATS_TEST_FILENAME}")/fixtures.sh"
+	source "${SCRIPT}"
+	source "${ZANGARMARSH_ROOT}/tools/auras/buff.sh"
+	source "${ZANGARMARSH_ROOT}/tools/auras/debuff.sh"
+	auras_home_setup
+
+	return 0
+}
+
+teardown() {
+	auras_home_teardown
+
+	return 0
+}
+
+teardown_file() {
+	return 0
+}
 
 ########################################################
 # applications_dir

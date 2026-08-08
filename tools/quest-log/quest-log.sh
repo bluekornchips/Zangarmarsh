@@ -4,9 +4,6 @@
 #
 
 _QUEST_LOG_SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
-_QUEST_LOG_SCRIPT_DIR="$(cd "$(dirname "${_QUEST_LOG_SCRIPT_PATH}")" && pwd)"
-# shellcheck source=lib/plugin.sh
-source "${_QUEST_LOG_SCRIPT_DIR}/lib/plugin.sh"
 
 # Display usage information
 usage() {
@@ -33,34 +30,37 @@ STATS_UPDATED=0
 STATS_UNCHANGED=0
 STATS_ERRORS=0
 
-# Print summary statistics
+# Print summary of quest-log work
 #
 # Side Effects:
 # - Displays summary report to stdout
+#
+# Returns:
+# - 0 when STATS_ERRORS is 0
+# - 1 when STATS_ERRORS is greater than 0
 print_summary() {
 	local total_processed=0
 	total_processed=$((STATS_CREATED + STATS_UPDATED + STATS_UNCHANGED))
 
-	cat <<EOF
-
-=============================
-Summary
-=============================
-EOF
-	[[ ${STATS_CREATED} -gt 0 ]] && echo "Created: ${STATS_CREATED}"
-	[[ ${STATS_UPDATED} -gt 0 ]] && echo "Updated: ${STATS_UPDATED}"
-	[[ ${STATS_UNCHANGED} -gt 0 ]] && echo "Unchanged: ${STATS_UNCHANGED}"
-	[[ ${STATS_ERRORS} -gt 0 ]] && echo "Errors: ${STATS_ERRORS}"
-	echo "Total processed: ${total_processed}"
-
-	echo ""
+	printf '\nquest-log summary\n'
 
 	if ((STATS_ERRORS > 0)); then
-		echo "print_summary:: Some files failed to sync. Please review errors above." >&2
+		printf '  vscode: %s error(s)\n' "${STATS_ERRORS}"
+		((STATS_CREATED > 0)) && printf '  vscode created: %s\n' "${STATS_CREATED}"
+		((STATS_UPDATED > 0)) && printf '  vscode updated: %s\n' "${STATS_UPDATED}"
+		((STATS_UNCHANGED > 0)) && printf '  vscode unchanged: %s\n' "${STATS_UNCHANGED}"
+		printf 'print_summary:: vscode sync failed\n' >&2
 		return 1
 	fi
 
-	echo "print_summary:: All files processed successfully."
+	if ((total_processed == 0)); then
+		printf '  vscode: no files synced\n'
+	else
+		((STATS_CREATED > 0)) && printf '  vscode created: %s\n' "${STATS_CREATED}"
+		((STATS_UPDATED > 0)) && printf '  vscode updated: %s\n' "${STATS_UPDATED}"
+		((STATS_UNCHANGED > 0)) && printf '  vscode unchanged: %s\n' "${STATS_UNCHANGED}"
+		printf '  vscode total: %s\n' "${total_processed}"
+	fi
 
 	return 0
 }
@@ -98,10 +98,29 @@ determine_target_directory() {
 # - Installs the plugin, syncs .vscode, prints summary
 # - Exits with appropriate status code
 run_quest_log() {
+	local summary_exit_code
+
+	if [[ -z "${ZANGARMARSH_ROOT:-}" ]]; then
+		echo "quest-log:: ZANGARMARSH_ROOT is required" >&2
+		return 1
+	fi
+
+	source "${ZANGARMARSH_ROOT}/tools/quest-log/lib/plugin.sh"
+	[[ -f "${ZANGARMARSH_ROOT}/tools/lib/vscodeoverride.sh" ]] || {
+		echo "quest-log:: vscodeoverride library not found" >&2
+		return 1
+	}
+	source "${ZANGARMARSH_ROOT}/tools/lib/vscodeoverride.sh"
+
+	if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+		usage
+		return 0
+	fi
+
 	echo "quest-log: running"
 
 	SCRIPT_PATH="${_QUEST_LOG_SCRIPT_PATH}"
-	SCRIPT_DIR="${_QUEST_LOG_SCRIPT_DIR}"
+	SCRIPT_DIR="${ZANGARMARSH_ROOT}/tools/quest-log"
 	QUEST_LOG_ROOT="${SCRIPT_DIR}"
 	PLUGIN_SOURCE_DIR="${PLUGIN_SOURCE_DIR:-${QUEST_LOG_ROOT}/plugin}"
 	TARGET_DIR_IS_EXPLICIT=false
@@ -109,12 +128,6 @@ run_quest_log() {
 	export SCRIPT_DIR
 	export QUEST_LOG_ROOT
 	export PLUGIN_SOURCE_DIR
-
-	[[ -f "${SCRIPT_DIR}/../lib/vscodeoverride.sh" ]] || {
-		echo "run_quest_log:: vscodeoverride library not found" >&2
-		return 1
-	}
-	source "${SCRIPT_DIR}/../lib/vscodeoverride.sh"
 
 	[[ -d "${PLUGIN_SOURCE_DIR}" ]] || {
 		echo "run_quest_log:: plugin source not found: ${PLUGIN_SOURCE_DIR}" >&2
@@ -146,8 +159,10 @@ run_quest_log() {
 
 	TARGET_DIR=${TARGET_DIR:-${PWD}}
 	determine_target_directory
-
+	export TARGET_DIR
 	GIT_ROOT="${TARGET_DIR}"
+	export GIT_ROOT
+	export DRY_RUN
 
 	cd "${TARGET_DIR}" || {
 		echo "run_quest_log:: Failed to change to target directory: ${TARGET_DIR}" >&2
@@ -159,13 +174,12 @@ run_quest_log() {
 		return 1
 	}
 
-	export DRY_RUN
 	install_quest_plugin "${PLUGIN_SOURCE_DIR}" || return 1
 
 	vscodeoverride
 
 	print_summary
-	local summary_exit_code=$?
+	summary_exit_code=$?
 
 	if ((summary_exit_code == 0)); then
 		echo "quest-log: complete"

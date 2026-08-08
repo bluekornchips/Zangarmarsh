@@ -4,19 +4,17 @@
 #
 
 setup_file() {
-	GIT_ROOT="$(git rev-parse --show-toplevel || echo "")"
-	if [[ -z "${GIT_ROOT}" ]]; then
-		echo "Failed to get git root" >&2
+	if ! GIT_ROOT="$(git rev-parse --show-toplevel)"; then
+		echo "setup_file:: Failed to get git root" >&2
 		return 1
 	fi
+	source "${GIT_ROOT}/tests/fixtures.sh"
 
-	SCRIPT="${GIT_ROOT}/tools/hearthstone/hearthstone.sh"
+	SCRIPT="${ZANGARMARSH_ROOT}/tools/hearthstone/hearthstone.sh"
 	if [[ ! -f "${SCRIPT}" ]]; then
 		echo "Script not found: ${SCRIPT}" >&2
 		return 1
 	fi
-
-	export GIT_ROOT
 	export SCRIPT
 
 	return 0
@@ -29,6 +27,14 @@ setup() {
 	trap - EXIT ERR
 	set +e
 
+	return 0
+}
+
+teardown() {
+	return 0
+}
+
+teardown_file() {
 	return 0
 }
 
@@ -85,7 +91,7 @@ mock_commands_failure() {
 }
 
 @test "verify_git_repository:: fails when tools directory missing" {
-	GIT_ROOT="/nonexistent/path"
+	ZANGARMARSH_ROOT="/nonexistent/path"
 
 	run verify_git_repository
 	[[ "$status" -eq 1 ]]
@@ -169,7 +175,7 @@ mock_commands_failure() {
 	grep -q "build_deck:: Failed to ensure jq" <<<"$output"
 }
 
-@test "execute_operations:: passes GIT_ROOT to trilliax and questlog" {
+@test "execute_operations:: passes ZANGARMARSH_ROOT to trilliax and questlog" {
 	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
 	local mock_dir
 	mock_dir="$(mktemp -d "${base}/hearthstone-args.XXXXXX")"
@@ -193,8 +199,8 @@ EOF
 
 	run execute_operations
 	[[ "$status" -eq 0 ]]
-	grep -Fq "trilliax args:--all ${GIT_ROOT}" <<<"$output"
-	grep -Fq "questlog args:${GIT_ROOT}" <<<"$output"
+	grep -Fq "trilliax args:--all ${ZANGARMARSH_ROOT}" <<<"$output"
+	grep -Fq "questlog args:${ZANGARMARSH_ROOT}" <<<"$output"
 }
 
 ########################################################

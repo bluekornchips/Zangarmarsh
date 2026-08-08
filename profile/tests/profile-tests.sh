@@ -2,19 +2,24 @@
 
 # Test file for zsh profile functionality in profile/zsh/profile.zsh
 
-if ! command -v zsh >/dev/null 2>&1; then
-	echo "zsh not available, skipping profile tests" >&2
-	exit 0
-fi
+setup_file() {
+	command -v zsh >/dev/null 2>&1 || skip "zsh not available"
 
-GIT_ROOT="$(git rev-parse --show-toplevel)"
-SCRIPT="$GIT_ROOT/profile/zsh/profile.zsh"
-[[ -f "$SCRIPT" ]] || {
-	echo "Script not found: $SCRIPT" >&2
-	exit 1
+	if ! GIT_ROOT="$(git rev-parse --show-toplevel)"; then
+		echo "setup_file:: Failed to get git root" >&2
+		return 1
+	fi
+	source "${GIT_ROOT}/tests/fixtures.sh"
+
+	SCRIPT="${ZANGARMARSH_ROOT}/profile/zsh/profile.zsh"
+	if [[ ! -f "${SCRIPT}" ]]; then
+		echo "Script not found: ${SCRIPT}" >&2
+		return 1
+	fi
+	export SCRIPT
+
+	return 0
 }
-
-source "$GIT_ROOT/profile/tests/fixtures.sh"
 
 # Setup test environment for zsh profile testing
 setup() {
@@ -34,7 +39,6 @@ setup() {
 	export PWD
 	ZSH="${TEST_DIR}/.oh-my-zsh"
 	export ZSH
-	ZANGARMARSH_ROOT="$GIT_ROOT"
 	export ZANGARMARSH_ROOT
 	ZANGARMARSH_VERBOSE=true
 	export ZANGARMARSH_VERBOSE
@@ -44,11 +48,19 @@ setup() {
 	touch "$ZSH/oh-my-zsh.sh"
 	mkdir -p "$ZSH/plugins/zsh-autosuggestions"
 	touch "$ZSH/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh"
+
+	return 0
 }
 
 # Clean up test environment
 teardown() {
 	rm -rf "$TEST_DIR"
+
+	return 0
+}
+
+teardown_file() {
+	return 0
 }
 
 @test "profile:: configures zsh session" {

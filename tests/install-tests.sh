@@ -1,17 +1,24 @@
 #!/usr/bin/env bats
 #
-# Tests for profile/install.sh: ~/.aliases sourcing and the quest-log Cursor plugin
+# Tests for profile/install.sh: ~/.zshrc ~/.bashrc sourcing and the quest-log plugin
 #
 
-GIT_ROOT="$(git rev-parse --show-toplevel)"
-SCRIPT="${GIT_ROOT}/profile/install.sh"
-[[ -f "${SCRIPT}" ]] || {
-	echo "Script not found: ${SCRIPT}" >&2
-	exit 1
-}
+setup_file() {
+	if ! GIT_ROOT="$(git rev-parse --show-toplevel)"; then
+		echo "setup_file:: Failed to get git root" >&2
+		return 1
+	fi
+	source "${GIT_ROOT}/tests/fixtures.sh"
 
-export GIT_ROOT
-export SCRIPT
+	SCRIPT="${ZANGARMARSH_ROOT}/profile/install.sh"
+	[[ -f "${SCRIPT}" ]] || {
+		echo "Script not found: ${SCRIPT}" >&2
+		return 1
+	}
+	export SCRIPT
+
+	return 0
+}
 
 # Isolate HOME per test, then source install.sh with its guard variables
 # set the same way the direct-run entry block would set them.
@@ -20,19 +27,27 @@ setup() {
 
 	TEST_HOME="$(mktemp -d "${base}/install-test.XXXXXX")"
 	HOME="${TEST_HOME}"
-	ALIASES_FILE="${HOME}/.aliases"
-	SCRIPT_ROOT="${GIT_ROOT}"
+	RC_FILE="${HOME}/.zshrc"
 	DRY_RUN=false
 	export HOME
-	export ALIASES_FILE
-	export SCRIPT_ROOT
+	export RC_FILE
+	export ZANGARMARSH_ROOT
 	export DRY_RUN
 
 	source "${SCRIPT}"
+	source "${ZANGARMARSH_ROOT}/tools/quest-log/lib/plugin.sh"
+
+	return 0
 }
 
 teardown() {
 	rm -rf "${TEST_HOME}"
+
+	return 0
+}
+
+teardown_file() {
+	return 0
 }
 
 ########################################################
@@ -42,6 +57,8 @@ teardown() {
 	run "${SCRIPT}" --help
 	[[ "${status}" -eq 0 ]]
 	grep -q "Usage:" <<<"${output}"
+	grep -q -- "--zsh" <<<"${output}"
+	grep -q -- "--bash" <<<"${output}"
 }
 
 @test "main:: -h exits 0 and prints usage" {
@@ -70,27 +87,27 @@ teardown() {
 @test "write_source_line:: emits a trailing newline" {
 	run write_source_line
 	[[ "${status}" -eq 0 ]]
-	[[ "${output}" == "source \"${SCRIPT_ROOT}/zangarmarsh.sh\"" ]]
+	[[ "${output}" == "source \"${ZANGARMARSH_ROOT}/zangarmarsh.sh\"" ]]
 	[[ "$(write_source_line | wc -c)" -eq $((${#output} + 1)) ]]
 }
 
 ########################################################
 # has_source_line
 ########################################################
-@test "has_source_line:: returns 1 when ALIASES_FILE is missing" {
+@test "has_source_line:: returns 1 when RC_FILE is missing" {
 	run has_source_line
 	[[ "${status}" -eq 1 ]]
 }
 
 @test "has_source_line:: returns 0 once the line is present" {
-	write_source_line >"${ALIASES_FILE}"
+	write_source_line >"${RC_FILE}"
 
 	run has_source_line
 	[[ "${status}" -eq 0 ]]
 }
 
 @test "has_source_line:: ignores a stale source line from another root" {
-	printf 'source "/other/root/zangarmarsh.sh"\n' >"${ALIASES_FILE}"
+	printf 'source "/other/root/zangarmarsh.sh"\n' >"${RC_FILE}"
 
 	run has_source_line
 	[[ "${status}" -eq 1 ]]
@@ -99,26 +116,26 @@ teardown() {
 ########################################################
 # install_zangarmarsh
 ########################################################
-@test "install_zangarmarsh:: creates ALIASES_FILE and appends the source line" {
+@test "install_zangarmarsh:: creates RC_FILE and appends the source line" {
 	run install_zangarmarsh
 	[[ "${status}" -eq 0 ]]
 
-	[[ -f "${ALIASES_FILE}" ]]
-	grep -Fqx "$(source_line_text)" "${ALIASES_FILE}"
-	[[ "$(tail -c 1 "${ALIASES_FILE}" | wc -c)" -eq 1 ]]
-	[[ -z "$(tail -c 1 "${ALIASES_FILE}")" ]]
+	[[ -f "${RC_FILE}" ]]
+	grep -Fqx "$(source_line_text)" "${RC_FILE}"
+	[[ "$(tail -c 1 "${RC_FILE}" | wc -c)" -eq 1 ]]
+	[[ -z "$(tail -c 1 "${RC_FILE}")" ]]
 }
 
 @test "install_zangarmarsh:: preserves existing content and adds a newline first" {
-	printf 'alias ll="ls -l"' >"${ALIASES_FILE}"
+	printf 'alias ll="ls -l"' >"${RC_FILE}"
 
 	run install_zangarmarsh
 	[[ "${status}" -eq 0 ]]
 
-	local expected_file="${HOME}/expected.aliases"
-	printf 'alias ll="ls -l"\nsource "%s/zangarmarsh.sh"\n' "${SCRIPT_ROOT}" >"${expected_file}"
-	cmp -s "${expected_file}" "${ALIASES_FILE}"
-	[[ "$(wc -l <"${ALIASES_FILE}")" -eq 2 ]]
+	local expected_file="${HOME}/expected.zshrc"
+	printf 'alias ll="ls -l"\nsource "%s/zangarmarsh.sh"\n' "${ZANGARMARSH_ROOT}" >"${expected_file}"
+	cmp -s "${expected_file}" "${RC_FILE}"
+	[[ "$(wc -l <"${RC_FILE}")" -eq 2 ]]
 }
 
 @test "install_zangarmarsh:: is idempotent on a second run" {
@@ -127,7 +144,7 @@ teardown() {
 	run install_zangarmarsh
 	[[ "${status}" -eq 0 ]]
 	grep -q "Already installed" <<<"${output}"
-	[[ "$(grep -Fcx "$(source_line_text)" "${ALIASES_FILE}")" -eq 1 ]]
+	[[ "$(grep -Fcx "$(source_line_text)" "${RC_FILE}")" -eq 1 ]]
 }
 
 @test "install_zangarmarsh:: dry-run reports the change without writing" {
@@ -136,23 +153,23 @@ teardown() {
 	run install_zangarmarsh
 	[[ "${status}" -eq 0 ]]
 	grep -q "Would append" <<<"${output}"
-	[[ ! -e "${ALIASES_FILE}" ]]
+	[[ ! -e "${RC_FILE}" ]]
 }
 
-@test "install_zangarmarsh:: writes through a symlinked ALIASES_FILE" {
-	local real_aliases="${HOME}/real-aliases"
-	printf 'alias ll="ls -l"\n' >"${real_aliases}"
-	ln -s "${real_aliases}" "${ALIASES_FILE}"
+@test "install_zangarmarsh:: writes through a symlinked RC_FILE" {
+	local real_rc="${HOME}/real-zshrc"
+	printf 'alias ll="ls -l"\n' >"${real_rc}"
+	ln -s "${real_rc}" "${RC_FILE}"
 
 	run install_zangarmarsh
 	[[ "${status}" -eq 0 ]]
-	[[ -L "${ALIASES_FILE}" ]]
-	grep -Fqx 'alias ll="ls -l"' "${real_aliases}"
-	grep -Fqx "$(source_line_text)" "${real_aliases}"
+	[[ -L "${RC_FILE}" ]]
+	grep -Fqx 'alias ll="ls -l"' "${real_rc}"
+	grep -Fqx "$(source_line_text)" "${real_rc}"
 }
 
-@test "install_zangarmarsh:: fails when ALIASES_FILE is not writable" {
-	mkdir -p "${ALIASES_FILE}"
+@test "install_zangarmarsh:: fails when RC_FILE is not writable" {
+	mkdir -p "${RC_FILE}"
 
 	run install_zangarmarsh
 	[[ "${status}" -eq 1 ]]
@@ -162,51 +179,51 @@ teardown() {
 ########################################################
 # uninstall_zangarmarsh
 ########################################################
-@test "uninstall_zangarmarsh:: reports not installed when ALIASES_FILE is missing" {
+@test "uninstall_zangarmarsh:: reports not installed when RC_FILE is missing" {
 	run uninstall_zangarmarsh
 	[[ "${status}" -eq 0 ]]
 	grep -q "Not installed" <<<"${output}"
 }
 
 @test "uninstall_zangarmarsh:: removes only the Zangarmarsh line" {
-	printf 'alias ll="ls -l"\n%s' "$(write_source_line)" >"${ALIASES_FILE}"
+	printf 'alias ll="ls -l"\n%s' "$(write_source_line)" >"${RC_FILE}"
 
 	run uninstall_zangarmarsh
 	[[ "${status}" -eq 0 ]]
 
-	grep -Fqx 'alias ll="ls -l"' "${ALIASES_FILE}"
-	! grep -Fqx "$(source_line_text)" "${ALIASES_FILE}"
+	grep -Fqx 'alias ll="ls -l"' "${RC_FILE}"
+	! grep -Fqx "$(source_line_text)" "${RC_FILE}"
 }
 
-@test "uninstall_zangarmarsh:: preserves a symlinked ALIASES_FILE" {
-	local real_aliases="${HOME}/real-aliases"
-	printf 'alias ll="ls -l"\n%s' "$(write_source_line)" >"${real_aliases}"
-	ln -s "${real_aliases}" "${ALIASES_FILE}"
+@test "uninstall_zangarmarsh:: preserves a symlinked RC_FILE" {
+	local real_rc="${HOME}/real-zshrc"
+	printf 'alias ll="ls -l"\n%s' "$(write_source_line)" >"${real_rc}"
+	ln -s "${real_rc}" "${RC_FILE}"
 
 	run uninstall_zangarmarsh
 	[[ "${status}" -eq 0 ]]
-	[[ -L "${ALIASES_FILE}" ]]
-	grep -Fqx 'alias ll="ls -l"' "${real_aliases}"
-	! grep -Fq "zangarmarsh.sh" "${real_aliases}"
+	[[ -L "${RC_FILE}" ]]
+	grep -Fqx 'alias ll="ls -l"' "${real_rc}"
+	! grep -Fq "zangarmarsh.sh" "${real_rc}"
 }
 
 @test "uninstall_zangarmarsh:: dry-run reports the change without writing" {
-	write_source_line >"${ALIASES_FILE}"
+	write_source_line >"${RC_FILE}"
 	DRY_RUN=true
 
 	run uninstall_zangarmarsh
 	[[ "${status}" -eq 0 ]]
 	grep -q "Would remove" <<<"${output}"
-	grep -Fqx "$(source_line_text)" "${ALIASES_FILE}"
+	grep -Fqx "$(source_line_text)" "${RC_FILE}"
 }
 
 @test "uninstall_zangarmarsh:: leaves a stale source line from another root" {
-	printf 'source "/other/root/zangarmarsh.sh"\n' >"${ALIASES_FILE}"
+	printf 'source "/other/root/zangarmarsh.sh"\n' >"${RC_FILE}"
 
 	run uninstall_zangarmarsh
 	[[ "${status}" -eq 0 ]]
 	grep -q "Not installed" <<<"${output}"
-	grep -Fqx 'source "/other/root/zangarmarsh.sh"' "${ALIASES_FILE}"
+	grep -Fqx 'source "/other/root/zangarmarsh.sh"' "${RC_FILE}"
 }
 
 ########################################################
@@ -263,20 +280,39 @@ teardown() {
 @test "main:: install then uninstall via the CLI leaves no trace" {
 	run "${SCRIPT}"
 	[[ "${status}" -eq 0 ]]
-	[[ -f "${TEST_HOME}/.aliases" ]]
+	[[ -f "${TEST_HOME}/.zshrc" ]]
+	[[ -f "${TEST_HOME}/.bashrc" ]]
 	[[ -f "${TEST_HOME}/.cursor/plugins/local/quest-log/.cursor-plugin/plugin.json" ]]
-	grep -Fqx "source \"${SCRIPT_ROOT}/zangarmarsh.sh\"" "${TEST_HOME}/.aliases"
+	grep -Fqx "source \"${ZANGARMARSH_ROOT}/zangarmarsh.sh\"" "${TEST_HOME}/.zshrc"
+	grep -Fqx "source \"${ZANGARMARSH_ROOT}/zangarmarsh.sh\"" "${TEST_HOME}/.bashrc"
+	[[ ! -e "${TEST_HOME}/.aliases" ]]
 
 	run "${SCRIPT}" --uninstall
 	[[ "${status}" -eq 0 ]]
-	! grep -Fq "zangarmarsh.sh" "${TEST_HOME}/.aliases"
+	! grep -Fq "zangarmarsh.sh" "${TEST_HOME}/.zshrc"
+	! grep -Fq "zangarmarsh.sh" "${TEST_HOME}/.bashrc"
 	[[ ! -e "${TEST_HOME}/.cursor/plugins/local/quest-log" ]]
+}
+
+@test "main:: --zsh installs only into ~/.zshrc" {
+	run "${SCRIPT}" --zsh
+	[[ "${status}" -eq 0 ]]
+	grep -Fqx "source \"${ZANGARMARSH_ROOT}/zangarmarsh.sh\"" "${TEST_HOME}/.zshrc"
+	[[ ! -e "${TEST_HOME}/.bashrc" ]]
+}
+
+@test "main:: --bash installs only into ~/.bashrc" {
+	run "${SCRIPT}" --bash
+	[[ "${status}" -eq 0 ]]
+	grep -Fqx "source \"${ZANGARMARSH_ROOT}/zangarmarsh.sh\"" "${TEST_HOME}/.bashrc"
+	[[ ! -e "${TEST_HOME}/.zshrc" ]]
 }
 
 @test "main:: --dry-run makes no changes" {
 	run "${SCRIPT}" --dry-run
 	[[ "${status}" -eq 0 ]]
-	[[ ! -e "${TEST_HOME}/.aliases" ]]
+	[[ ! -e "${TEST_HOME}/.zshrc" ]]
+	[[ ! -e "${TEST_HOME}/.bashrc" ]]
 	[[ ! -e "${TEST_HOME}/.cursor/plugins/local/quest-log" ]]
 }
 
@@ -285,14 +321,15 @@ teardown() {
 
 	run "${SCRIPT}" --dry-run --uninstall
 	[[ "${status}" -eq 0 ]]
-	grep -Fq "zangarmarsh.sh" "${TEST_HOME}/.aliases"
+	grep -Fq "zangarmarsh.sh" "${TEST_HOME}/.zshrc"
+	grep -Fq "zangarmarsh.sh" "${TEST_HOME}/.bashrc"
 	[[ -e "${TEST_HOME}/.cursor/plugins/local/quest-log" ]]
 }
 
-@test "main:: rolls back the plugin when aliases install fails" {
-	mkdir -p "${ALIASES_FILE}"
+@test "main:: rolls back the plugin when rc install fails" {
+	mkdir -p "${HOME}/.zshrc"
 
-	run main
+	run main --zsh
 	[[ "${status}" -eq 1 ]]
 	[[ ! -e "$(quest_log_plugin_dir)" ]]
 }
@@ -306,7 +343,8 @@ teardown() {
 	run main
 	[[ "${status}" -eq 1 ]]
 	grep -q "forced failure" <<<"${output}"
-	[[ ! -e "${ALIASES_FILE}" ]]
+	[[ ! -e "${HOME}/.zshrc" ]]
+	[[ ! -e "${HOME}/.bashrc" ]]
 }
 
 @test "main:: returns nonzero when uninstall_cursor_plugin fails" {
@@ -320,5 +358,6 @@ teardown() {
 	run main --uninstall
 	[[ "${status}" -eq 1 ]]
 	grep -q "forced failure" <<<"${output}"
-	! grep -Fq "zangarmarsh.sh" "${ALIASES_FILE}"
+	! grep -Fq "zangarmarsh.sh" "${HOME}/.zshrc"
+	! grep -Fq "zangarmarsh.sh" "${HOME}/.bashrc"
 }
