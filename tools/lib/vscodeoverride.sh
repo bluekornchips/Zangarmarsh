@@ -87,12 +87,6 @@ vscodeoverride() {
 		return 1
 	fi
 
-	if [[ "${GIT_ROOT}" == "${zangarmarsh_root}" ]]; then
-		echo "vscodeoverride: skipped, target is the Zangarmarsh root"
-		echo "vscodeoverride: complete"
-		return 0
-	fi
-
 	if [[ "${DRY_RUN:-false}" == true ]]; then
 		copy_vscode_template "${zangarmarsh_root}" "${GIT_ROOT}" || return 1
 		echo "vscodeoverride: complete"

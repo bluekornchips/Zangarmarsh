@@ -49,18 +49,6 @@ create_mock_git_repo() {
 	git commit -m "Initial commit" >/dev/null 2>&1
 }
 
-# Create a mock git branch for testing
-create_mock_git_branch() {
-	local test_dir="$1"
-	local branch_name="$2"
-
-	cd "$test_dir" || {
-		echo "create_mock_git_branch:: failed to cd to test_dir: ${test_dir}" >&2
-		return 1
-	}
-	git checkout -b "$branch_name" >/dev/null 2>&1
-}
-
 # Tests must set GIT_ROOT before sourcing this file.
 if [[ "${_ZANGARMARSH_SHARED_FIXTURES_LOADED:-}" != "1" ]]; then
 	load_shared_fixtures || return 1

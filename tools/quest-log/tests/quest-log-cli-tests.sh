@@ -21,6 +21,7 @@ setup_file() {
 }
 
 setup() {
+	source "$(dirname "${BATS_TEST_FILENAME}")/fixtures.sh"
 	quest_log_test_setup
 
 	return 0
@@ -33,32 +34,6 @@ teardown() {
 }
 
 teardown_file() {
-	return 0
-}
-
-create_test_plugin_source() {
-	local plugin_dir="$1"
-
-	mkdir -p "${plugin_dir}/.cursor-plugin" "${plugin_dir}/rules" "${plugin_dir}/skills/quest-review"
-	echo '{"name":"quest-log"}' >"${plugin_dir}/.cursor-plugin/plugin.json"
-	echo "rule body" >"${plugin_dir}/rules/always.mdc"
-	echo "skill body" >"${plugin_dir}/skills/quest-review/SKILL.md"
-
-	return 0
-}
-
-quest_log_test_teardown() {
-	if [[ -n "${TEST_TEMP_DIR}" ]] && [[ -d "${TEST_TEMP_DIR}" ]]; then
-		if ! rm -rf "${TEST_TEMP_DIR}"; then
-			echo "Failed to cleanup test directory: ${TEST_TEMP_DIR}" >&2
-		fi
-	fi
-
-	STATS_CREATED=0
-	STATS_UPDATED=0
-	STATS_UNCHANGED=0
-	STATS_ERRORS=0
-
 	return 0
 }
 
@@ -379,14 +354,15 @@ mock_git_not_in_repo() {
 	echo "$output" | grep -Eq 'vscode: no files synced|vscode total:'
 }
 
-@test 'vscodeoverride:: skips copy when GIT_ROOT is the Zangarmarsh root' {
+@test 'vscodeoverride:: syncs when GIT_ROOT is the Zangarmarsh root' {
 	GIT_ROOT="${ZANGARMARSH_ROOT}"
 	export GIT_ROOT
 
 	run vscodeoverride
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "vscodeoverride: skipped, target is the Zangarmarsh root"
+	echo "$output" | grep -q "vscodeoverride: running"
 	echo "$output" | grep -q "vscodeoverride: complete"
+	! echo "$output" | grep -q "skipped, target is the Zangarmarsh root"
 }
 
 @test 'run_quest_log:: reports no changes on a second identical run' {
