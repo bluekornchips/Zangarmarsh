@@ -8,7 +8,6 @@ Short index. Full usage, options, and tests live in each tool README under this 
 | Trilliax          | Remove caches and build artifacts                                | `./tools/trilliax/trilliax.sh --all`                                      |
 | Talent Calculator | Check or install workstation CLIs                                | `./tools/talent-calculator/talent-calculator.sh` then `--help`            |
 | Hearthstone       | jq, questlog with VS Code sync, optional Trilliax with `--force` | `./tools/hearthstone/hearthstone.sh`                                      |
-| Ice Block         | Backup dotfiles to `~/.ice-block/<hostname>/`                    | `./tools/ice-block/ice-block.sh`                                          |
 | Auras             | Managed AppImage `.desktop` files and `~/.local/bin` symlinks    | `./tools/auras/auras.sh --help`                                           |
 
 ## Testing
@@ -17,4 +16,4 @@ Short index. Full usage, options, and tests live in each tool README under this 
 make test
 ```
 
-See [quest-log/README.md](quest-log/README.md), [trilliax/README.md](trilliax/README.md), [talent-calculator/README.md](talent-calculator/README.md), [hearthstone/README.md](hearthstone/README.md), [ice-block/README.md](ice-block/README.md), and [auras/README.md](auras/README.md).
+See [quest-log/README.md](quest-log/README.md), [trilliax/README.md](trilliax/README.md), [talent-calculator/README.md](talent-calculator/README.md), [hearthstone/README.md](hearthstone/README.md), and [auras/README.md](auras/README.md).

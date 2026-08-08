@@ -52,7 +52,6 @@ questlog --dry-run /path/to/project
 
 ## Notes on destructive tools
 
-- Ice Block copies `~/.ssh` into `~/.ice-block/<hostname>/` when that path exists; protect the backup tree like your SSH directory
 - Trilliax and Hearthstone `--force` can delete generated trees and caches
 - Talent Calculator `--spec` may run remote upstream installers for script-managed tools such as Bun and Helm
 
@@ -109,7 +108,6 @@ After sourcing, aliases map to scripts under `tools/`:
 | `trilliax`    | Trilliax          | Cleanup for caches and artifacts                                      |
 | `talents`     | Talent Calculator | Check workstation CLIs; install script-managed tools with `--spec`    |
 | `hearthstone` | Hearthstone       | Sync VS Code settings and quest log; optional Trilliax with `--force` |
-| `iceblock`    | Ice Block         | Dotfile backup to `~/.ice-block/<hostname>/`                          |
 | `auras`       | Auras             | AppImage `.desktop` launchers and `~/.local/bin` commands             |
 
 Per-tool docs: [tools/README.md](tools/README.md).

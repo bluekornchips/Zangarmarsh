@@ -215,11 +215,11 @@ run_hearthstone() {
 	local questlog_script="${QUESTLOG_SCRIPT:-${DEFAULT_QUESTLOG_SCRIPT}}"
 	FORCE="${FORCE:-${DEFAULT_FORCE}}"
 
-	local skip_confirmation=false
+	SKIP_CONFIRMATION=false
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
 		-y | --yes)
-			skip_confirmation=true
+			SKIP_CONFIRMATION=true
 			shift
 			;;
 		-f | --force)
@@ -246,7 +246,7 @@ run_hearthstone() {
 	QUESTLOG_SCRIPT="${questlog_script}"
 
 	export FORCE
-	export skip_confirmation
+	export SKIP_CONFIRMATION
 	export TRILLIAX_SCRIPT
 	export QUESTLOG_SCRIPT
 
@@ -254,7 +254,7 @@ run_hearthstone() {
 		return 1
 	fi
 
-	if [[ "${skip_confirmation}" != "true" ]]; then
+	if [[ "${SKIP_CONFIRMATION}" != "true" ]]; then
 		if ! confirm_proceed; then
 			return 1
 		fi
