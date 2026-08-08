@@ -156,6 +156,23 @@ teardown() {
 	echo "$output" | grep -q "install_quest_plugin:: plugin manifest not found"
 }
 
+@test 'install_quest_plugin:: rejects an install path outside the Cursor local plugin directory' {
+	QUEST_LOG_PLUGIN_DIR="${TEST_TEMP_DIR}/unsafe-install"
+
+	run install_quest_plugin "${PLUGIN_SOURCE_DIR}"
+	[[ "$status" -eq 1 ]]
+	echo "$output" | grep -q "install path must be below"
+	[[ ! -e "${QUEST_LOG_PLUGIN_DIR}" ]]
+}
+
+@test 'install_quest_plugin:: rejects path traversal in the install directory' {
+	QUEST_LOG_PLUGIN_DIR="${HOME}/.cursor/plugins/local/quest-log/../../unsafe-install"
+
+	run install_quest_plugin "${PLUGIN_SOURCE_DIR}"
+	[[ "$status" -eq 1 ]]
+	echo "$output" | grep -q "path traversal is not allowed"
+}
+
 @test 'install_quest_plugin:: installs plugin files into an empty directory' {
 	run install_quest_plugin "${PLUGIN_SOURCE_DIR}"
 	[[ "$status" -eq 0 ]]
@@ -240,6 +257,40 @@ teardown() {
 	run run_quest_log
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "git_root: none"
+}
+
+@test 'run_quest_log:: preserves an explicit target directory inside another git repository' {
+	local target_dir="${TEST_TEMP_DIR}/external-target"
+	mkdir -p "${target_dir}"
+	mock_git_in_repo
+
+	run run_quest_log "${target_dir}"
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "target_dir: ${target_dir}"
+	[[ -f "${target_dir}/.vscode/settings.json" ]]
+	[[ ! -f "${TEST_TEMP_DIR}/.vscode/settings.json" ]]
+}
+
+@test 'run_quest_log:: dry-run does not write plugin or VS Code files' {
+	local target_dir="${TEST_TEMP_DIR}/dry-run-target"
+	mkdir -p "${target_dir}"
+
+	run run_quest_log --dry-run "${target_dir}"
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "would replace"
+	echo "$output" | grep -q "would write"
+	[[ ! -e "${QUEST_LOG_PLUGIN_DIR}" ]]
+	[[ ! -e "${target_dir}/.vscode" ]]
+}
+
+@test 'run_quest_log:: accepts the short dry-run flag' {
+	local target_dir="${TEST_TEMP_DIR}/short-dry-run-target"
+	mkdir -p "${target_dir}"
+
+	run run_quest_log -r "${target_dir}"
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "would replace"
+	[[ ! -e "${QUEST_LOG_PLUGIN_DIR}" ]]
 }
 
 @test 'run_quest_log:: installs plugin under QUEST_LOG_PLUGIN_DIR and syncs vscode' {

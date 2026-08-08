@@ -46,6 +46,8 @@ The quest-log Cursor plugin lives under `tools/quest-log/plugin/` as tracked fil
 ```bash
 source zangarmarsh.sh
 questlog
+
+questlog --dry-run /path/to/project
 ```
 
 ## Notes on destructive tools
@@ -103,7 +105,7 @@ After sourcing, aliases map to scripts under `tools/`:
 
 | Alias         | Tool              | Role                                                                  |
 | ------------- | ----------------- | --------------------------------------------------------------------- |
-| `questlog`    | Quest Log         | Install the local quest-log plugin; sync `.vscode` |
+| `questlog`    | Quest Log         | Install the local quest-log plugin; sync `.vscode`                    |
 | `trilliax`    | Trilliax          | Cleanup for caches and artifacts                                      |
 | `talents`     | Talent Calculator | Check workstation CLIs; install script-managed tools with `--spec`    |
 | `hearthstone` | Hearthstone       | Sync VS Code settings and quest log; optional Trilliax with `--force` |

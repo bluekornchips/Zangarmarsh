@@ -28,6 +28,13 @@ copy_vscode_template() {
 		return 1
 	fi
 
+	if [[ "${DRY_RUN:-}" == true ]]; then
+		while IFS= read -r -d '' template_file; do
+			echo "copy_vscode_template: would write ${dest_root}/.vscode/$(basename "${template_file}")"
+		done < <(find "${zangarmarsh_root}/.vscode" -maxdepth 1 -type f -print0)
+		return 0
+	fi
+
 	local template_file
 	while IFS= read -r -d '' template_file; do
 		local file_name
@@ -83,6 +90,12 @@ vscodeoverride() {
 	fi
 
 	if [[ "${GIT_ROOT}" == "${zangarmarsh_root}" ]]; then
+		echo "vscodeoverride: complete"
+		return 0
+	fi
+
+	if [[ "${DRY_RUN:-false}" == true ]]; then
+		copy_vscode_template "${zangarmarsh_root}" "${GIT_ROOT}" || return 1
 		echo "vscodeoverride: complete"
 		return 0
 	fi

@@ -35,11 +35,15 @@ quest_log_test_setup() {
 	TEST_TEMP_DIR="$(mktemp -d "${base}/quest-log-test.XXXXXX")"
 	cd "$TEST_TEMP_DIR" || return 1
 
+	HOME="${TEST_TEMP_DIR}/home"
+	mkdir -p "${HOME}"
+	export HOME
+
 	PLUGIN_SOURCE_DIR="${TEST_TEMP_DIR}/plugin"
 	create_test_plugin_source "${PLUGIN_SOURCE_DIR}"
 	export PLUGIN_SOURCE_DIR
 
-	QUEST_LOG_PLUGIN_DIR="${TEST_TEMP_DIR}/quest-log-install"
+	QUEST_LOG_PLUGIN_DIR="${HOME}/.cursor/plugins/local/quest-log"
 	export QUEST_LOG_PLUGIN_DIR
 
 	export TEST_TEMP_DIR

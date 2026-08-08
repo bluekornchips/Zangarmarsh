@@ -36,6 +36,8 @@ questlog /path/to/project
 
 # Show help
 questlog --help
+
+questlog --dry-run /path/to/project
 ```
 
 ## Plugin source layout
@@ -96,3 +98,4 @@ You can also run `bash -n tools/quest-log/quest-log.sh` for a quick syntax check
 - [ ] `~/.cursor/plugins/local/quest-log/skills/quest-review/SKILL.md` exists after `questlog`
 - [ ] Running `questlog` again on an unchanged tree reports "No changes" for `.vscode` files
 - [ ] `.vscode/settings.json` appears in an external target project after `questlog`
+- [ ] `questlog --dry-run /path/to/project` makes no file changes

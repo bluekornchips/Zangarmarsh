@@ -18,6 +18,7 @@ target project directory.
 
 OPTIONS:
     -h, --help          Show this help message
+    -r, --dry-run       Show planned changes without writing files
 
 EXAMPLES:
     $0                  # Install plugin, sync .vscode in git root
@@ -33,6 +34,47 @@ STATS_ERRORS=0
 
 DEFAULT_QUEST_LOG_PLUGIN_DIR="${HOME}/.cursor/plugins/local/quest-log"
 
+# Validate the plugin installation path before any deletion.
+#
+# Inputs:
+# - $1, install_dir, requested plugin installation directory
+#
+# Returns:
+# - 0 when install_dir is an absolute child of ~/.cursor/plugins/local
+# - 1 when the path is unsafe or invalid
+validate_plugin_install_dir() {
+	local install_dir="$1"
+	local allowed_root="${HOME}/.cursor/plugins/local"
+
+	if [[ -z "${HOME:-}" || -z "${install_dir}" || "${install_dir}" != /* ]]; then
+		echo "validate_plugin_install_dir:: absolute install path is required" >&2
+		return 1
+	fi
+
+	case "${install_dir}" in
+	*"/../"* | *"/./"* | */.. | */.)
+		echo "validate_plugin_install_dir:: path traversal is not allowed" >&2
+		return 1
+		;;
+	esac
+
+	case "${install_dir}" in
+	"${allowed_root}"/*)
+		;;
+	*)
+		echo "validate_plugin_install_dir:: install path must be below ${allowed_root}" >&2
+		return 1
+		;;
+	esac
+
+	if [[ "${install_dir}" == "${allowed_root}" || "${install_dir}" == */. || "${install_dir}" == */.. ]]; then
+		echo "validate_plugin_install_dir:: refusing unsafe install path: ${install_dir}" >&2
+		return 1
+	fi
+
+	return 0
+}
+
 # Copy the tracked quest-log plugin tree into the local Cursor plugins path
 #
 # Inputs:
@@ -42,7 +84,7 @@ DEFAULT_QUEST_LOG_PLUGIN_DIR="${HOME}/.cursor/plugins/local/quest-log"
 # - QUEST_LOG_PLUGIN_DIR, optional install destination
 #
 # Side Effects:
-# - Removes the install directory and recreates it from plugin_source_dir,
+# - Replaces the install directory from a staged copy of plugin_source_dir,
 #   so stale files never survive a run
 #
 # Returns:
@@ -51,25 +93,66 @@ DEFAULT_QUEST_LOG_PLUGIN_DIR="${HOME}/.cursor/plugins/local/quest-log"
 install_quest_plugin() {
 	local plugin_source_dir="$1"
 	local install_dir="${QUEST_LOG_PLUGIN_DIR:-${DEFAULT_QUEST_LOG_PLUGIN_DIR}}"
+	local install_parent
+	local staging_dir
+	local backup_dir
 
 	[[ -f "${plugin_source_dir}/.cursor-plugin/plugin.json" ]] || {
 		echo "install_quest_plugin:: plugin manifest not found: ${plugin_source_dir}/.cursor-plugin/plugin.json" >&2
 		return 1
 	}
+	validate_plugin_install_dir "${install_dir}" || return 1
+
+	install_parent="$(dirname "${install_dir}")"
+	ensure_dir "${install_parent}" "install_quest_plugin" || return 1
 
 	echo "install_quest_plugin: running"
 
-	rm -rf "${install_dir}" || {
-		echo "install_quest_plugin:: Failed to remove ${install_dir}" >&2
+	if [[ "${DRY_RUN:-false}" == true ]]; then
+		echo "install_quest_plugin: would replace ${install_dir}"
+		return 0
+	fi
+
+	staging_dir="$(mktemp -d "${install_parent}/.quest-log-staging.XXXXXX")" || {
+		echo "install_quest_plugin:: Failed to create staging directory" >&2
 		return 1
 	}
 
-	ensure_dir "${install_dir}" "install_quest_plugin" || return 1
-
-	cp -r "${plugin_source_dir}/." "${install_dir}/" || {
+	if ! cp -R "${plugin_source_dir}/." "${staging_dir}/"; then
+		rm -rf "${staging_dir}"
 		echo "install_quest_plugin:: copy failed" >&2
 		return 1
+	fi
+
+	backup_dir="$(mktemp -d "${install_parent}/.quest-log-backup.XXXXXX")" || {
+		rm -rf "${staging_dir}"
+		echo "install_quest_plugin:: Failed to create backup directory" >&2
+		return 1
 	}
+	rmdir "${backup_dir}" || {
+		rm -rf "${staging_dir}"
+		echo "install_quest_plugin:: Failed to prepare backup directory" >&2
+		return 1
+	}
+
+	if [[ -e "${install_dir}" || -L "${install_dir}" ]]; then
+		if ! mv "${install_dir}" "${backup_dir}"; then
+			rm -rf "${staging_dir}"
+			echo "install_quest_plugin:: Failed to stage existing installation" >&2
+			return 1
+		fi
+	fi
+
+	if ! mv "${staging_dir}" "${install_dir}"; then
+		if [[ -e "${backup_dir}" || -L "${backup_dir}" ]]; then
+			mv "${backup_dir}" "${install_dir}" || true
+		fi
+		rm -rf "${staging_dir}"
+		echo "install_quest_plugin:: Failed to activate staged installation" >&2
+		return 1
+	fi
+
+	rm -rf "${backup_dir}"
 
 	echo "install_quest_plugin: complete"
 
@@ -111,10 +194,16 @@ EOF
 # Determine the target directory for .vscode sync
 #
 # Side Effects:
-# - Sets TARGET_DIR to git root if in git repo, otherwise uses provided/current directory
+# - Sets TARGET_DIR to git root when no explicit target was supplied
+# - Preserves an explicit target directory
 # - Outputs status messages for testing
 determine_target_directory() {
 	local git_root
+	if [[ "${TARGET_DIR_IS_EXPLICIT:-false}" == true ]]; then
+		echo "target_dir: ${TARGET_DIR}"
+		return 0
+	fi
+
 	if git_root=$(git rev-parse --show-toplevel 2>/dev/null); then
 		TARGET_DIR="${git_root}"
 		echo "git_root: ${git_root}"
@@ -141,6 +230,8 @@ run_quest_log() {
 	SCRIPT_DIR="${_QUEST_LOG_SCRIPT_DIR}"
 	QUEST_LOG_ROOT="${SCRIPT_DIR}"
 	PLUGIN_SOURCE_DIR="${PLUGIN_SOURCE_DIR:-${QUEST_LOG_ROOT}/plugin}"
+	TARGET_DIR_IS_EXPLICIT=false
+	DRY_RUN=false
 	export SCRIPT_DIR
 	export QUEST_LOG_ROOT
 	export PLUGIN_SOURCE_DIR
@@ -156,13 +247,15 @@ run_quest_log() {
 		return 1
 	}
 
-	TARGET_DIR=${TARGET_DIR:-${PWD}}
-
 	while [[ $# -gt 0 ]]; do
 		case $1 in
 		-h | --help)
 			usage
 			return 0
+			;;
+		-r | --dry-run)
+			DRY_RUN=true
+			shift
 			;;
 		-*)
 			echo "run_quest_log:: Unknown option: ${1}" >&2
@@ -171,11 +264,13 @@ run_quest_log() {
 			;;
 		*)
 			TARGET_DIR="${1}"
+			TARGET_DIR_IS_EXPLICIT=true
 			shift
 			;;
 		esac
 	done
 
+	TARGET_DIR=${TARGET_DIR:-${PWD}}
 	determine_target_directory
 
 	GIT_ROOT="${TARGET_DIR}"
@@ -190,6 +285,7 @@ run_quest_log() {
 		return 1
 	}
 
+	export DRY_RUN
 	install_quest_plugin "${PLUGIN_SOURCE_DIR}" || return 1
 
 	vscodeoverride
