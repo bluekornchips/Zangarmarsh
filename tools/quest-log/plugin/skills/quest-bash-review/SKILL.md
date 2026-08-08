@@ -169,12 +169,12 @@ Pragmatic review criteria for bash/shell script repositories. Focus on security,
 
 ### Important Improvements
 
-- [ ] Script too large (150 lines) - Consider Python/Go - File: `path/to/file.sh`
+- [ ] Script too large (150 lines) - Consider focused shell modules - File: `path/to/file.sh`
 
 ### Recommendations
 
 1. Add explicit error checking for critical operations
-2. Consider refactoring large scripts to Python/Go
+2. Consider splitting large scripts into focused shell modules
 ```
 
 ---

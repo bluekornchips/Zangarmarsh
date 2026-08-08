@@ -178,7 +178,7 @@ teardown() {
 	[[ "$status" -eq 0 ]]
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/.cursor-plugin/plugin.json" ]]
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc" ]]
-	[[ -f "${QUEST_LOG_PLUGIN_DIR}/skills/quest-author/SKILL.md" ]]
+	[[ -f "${QUEST_LOG_PLUGIN_DIR}/skills/quest-review/SKILL.md" ]]
 	cmp -s "${PLUGIN_SOURCE_DIR}/rules/always.mdc" "${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc"
 }
 
@@ -200,12 +200,12 @@ teardown() {
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/rules/stale.mdc" ]]
 
 	rm -f "${PLUGIN_SOURCE_DIR}/rules/stale.mdc"
-	rm -rf "${PLUGIN_SOURCE_DIR}/skills/quest-author"
+	rm -rf "${PLUGIN_SOURCE_DIR}/skills/quest-review"
 
 	run install_quest_plugin "${PLUGIN_SOURCE_DIR}"
 	[[ "$status" -eq 0 ]]
 	[[ ! -f "${QUEST_LOG_PLUGIN_DIR}/rules/stale.mdc" ]]
-	[[ ! -f "${QUEST_LOG_PLUGIN_DIR}/skills/quest-author/SKILL.md" ]]
+	[[ ! -f "${QUEST_LOG_PLUGIN_DIR}/skills/quest-review/SKILL.md" ]]
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc" ]]
 }
 
@@ -299,7 +299,7 @@ teardown() {
 	run run_quest_log
 	[[ "$status" -eq 0 ]]
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc" ]]
-	[[ -f "${QUEST_LOG_PLUGIN_DIR}/skills/quest-author/SKILL.md" ]]
+	[[ -f "${QUEST_LOG_PLUGIN_DIR}/skills/quest-review/SKILL.md" ]]
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/.cursor-plugin/plugin.json" ]]
 	[[ -f "$TEST_TEMP_DIR/.vscode/settings.json" ]]
 }
@@ -330,4 +330,41 @@ teardown() {
 	run run_quest_log -f
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "run_quest_log:: Unknown option"
+}
+
+########################################################
+# Tracked plugin coherence
+########################################################
+@test 'tracked plugin:: ships the declared rules and skills' {
+	local tracked_plugin="${GIT_ROOT}/tools/quest-log/plugin"
+	local rule
+	local skill
+
+	[[ -f "${tracked_plugin}/.cursor-plugin/plugin.json" ]]
+	for rule in always never shell bash zsh python lua javascript typescript; do
+		[[ -f "${tracked_plugin}/rules/${rule}.mdc" ]]
+	done
+	for skill in quest-author quest-review quest-bash-review quest-lua-review quest-typescript-review quest-python-project-setup; do
+		[[ -f "${tracked_plugin}/skills/${skill}/SKILL.md" ]]
+	done
+	[[ ! -e "${tracked_plugin}/MCP.md" ]]
+}
+
+@test 'tracked plugin:: install replaces a live tree with the declared assets' {
+	local tracked_plugin="${GIT_ROOT}/tools/quest-log/plugin"
+
+	mkdir -p "${QUEST_LOG_PLUGIN_DIR}/skills/quest-retired" "${QUEST_LOG_PLUGIN_DIR}/rules"
+	echo "stale" >"${QUEST_LOG_PLUGIN_DIR}/skills/quest-retired/SKILL.md"
+	echo "stale" >"${QUEST_LOG_PLUGIN_DIR}/rules/extra.mdc"
+
+	run install_quest_plugin "${tracked_plugin}"
+	[[ "$status" -eq 0 ]]
+	[[ -f "${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc" ]]
+	[[ -f "${QUEST_LOG_PLUGIN_DIR}/rules/bash.mdc" ]]
+	[[ -f "${QUEST_LOG_PLUGIN_DIR}/rules/zsh.mdc" ]]
+	[[ -f "${QUEST_LOG_PLUGIN_DIR}/skills/quest-author/SKILL.md" ]]
+	[[ -f "${QUEST_LOG_PLUGIN_DIR}/skills/quest-review/SKILL.md" ]]
+	[[ -f "${QUEST_LOG_PLUGIN_DIR}/.cursor-plugin/plugin.json" ]]
+	[[ ! -e "${QUEST_LOG_PLUGIN_DIR}/skills/quest-retired" ]]
+	[[ ! -f "${QUEST_LOG_PLUGIN_DIR}/rules/extra.mdc" ]]
 }

@@ -46,7 +46,6 @@ Items marked with `[TS]` apply only to TypeScript projects.
 - [ ] _Narrowing for `unknown`_: `[TS]` External data starts as `unknown` and is narrowed safely
 - [ ] _Runtime schema validation_: Use schemas for untrusted inputs and API payloads
 - [ ] _No unsafe assertions_: `[TS]` Avoid `as` casts unless verified by runtime checks
-- [ ] _Versioned types_: `[TS]` Public APIs use versioned types for backward compatibility
 
 ---
 
@@ -97,7 +96,6 @@ Items marked with `[TS]` apply only to TypeScript projects.
 - [ ] _Reproducible builds_: Lockfiles are present and respected
 - [ ] _SBOM generated_: Software bill of materials produced in CI
 - [ ] _Dependency updates_: Automated patch updates with review gates
-- [ ] _Release tagging_: Releases are tagged and changelog maintained
 - [ ] _CI gates_: Lint, test, typecheck, and security scan in CI
 
 ---

@@ -22,8 +22,10 @@ questlog
 
 ## Features
 
-- Replaces `~/.cursor/plugins/local/quest-log` with a fresh copy of `tools/quest-log/plugin/` on every run, so stale files never survive
-- Syncs `.vscode/` from Zangarmarsh into the target project when the target is not this repo
+- Replaces `~/.cursor/plugins/local/quest-log` with a fresh copy of
+  `tools/quest-log/plugin/` on every run, so stale files never survive
+- Syncs `.vscode/` from Zangarmarsh into the target project when the target is
+  not this repo
 
 ## Usage
 
@@ -47,33 +49,35 @@ questlog --dry-run /path/to/project
 ```text
 plugin/
   .cursor-plugin/plugin.json   # plugin manifest
-  rules/*.mdc                  # Cursor rules, loaded in every window
+  rules/*.mdc                  # Cursor rules
   skills/quest-*/SKILL.md      # quest-* skills
-  MCP.md                       # optional MCP setup guidance
 ```
 
 This tracked plugin is the canonical agent configuration for this repository.
-The old ignored `.agent/` directory is not a source tree and should not be
-recreated. The plugin follows this repository's GPL-3.0-only license.
+The plugin follows this repository's GPL-3.0-only license.
 
-| Rule             | Role                                                        |
-| ---------------- | ----------------------------------------------------------- |
-| `always.mdc`     | Universal assistant behavior, safety, and response quality  |
-| `lua.mdc`        | Lua and WoW addon guidance                                  |
-| `python.mdc`     | Python typing, errors, imports, tests, and tooling          |
-| `shell.mdc`      | Bash and zsh scripting, structure, and Bats testing         |
-| `typescript.mdc` | TypeScript and JavaScript typing, modules, async, and tests |
+| Rule             | Role                                                       |
+| ---------------- | ---------------------------------------------------------- |
+| `always.mdc`     | Universal assistant behavior, safety, and response quality |
+| `never.mdc`      | Agent prohibitions, including no Python generation or run  |
+| `shell.mdc`      | Shared shell quoting, status, and destructive-path rules   |
+| `bash.mdc`       | Bash 3.2, locals, source guards, arrays, and Bats          |
+| `zsh.mdc`        | Zsh 5 profile and Zsh-owned module rules                   |
+| `python.mdc`     | Python typing, errors, imports, tests, and tooling         |
+| `lua.mdc`        | Lua and WoW addon guidance                                 |
+| `javascript.mdc` | JavaScript modules, async work, errors, and tests          |
+| `typescript.mdc` | TypeScript typing, modules, async work, errors, and tests  |
 
 ## Skills
 
-| Skill                        | Role                                                              |
-| ---------------------------- | ----------------------------------------------------------------- |
-| `quest-author`               | Documentation templates for PRs, tickets, README files, and specs |
-| `quest-bash-review`          | Bash repository review checklist                                  |
-| `quest-lua-review`           | Lua review checklist                                              |
-| `quest-python-project-setup` | Python project bootstrap notes                                    |
-| `quest-review`               | Strict maintainability review                                     |
-| `quest-typescript-review`    | TypeScript review checklist                                       |
+| Skill                        | Role                                        |
+| ---------------------------- | ------------------------------------------- |
+| `quest-author`               | Current PR and issue delivery documents     |
+| `quest-bash-review`          | Bash repository review checklist            |
+| `quest-lua-review`           | Lua review checklist                        |
+| `quest-python-project-setup` | Python project bootstrap notes for the user |
+| `quest-review`               | Strict maintainability review               |
+| `quest-typescript-review`    | TypeScript review checklist                 |
 
 To add or change a rule or skill, edit the files under `plugin/` directly and
 run `questlog` to install the update.
@@ -83,12 +87,13 @@ run `questlog` to install the update.
 - `tools/quest-log/plugin/`: tracked plugin source, installed as-is
 - `~/.cursor/plugins/local/quest-log/`: live local install refreshed every run
 
-The live install is disposable. Edit the tracked source, validate it with
-`make plugin-check`, then run `questlog` to refresh the local copy.
+The live install is disposable. Edit the tracked source, then run `questlog` to
+refresh the local copy.
 
 ## VS Code settings
 
-`questlog` always syncs `.vscode/` from the Zangarmarsh template into the target project when the target is not the Zangarmarsh repo itself.
+`questlog` always syncs `.vscode/` from the Zangarmarsh template into the target
+project when the target is not the Zangarmarsh repo itself.
 
 ## Testing
 
@@ -98,7 +103,8 @@ Install a Bats package so the `bats` binary is on your `PATH`, then run:
 bats tools/quest-log/tests/quest-log-cli-tests.sh
 ```
 
-You can also run `bash -n tools/quest-log/quest-log.sh` for a quick syntax check without Bats.
+You can also run `bash -n tools/quest-log/quest-log.sh` for a quick syntax check
+without Bats.
 
 ## Verification Steps
 

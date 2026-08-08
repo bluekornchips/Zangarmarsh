@@ -1,38 +1,37 @@
 ---
-description: TypeScript and JavaScript standards for strict typing, modules, async, errors, tests, and tooling.
+description: TypeScript standards for strict typing, modules, async, errors, tests, and tooling.
 globs:
   - '**/*.ts'
   - '**/*.tsx'
-  - '**/*.js'
-  - '**/*.jsx'
 alwaysApply: false
 ---
 
 RULE APPLIED: Start each response with an acknowledgement icon to confirm this rule is being followed: 🟦
 
-Keywords that trigger usage of this rule: typescript,ts,tsx,tsconfig,eslint,prettier,node,deno
+Keywords that trigger usage of this rule: typescript,ts,tsx,tsconfig,tsc,eslint,prettier
 
-# TypeScript and JavaScript Standards
+# TypeScript Standards
 
 ## Purpose
 
-Keep TypeScript strict at the edges so mistakes surface early and types stay honest.
+Keep TypeScript strict at boundaries so mistakes surface early and types stay honest.
 
 ## Standards
 
-- Enable `"strict": true` and `noUncheckedIndexedAccess` in `tsconfig.json` when the project uses TypeScript.
-- Named exports for library code. Explicit return types on exported functions, public class methods, and shared types.
-- `const` by default, `let` only when reassignment is needed. Use `===` and `!==`.
-- `async` and `await` instead of raw `Promise` chains when both are available.
+- Enable `"strict": true` and `noUncheckedIndexedAccess` in `tsconfig.json`.
+- Named exports for library code. Explicit return types on exported functions, public class methods, and shared types when they clarify contracts.
+- Prefer `const`. Use `let` only when reassignment is needed. Use `===` and `!==`.
+- Prefer `async` and `await` over raw `Promise` chains when both are available.
 - In `catch`, use `unknown` and narrow before use. Set `cause` on re-throw when the runtime supports it.
 - Validate untrusted input at module boundaries. Read config from environment variables or injected config, not literals.
-- Run `tsc --noEmit` with zero errors before merge when TypeScript is in use. Keep formatter and linter clean on touched files when the repo defines them.
+- Run `tsc --noEmit` with zero errors before merge.
+- Keep formatter and linter clean on touched files when the repo defines them.
 
 ## Usage
 
 ### Allowed
 
-- `interface` for object shapes, `type` for unions and aliases when both read well.
+- `interface` for object shapes and `type` for unions and aliases when both read well.
 - `readonly` on fields that must not change after construction.
 - Discriminated unions instead of large optional bags for mutually exclusive states.
 - `satisfies` and `as const` when they tighten inference without widening.

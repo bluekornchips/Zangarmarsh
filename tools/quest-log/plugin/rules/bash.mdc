@@ -1,0 +1,239 @@
+---
+description: Bash 3.2 standards for locals, source guards, strict mode, arrays, and Bats.
+globs:
+  - '**/*.sh'
+  - '**/*.bash'
+alwaysApply: false
+---
+
+RULE APPLIED: Start each response with an acknowledgement icon to confirm this rule is being followed: 🔨
+
+Keywords that trigger usage of this rule: bash,bats,local,shebang,BASH_SOURCE,array,mktemp,source guard
+
+# Bash Standards
+
+## Purpose
+
+Keep executable Bash scripts compatible with Bash 3.2+ and consistent with this repo's test style.
+
+## Standards
+
+- Use `#!/usr/bin/env bash` for Bash executables.
+- Stay compatible with Bash 3.2+.
+- In the direct-run entry block only, enable strict mode when it fits, for example `set -euo pipefail` or `set -eo pipefail`. Set `umask 077` when the script handles sensitive files.
+- Prefer `[[ ... ]]` for string and file tests. Use `(( ... ))` for integers.
+- Use array literals for lists, for example `flags=(--foo --bar='baz')`, and expand with `"${name[@]}"`.
+- Declare each `local` name once, at first use. Prefer `local name=value` for literals.
+- When the RHS is a command substitution, declare and assign on separate lines so the command status is not masked. ShellCheck: SC2155.
+- When more than one branch assigns the same name, declare once before the branch, then assign in each branch.
+- Split assign and `export` onto separate lines when export intent should stand out.
+- Add function comments for invoked scripts unless the function is obvious and short.
+- For complex helpers, include Inputs, Outputs, Side Effects, and Returns when they clarify behavior.
+- Leave a blank line before the final `return` in a function, except in `main`.
+- Support execution and sourcing with a `BASH_SOURCE[0]` source guard when the script exposes helper functions.
+- Use Bats for non-trivial shell. Use `@test "name:: description" {` for direct function tests.
+- Use `setup_file` and `setup` as the project already does.
+- Space before `run` in Bats tests to show what is being changed, mocked, or asserted.
+- Use worktrees for Bats tests that require git interaction. Avoid real side effects unless that behavior is under test.
+
+## Usage
+
+### Allowed
+
+- Source guards such as `if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then`.
+- Shared shell rules from `shell.mdc` for quoting, status, guard clauses, and destructive-path safety.
+
+### Denied
+
+- `declare -a` for simple array assignment. Use `name=(a b)` and `"${name[@]}"`.
+- Hoisting all `local` declarations to the top of a function away from first use.
+- Declaring the same `local` name more than once in a function.
+- `local name=$(cmd)`, `local name="$(cmd)"`, `export name=$(cmd)`, or `export name="$(cmd)"`.
+- Required function comments in test scripts when names and setup are already clear.
+- Applying Bash-only constructs to Zsh profile files.
+
+## Example
+
+### Script
+
+```bash
+#!/usr/bin/env bash
+#
+# Validate local dependencies and an optional API token.
+#
+
+# Defaults
+REQUIRED_COMMANDS=("jq" "curl")
+
+usage() {
+  cat <<EOF
+Usage: $(basename "$0") [OPTIONS]
+
+Options:
+  -h, --help      Show help
+  --health-check  Validate local dependencies and token setup
+EOF
+
+  return 0
+}
+
+# Check for required external commands
+#
+# Side Effects:
+# - Writes missing dependency messages to stderr
+#
+# Returns:
+# - 0 when all commands exist
+# - 1 when any command is missing
+check_dependencies() {
+  local missing=()
+
+  local cmd
+  for cmd in "${REQUIRED_COMMANDS[@]}"; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+      missing+=("$cmd")
+    fi
+  done
+
+  if [[ "${#missing[@]}" -gt 0 ]]; then
+    echo "check_dependencies:: missing dependencies: ${missing[*]}" >&2
+    return 1
+  fi
+
+  return 0
+}
+
+# Validate API token configuration when present
+#
+# Reads environment:
+# - API_TOKEN
+#
+# Outputs:
+# - One status line to stdout
+#
+# Returns:
+# - 0 when token setup is acceptable
+validate_token() {
+  if [[ -z "${API_TOKEN:-}" ]]; then
+    echo "validate_token:: API_TOKEN not set, skipping API check"
+    return 0
+  fi
+
+  if [[ "${#API_TOKEN}" -lt 8 ]]; then
+    echo "validate_token:: API_TOKEN is too short" >&2
+    return 1
+  fi
+
+  echo "validate_token:: API token is configured"
+
+  return 0
+}
+
+health_check() {
+  local errors=0
+
+  if ! check_dependencies; then
+    errors=$((errors + 1))
+  fi
+
+  if ! validate_token; then
+    errors=$((errors + 1))
+  fi
+
+  if [[ "${errors}" -eq 0 ]]; then
+    echo "health_check:: passed"
+    return 0
+  fi
+
+  echo "health_check:: failed with ${errors} error(s)" >&2
+
+  return 1
+}
+
+main() {
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -h | --help)
+        usage
+        return 0
+        ;;
+      --health-check)
+        health_check
+        return $?
+        ;;
+      *)
+        echo "main:: unknown option '$1'" >&2
+        echo "main:: use '$(basename "$0") --help' for usage" >&2
+        return 1
+        ;;
+    esac
+  done
+
+  usage
+  return 0
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  set -eo pipefail
+  umask 077
+  main "$@"
+  exit $?
+fi
+```
+
+### Bats
+
+```bash
+#!/usr/bin/env bats
+#
+# Tests for bin/example-health-check.sh
+#
+
+setup_file() {
+  GIT_ROOT="$(git rev-parse --show-toplevel || echo "")"
+  if [[ -z "${GIT_ROOT}" ]]; then
+    fail "Failed to get git root"
+  fi
+
+  SCRIPT="${GIT_ROOT}/bin/example-health-check.sh"
+  if [[ ! -f "${SCRIPT}" ]]; then
+    fail "Script not found: ${SCRIPT}"
+  fi
+
+  export GIT_ROOT
+  export SCRIPT
+
+  return 0
+}
+
+setup() {
+  source "${SCRIPT}"
+  unset API_TOKEN
+
+  return 0
+}
+
+@test "health_check:: passes when dependencies are available" {
+  local mock_bin="${BATS_TEST_TMPDIR}/example-health-check-bin"
+  mkdir -p "${mock_bin}"
+
+  printf '#!/usr/bin/env bash\nexit 0\n' >"${mock_bin}/jq"
+  printf '#!/usr/bin/env bash\nexit 0\n' >"${mock_bin}/curl"
+  chmod +x "${mock_bin}/jq" "${mock_bin}/curl"
+
+  PATH="${mock_bin}:${PATH}"
+  export PATH
+
+  run health_check
+  [[ "${status}" -eq 0 ]]
+  echo "${output}" | grep -q "health_check:: passed"
+}
+
+@test "main:: --health-check returns dependency failures" {
+  REQUIRED_COMMANDS=("missing-jq" "missing-curl")
+
+  run main --health-check
+  [[ "${status}" -eq 1 ]]
+  echo "${output}" | grep -q "check_dependencies:: missing dependencies"
+}
+```

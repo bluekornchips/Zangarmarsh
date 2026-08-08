@@ -2,7 +2,7 @@
   "name": "quest-log",
   "displayName": "Quest Log",
   "version": "0.2.0",
-  "description": "Tracked Cursor rules and skills for Python, shell, Lua, and TypeScript, plus focused review and project setup workflows.",
+  "description": "Tracked Cursor rules and skills for shell, Python, Lua, JavaScript, and TypeScript review and project standards.",
   "author": {
     "name": "bluekornchips"
   },

@@ -23,7 +23,7 @@ After you `source zangarmarsh.sh`, both shells load shared files under `profile/
 
 - `aliases.sh` and `functions.sh`: tool aliases, `penv`, `nvm` lazy load when enabled, `gw`, `list_changed_files`, and related helpers
 
-Zsh also loads `profile/zsh/profile.sh`, which pulls in Oh My Zsh, `profile/zsh/platform.sh` for macOS and Linux PATH and aliases, and `profile/zsh/prompt.sh` for the customizable prompt with Git branch and kubectl context.
+Zsh also loads `profile/zsh/profile.zsh`, which pulls in Oh My Zsh, `profile/zsh/platform.zsh` for macOS and Linux PATH and aliases, and `profile/zsh/prompt.zsh` for the customizable prompt with Git branch and kubectl context.
 
 Bash loads `profile/bash/profile.sh` for history and readline options only. It does not load the Zsh prompt or platform module.
 
@@ -32,11 +32,23 @@ Bash loads `profile/bash/profile.sh` for history and readline options only. It d
 ```bash
 git clone https://github.com/bluekornchips/Zangarmarsh.git
 cd Zangarmarsh
-source zangarmarsh.sh
+make install
+```
 
-# Add to your shell profile for permanent setup
-echo 'source /path/to/zangarmarsh/zangarmarsh.sh' >> ~/.bashrc
-echo 'source /path/to/zangarmarsh/zangarmarsh.sh' >> ~/.zshrc
+`make install` appends a source line to `~/.aliases` and installs the tracked
+quest-log plugin. This setup expects `~/.bashrc` and `~/.zshrc` to source
+`~/.aliases`.
+
+Dry-run first with:
+
+```bash
+profile/install.sh --dry-run
+```
+
+Manual source without the installer:
+
+```bash
+source /path/to/zangarmarsh/zangarmarsh.sh
 ```
 
 ## Install the quest-log plugin
@@ -75,7 +87,7 @@ Zangarmarsh loads configuration from:
 
 #### Prompt, Zsh only
 
-These apply when `profile/zsh/prompt.sh` runs:
+These apply when `profile/zsh/prompt.zsh` runs:
 
 - `ZANGARMARSH_PROMPT_CACHE_TTL=2`: Prompt cache TTL in seconds, default `2`
 - `ZANGARMARSH_GIT_PROMPT=true`: Show git branch in prompt, default `true`
@@ -83,7 +95,7 @@ These apply when `profile/zsh/prompt.sh` runs:
 - `ZANGARMARSH_SHOW_USER=true`: Show username in prompt, default `true`
 - `ZANGARMARSH_SHOW_HOST=true`: Show hostname in prompt, default `true`
 - `ZANGARMARSH_SHORTEN_NAMES=true`: Shorten user and host to one character, default `true`
-- `ZANGARMARSH_PROMPT_SYMBOL=🌻`: Trailing symbol, default sunflower
+- `ZANGARMARSH_PROMPT_SYMBOL=❯`: Trailing symbol, default `❯`
 
 ## Features
 
@@ -117,7 +129,7 @@ Per-tool docs: [tools/README.md](tools/README.md).
 - Bash 3.2+ or Zsh 5.0+
 - Git for helpers that inspect the repository
 - Standard Unix tools such as grep, sed, and awk
-- Optional: Oh My Zsh and zsh-autosuggestions for the full Zsh stack described in [profile/zsh/profile.sh](profile/zsh/profile.sh)
+- Optional: Oh My Zsh and zsh-autosuggestions for the full Zsh stack described in [profile/zsh/profile.zsh](profile/zsh/profile.zsh)
 
 ## License
 

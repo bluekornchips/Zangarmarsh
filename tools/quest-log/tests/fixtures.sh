@@ -20,10 +20,10 @@ export ZANGARMARSH_VSCODE_DIR
 create_test_plugin_source() {
 	local plugin_dir="$1"
 
-	mkdir -p "${plugin_dir}/.cursor-plugin" "${plugin_dir}/rules" "${plugin_dir}/skills/quest-author"
+	mkdir -p "${plugin_dir}/.cursor-plugin" "${plugin_dir}/rules" "${plugin_dir}/skills/quest-review"
 	echo '{"name":"quest-log"}' >"${plugin_dir}/.cursor-plugin/plugin.json"
 	echo "rule body" >"${plugin_dir}/rules/always.mdc"
-	echo "skill body" >"${plugin_dir}/skills/quest-author/SKILL.md"
+	echo "skill body" >"${plugin_dir}/skills/quest-review/SKILL.md"
 
 	return 0
 }

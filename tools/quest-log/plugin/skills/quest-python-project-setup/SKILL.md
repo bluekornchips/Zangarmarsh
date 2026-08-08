@@ -6,10 +6,12 @@ disable-model-invocation: true
 
 # Python Project Setup
 
-Create a small Python project that follows the Python coding standards defined in
-`.cursor/rules/rules-python.mdc`. Use `uv` for project creation, dependency
-resolution, virtual environments, and lock files. Require `uv` for dependency
-installation.
+User reference for creating a small Python project that follows the Python
+coding standards in `rules/python.mdc` after `questlog` installs this plugin.
+Use `uv` for project creation, dependency resolution, virtual environments, and
+lock files. Require `uv` for dependency installation.
+
+This skill does not authorize the agent to write or execute Python.
 
 ## Project Structure
 

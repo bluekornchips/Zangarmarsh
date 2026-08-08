@@ -1,0 +1,87 @@
+---
+description: JavaScript standards for modules, async work, errors, validation, tests, and tooling.
+globs:
+  - '**/*.js'
+  - '**/*.jsx'
+  - '**/*.mjs'
+  - '**/*.cjs'
+alwaysApply: false
+---
+
+RULE APPLIED: Start each response with an acknowledgement icon to confirm this rule is being followed: 🤡
+
+Keywords that trigger usage of this rule: javascript,js,jsx,mjs,cjs,node,deno,eslint,prettier
+
+# JavaScript Standards
+
+## Purpose
+
+Keep JavaScript boundaries explicit and keep async and error handling direct.
+
+## Standards
+
+- Use ECMAScript modules when the project supports them. Match the existing module system when it does not.
+- Prefer named exports for library code.
+- Prefer `const`. Use `let` only when reassignment is needed. Use `===` and `!==`.
+- Prefer `async` and `await` over raw `Promise` chains when both are available.
+- Validate untrusted input at module boundaries.
+- Read config from environment variables or injected config, not literals.
+- Throw or return errors with useful context. Preserve the original error with `cause` when the runtime supports it.
+- Use JSDoc when a public contract, error, unit, or object shape is not obvious from the code.
+- Keep formatter, linter, and tests clean on touched files when the repo defines them.
+
+## Usage
+
+### Allowed
+
+- Optional chaining and nullish coalescing when absence is part of the contract.
+- `Promise.all` for independent concurrent work with rejection handling on work you start.
+- Small pure helpers for parsing, validation, and data conversion.
+- Runtime schema validation for untrusted data when the project already uses a schema library.
+
+### Denied
+
+- `var`.
+- Hardcoded secrets.
+- `eval` or `Function` on dynamic input.
+- Mutating function parameters.
+- `console.log` on production paths.
+- Silent catches such as `catch (_) {}`.
+- Floating promises or unhandled rejections.
+- Importing TypeScript-only syntax or compiler requirements into JavaScript files.
+
+## Example
+
+```javascript
+class PortError extends Error {
+  constructor(message, options) {
+    super(message, options);
+    this.name = 'PortError';
+  }
+}
+
+/**
+ * Parse a string into a valid TCP port.
+ *
+ * @param {string} value
+ * @returns {number}
+ * @throws {PortError}
+ */
+export function parsePort(value) {
+  if (value === '') {
+    throw new PortError('parsePort: value is required');
+  }
+
+  const port = Number(value);
+
+  if (!Number.isInteger(port)) {
+    throw new PortError(`parsePort: invalid integer "${value}"`);
+  }
+
+  if (port < 1 || port > 65535) {
+    throw new PortError(`parsePort: out of range (${port})`);
+  }
+
+  return port;
+}
+```
