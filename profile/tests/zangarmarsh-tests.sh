@@ -115,6 +115,23 @@ teardown_file() {
 	rm -rf "${temp_dir}"
 }
 
+@test "zangarmarsh:: keep script-dir root when CWD is another git repository" {
+	local other_repo
+	local expected_root
+	other_repo="$(mktemp -d "${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}/other-git.XXXXXX")"
+	expected_root="$(cd "$(dirname "${SCRIPT}")" && pwd)"
+	create_mock_git_repo "${other_repo}"
+	cd "${other_repo}" || return 1
+
+	run bash -c "unset ZANGARMARSH_VERBOSE; source '${SCRIPT}' && printf '%s\n' \"\${ZANGARMARSH_ROOT}\""
+	[[ "${status}" -eq 0 ]]
+	[[ "${output}" == "${expected_root}" ]]
+	[[ "${output}" != "${other_repo}" ]]
+
+	cd - >/dev/null || return 1
+	rm -rf "${other_repo}"
+}
+
 @test "zangarmarsh:: load every time without errors" {
 	run source "$SCRIPT"
 	[[ "$status" -eq 0 ]]

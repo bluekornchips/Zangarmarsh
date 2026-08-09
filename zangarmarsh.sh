@@ -11,10 +11,9 @@ else
 	SCRIPT_PATH="$(cd "$(dirname "${0}")" && pwd)/$(basename "${0}")"
 fi
 
-ZANGARMARSH_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || true
-if [[ -z "${ZANGARMARSH_ROOT}" ]]; then
-	ZANGARMARSH_ROOT="$(cd "$(dirname "${SCRIPT_PATH}")" && pwd)"
-fi
+# Always resolve from this file's location. Using the CWD git toplevel breaks
+# whenever the shell starts inside a different repository (e.g. auryouready).
+ZANGARMARSH_ROOT="$(cd "$(dirname "${SCRIPT_PATH}")" && pwd)"
 export ZANGARMARSH_ROOT
 
 # Common configuration files to load
