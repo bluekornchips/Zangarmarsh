@@ -11,8 +11,8 @@ usage() {
 Usage: $0 [OPTIONS] [DIRECTORY]
 
 Install the quest-log Cursor plugin from tools/quest-log/plugin under
-~/.cursor/plugins/local/quest-log, and sync .vscode settings into the
-target project directory.
+~/.cursor/plugins/local/quest-log, sync tools/vscode into the target
+project's .vscode directory, and align Cursor user theme settings.
 
 OPTIONS:
     -h, --help          Show this help message
@@ -85,6 +85,65 @@ determine_target_directory() {
 		TARGET_DIR=${TARGET_DIR:-${PWD}}
 		echo "git_root: none"
 	fi
+
+	return 0
+}
+
+# Set Cursor user theme keys to match tools/vscode/settings.json
+#
+# Reads environment:
+# - ZANGARMARSH_ROOT, HOME, DRY_RUN
+#
+# Side Effects:
+# - Updates ${HOME}/.config/Cursor/User/settings.json when needed
+#
+# Returns:
+# - 0 on success
+# - 1 when theme cannot be read or settings cannot be written
+sync_cursor_theme() {
+	local template="${ZANGARMARSH_ROOT}/tools/vscode/settings.json"
+	local settings_file="${HOME}/.config/Cursor/User/settings.json"
+	local theme
+	local new_content
+
+	theme="$(sed -n 's/.*"workbench.colorTheme"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "${template}" | head -n 1)"
+	if [[ -z "${theme}" ]]; then
+		echo "sync_cursor_theme:: workbench.colorTheme not found in ${template}" >&2
+		return 1
+	fi
+
+	if [[ "${DRY_RUN:-}" == true ]]; then
+		echo "sync_cursor_theme: would set theme to ${theme} in ${settings_file}"
+		return 0
+	fi
+
+	if [[ -z "${HOME:-}" ]]; then
+		echo "sync_cursor_theme:: HOME is required" >&2
+		return 1
+	fi
+
+	if ! command -v jq >/dev/null 2>&1; then
+		echo "sync_cursor_theme:: jq is required" >&2
+		return 1
+	fi
+
+	ensure_dir "$(dirname "${settings_file}")" "sync_cursor_theme" || return 1
+
+	if [[ -f "${settings_file}" ]]; then
+		new_content="$(jq --indent 4 --arg theme "${theme}" '
+			.["workbench.preferredDarkColorTheme"] = $theme
+			| .["workbench.colorTheme"] = $theme
+		' "${settings_file}")" || return 1
+	else
+		new_content="$(jq --indent 4 --null-input --arg theme "${theme}" '
+			{
+				"workbench.preferredDarkColorTheme": $theme,
+				"workbench.colorTheme": $theme
+			}
+		')" || return 1
+	fi
+
+	write_if_changed "${settings_file}" "${new_content}"$'\n' "rule" "sync_cursor_theme" || return 1
 
 	return 0
 }
@@ -176,7 +235,8 @@ run_quest_log() {
 
 	install_quest_plugin "${PLUGIN_SOURCE_DIR}" || return 1
 
-	vscodeoverride
+	vscodeoverride || return 1
+	sync_cursor_theme || return 1
 
 	print_summary
 	summary_exit_code=$?

@@ -1,8 +1,8 @@
 # Hearthstone
 
 Runs a fixed sequence to sync a development machine with this repo: ensure `jq`,
-install the local quest-log plugin, and sync `.vscode` settings from Zangarmarsh
-into the current target via `questlog`. Optional cleanup runs only with
+install the local quest-log plugin, sync `tools/vscode/` into `.vscode`, and
+align Cursor user theme preferences via `questlog`. Optional cleanup runs only with
 `--force` and always targets the verified Zangarmarsh root.
 
 ## Requirements
@@ -20,8 +20,8 @@ into the current target via `questlog`. Optional cleanup runs only with
 2. `trilliax --all "$ZANGARMARSH_ROOT"` — **only when `--force`** — cleanup the
    verified Zangarmarsh root before the sync
 3. `questlog "$ZANGARMARSH_ROOT"` — install the quest-log plugin under
-   `~/.cursor/plugins/local/quest-log`, and sync `.vscode/` via
-   `tools/quest-log/quest-log.sh`
+   `~/.cursor/plugins/local/quest-log`, sync `tools/vscode/` into `.vscode/`,
+   and align Cursor user theme settings via `tools/quest-log/quest-log.sh`
 
 ## Usage
 

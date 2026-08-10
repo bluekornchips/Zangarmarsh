@@ -3,8 +3,9 @@
 ## Overview
 
 Install the tracked plugin tree in this directory under
-`~/.cursor/plugins/local/quest-log`, and sync `.vscode/` settings into the
-target project. There is no generation step: `plugin/` is the plugin.
+`~/.cursor/plugins/local/quest-log`, sync `tools/vscode/` into the target
+project's `.vscode/`, and align Cursor user theme settings. There is no
+generation step: `plugin/` is the plugin.
 
 ## Prerequisites
 
@@ -24,8 +25,9 @@ questlog
 
 - Replaces `~/.cursor/plugins/local/quest-log` with a fresh copy of
   `tools/quest-log/plugin/` on every run, so stale files never survive
-- Syncs `.vscode/` from Zangarmarsh into the target project when the target is
-  not this repo
+- Syncs `tools/vscode/` into the target project's `.vscode/`
+- Sets Cursor user `preferredDarkColorTheme` / `colorTheme` from the template
+  so auto color-scheme cannot keep a weak dark theme
 
 ## Usage
 
@@ -92,8 +94,11 @@ refresh the local copy.
 
 ## VS Code settings
 
-`questlog` always syncs `.vscode/` from the Zangarmarsh template into the target
-project when the target is not the Zangarmarsh repo itself.
+Canonical editor settings live in `tools/vscode/`. Each `questlog` run copies
+those files into the target project's `.vscode/` via `vscodeoverride`, then sets
+Cursor user `preferredDarkColorTheme` / `colorTheme` to match the template theme.
+
+Edit `tools/vscode/`, then run `questlog` (or `hearthstone`) to apply.
 
 ## Testing
 
@@ -112,4 +117,5 @@ without Bats.
 - [ ] `~/.cursor/plugins/local/quest-log/skills/quest-review/SKILL.md` exists after `questlog`
 - [ ] Running `questlog` again on an unchanged tree reports "No changes" for `.vscode` files
 - [ ] `.vscode/settings.json` appears in an external target project after `questlog`
+- [ ] Cursor user `preferredDarkColorTheme` matches `tools/vscode/settings.json` after `questlog`
 - [ ] `questlog --dry-run /path/to/project` makes no file changes

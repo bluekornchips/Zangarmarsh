@@ -11,7 +11,7 @@ setup_file() {
 	source "${GIT_ROOT}/tests/fixtures.sh"
 	QUEST_LOG_ROOT="${ZANGARMARSH_ROOT}/tools/quest-log"
 	SCRIPT="${QUEST_LOG_ROOT}/quest-log.sh"
-	ZANGARMARSH_VSCODE_DIR="${ZANGARMARSH_ROOT}/.vscode"
+	ZANGARMARSH_VSCODE_DIR="${ZANGARMARSH_ROOT}/tools/vscode"
 	export QUEST_LOG_ROOT
 	export SCRIPT
 	export ZANGARMARSH_VSCODE_DIR

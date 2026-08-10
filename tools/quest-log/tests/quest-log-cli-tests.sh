@@ -12,7 +12,7 @@ setup_file() {
 	source "${GIT_ROOT}/tests/fixtures.sh"
 	QUEST_LOG_ROOT="${ZANGARMARSH_ROOT}/tools/quest-log"
 	SCRIPT="${QUEST_LOG_ROOT}/quest-log.sh"
-	ZANGARMARSH_VSCODE_DIR="${ZANGARMARSH_ROOT}/.vscode"
+	ZANGARMARSH_VSCODE_DIR="${ZANGARMARSH_ROOT}/tools/vscode"
 	export QUEST_LOG_ROOT
 	export SCRIPT
 	export ZANGARMARSH_VSCODE_DIR
@@ -249,7 +249,23 @@ mock_git_not_in_repo() {
 
 	run vscodeoverride "${fake_root}"
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "vscodeoverride:: VSCode settings directory not found"
+	echo "$output" | grep -q "vscodeoverride:: VSCode template directory not found"
+}
+
+@test 'run_quest_log:: sets Cursor preferredDarkColorTheme from template' {
+	mock_git_in_repo
+
+	mkdir -p "${HOME}/.config/Cursor/User"
+	printf '%s\n' '{
+    "window.autoDetectColorScheme": true,
+    "workbench.preferredDarkColorTheme": "Visual Studio Dark"
+}' >"${HOME}/.config/Cursor/User/settings.json"
+
+	run run_quest_log
+	[[ "$status" -eq 0 ]]
+	jq -e '.["workbench.preferredDarkColorTheme"] == "Default Dark+"' "${HOME}/.config/Cursor/User/settings.json"
+	jq -e '.["workbench.colorTheme"] == "Default Dark+"' "${HOME}/.config/Cursor/User/settings.json"
+	jq -e '.["window.autoDetectColorScheme"] == true' "${HOME}/.config/Cursor/User/settings.json"
 }
 
 ########################################################

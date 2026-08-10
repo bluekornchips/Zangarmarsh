@@ -6,7 +6,9 @@
 # tools/quest-log/lib/io.sh, already sourced by the caller before this file.
 #
 
-# Copy .vscode template files into a destination project, reporting diffs
+VSCODE_TEMPLATE_RELDIR="tools/vscode"
+
+# Copy tools/vscode template files into a destination project, reporting diffs
 #
 # Inputs:
 # - $1 zangarmarsh_root, source repository root
@@ -22,6 +24,7 @@
 copy_vscode_template() {
 	local zangarmarsh_root="$1"
 	local dest_root="$2"
+	local template_dir="${zangarmarsh_root}/${VSCODE_TEMPLATE_RELDIR}"
 
 	if [[ -z "${zangarmarsh_root}" || -z "${dest_root}" ]]; then
 		echo "copy_vscode_template:: zangarmarsh_root and dest_root are required" >&2
@@ -31,7 +34,7 @@ copy_vscode_template() {
 	if [[ "${DRY_RUN:-}" == true ]]; then
 		while IFS= read -r -d '' template_file; do
 			echo "copy_vscode_template: would write ${dest_root}/.vscode/$(basename "${template_file}")"
-		done < <(find "${zangarmarsh_root}/.vscode" -maxdepth 1 -type f -print0)
+		done < <(find "${template_dir}" -maxdepth 1 -type f -print0)
 		return 0
 	fi
 
@@ -47,12 +50,12 @@ copy_vscode_template() {
 		fi
 
 		write_if_changed "${dest_root}/.vscode/${file_name}" "${new_content}" "rule" "copy_vscode_template" || return 1
-	done < <(find "${zangarmarsh_root}/.vscode" -maxdepth 1 -type f -print0)
+	done < <(find "${template_dir}" -maxdepth 1 -type f -print0)
 
 	return 0
 }
 
-# Copy .vscode from Zangarmarsh into GIT_ROOT
+# Copy tools/vscode from Zangarmarsh into GIT_ROOT/.vscode
 #
 # Inputs:
 # - $1 zangarmarsh_root, optional source repository root
@@ -69,6 +72,7 @@ copy_vscode_template() {
 # - 1 when GIT_ROOT is unset, source is missing, or a file write fails
 vscodeoverride() {
 	local zangarmarsh_root="${1:-${ZANGARMARSH_ROOT:-}}"
+	local template_dir
 
 	if [[ -z "${GIT_ROOT:-}" ]]; then
 		echo "vscodeoverride:: GIT_ROOT is not set" >&2
@@ -82,8 +86,9 @@ vscodeoverride() {
 
 	echo "vscodeoverride: running"
 
-	if [[ ! -d "${zangarmarsh_root}/.vscode" ]]; then
-		echo "vscodeoverride:: VSCode settings directory not found in ${zangarmarsh_root}/.vscode" >&2
+	template_dir="${zangarmarsh_root}/${VSCODE_TEMPLATE_RELDIR}"
+	if [[ ! -d "${template_dir}" ]]; then
+		echo "vscodeoverride:: VSCode template directory not found in ${template_dir}" >&2
 		return 1
 	fi
 
