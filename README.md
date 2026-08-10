@@ -53,7 +53,7 @@ source /path/to/zangarmarsh/zangarmarsh.sh
 
 ## Install the quest-log plugin
 
-The quest-log Cursor plugin lives under `tools/quest-log/plugin/` as tracked files and is the canonical agent configuration for this repository. Each `questlog` run installs that tree into `~/.cursor/plugins/local/quest-log`, syncs `tools/vscode/` into the target project's `.vscode/`, and aligns Cursor user theme preferences with the template.
+The quest-log Cursor plugin lives under `tools/quest-log/plugin/` as tracked files and is the canonical agent configuration for this repository. Each `questlog` run installs that tree into `~/.cursor/plugins/local/quest-log` and overwrites host Cursor user settings from `tools/vscode/settings.json`. It does not write project `.vscode/` files.
 
 ```bash
 source zangarmarsh.sh
@@ -116,7 +116,7 @@ After sourcing, aliases map to scripts under `tools/`:
 
 | Alias         | Tool              | Role                                                                  |
 | ------------- | ----------------- | --------------------------------------------------------------------- |
-| `questlog`    | Quest Log         | Install the local quest-log plugin; sync `.vscode`                    |
+| `questlog`    | Quest Log         | Install plugin; overwrite host Cursor user settings                   |
 | `trilliax`    | Trilliax          | Cleanup for caches and artifacts                                      |
 | `talents`     | Talent Calculator | Check workstation CLIs; install script-managed tools with `--spec`    |
 | `hearthstone` | Hearthstone       | Sync VS Code settings and quest log; optional Trilliax with `--force` |

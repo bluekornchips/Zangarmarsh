@@ -1,5 +1,4 @@
 {
-  // Exclude files from search and replace
   "files.exclude": {
     "**/__pycache__": true,
     "**/*.pyc": true,
@@ -24,24 +23,27 @@
     "**/*.pyc": true,
     "**/*.pyo": true
   },
-  // workbench
   "workbench.colorTheme": "Default Dark+",
+  "workbench.preferredDarkColorTheme": "Default Dark+",
+  "workbench.preferredLightColorTheme": "Default Light+",
   "workbench.activityBar.location": "default",
   "workbench.panel.defaultLocation": "bottom",
   "workbench.activityBar.orientation": "vertical",
   "workbench.panel.showLabels": true,
   "workbench.editor.showTabs": "multiple",
-  // editor
   "editor.fontSize": 14,
   "editor.fontFamily": "DejaVu Sans Mono, monospace",
   "editor.minimap.enabled": false,
   "editor.renderWhitespace": "all",
-  // terminal
+  "editor.formatOnSave": true,
+  "editor.stickyScroll.enabled": true,
   "terminal.integrated.fontFamily": "DejaVu Sans Mono, monospace",
   "terminal.integrated.fontSize": 14,
-  // misc
+  "terminal.integrated.gpuAcceleration": "auto",
+  "files.autoSave": "onFocusChange",
+  "git.autofetch": true,
+  "diffEditor.hideUnchangedRegions.enabled": true,
   "redhat.telemetry.enabled": false,
-  // languages
   "[json]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
@@ -75,5 +77,5 @@
   "shellcheck.customArgs": [
     "${workspaceFolder}/.shellcheckrc"
   ],
-  "makefile.configureOnOpen": false,
+  "makefile.configureOnOpen": false
 }

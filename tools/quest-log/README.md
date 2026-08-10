@@ -3,9 +3,9 @@
 ## Overview
 
 Install the tracked plugin tree in this directory under
-`~/.cursor/plugins/local/quest-log`, sync `tools/vscode/` into the target
-project's `.vscode/`, and align Cursor user theme settings. There is no
-generation step: `plugin/` is the plugin.
+`~/.cursor/plugins/local/quest-log` and overwrite host Cursor user settings from
+`tools/vscode/settings.json`. There is no generation step: `plugin/` is the
+plugin. Quest-log does not write project `.vscode/` files.
 
 ## Prerequisites
 
@@ -25,17 +25,16 @@ questlog
 
 - Replaces `~/.cursor/plugins/local/quest-log` with a fresh copy of
   `tools/quest-log/plugin/` on every run, so stale files never survive
-- Syncs `tools/vscode/` into the target project's `.vscode/`
-- Sets Cursor user `preferredDarkColorTheme` / `colorTheme` from the template
-  so auto color-scheme cannot keep a weak dark theme
+- Overwrites `~/.config/Cursor/User/settings.json` from
+  `tools/vscode/settings.json` (host-wide only)
 
 ## Usage
 
 ```bash
-# Install plugin locally, sync .vscode in the current git repository root
+# Install plugin and overwrite host Cursor user settings
 questlog
 
-# Same, syncing .vscode for a specific directory tree
+# Same, using a specific working directory
 questlog /path/to/project
 
 # Show help
@@ -92,13 +91,17 @@ run `questlog` to install the update.
 The live install is disposable. Edit the tracked source, then run `questlog` to
 refresh the local copy.
 
-## VS Code settings
+## Cursor user settings
 
-Canonical editor settings live in `tools/vscode/`. Each `questlog` run copies
-those files into the target project's `.vscode/` via `vscodeoverride`, then sets
-Cursor user `preferredDarkColorTheme` / `colorTheme` to match the template theme.
+Canonical host Cursor settings live in `tools/vscode/settings.json`. Each
+`questlog` run overwrites `~/.config/Cursor/User/settings.json` from that file.
+There is no project `.vscode/` sync.
 
-Edit `tools/vscode/`, then run `questlog` (or `hearthstone`) to apply.
+`tools/vscode/extensions.json` is a recommended extensions list only; it is not
+installed automatically.
+
+Edit `tools/vscode/settings.json`, then run `questlog` (or `hearthstone`) to
+apply.
 
 ## Testing
 
@@ -115,7 +118,7 @@ without Bats.
 
 - [ ] `~/.cursor/plugins/local/quest-log/rules/always.mdc` exists after `questlog`
 - [ ] `~/.cursor/plugins/local/quest-log/skills/quest-review/SKILL.md` exists after `questlog`
-- [ ] Running `questlog` again on an unchanged tree reports "No changes" for `.vscode` files
-- [ ] `.vscode/settings.json` appears in an external target project after `questlog`
-- [ ] Cursor user `preferredDarkColorTheme` matches `tools/vscode/settings.json` after `questlog`
+- [ ] Running `questlog` again reports "No changes" for Cursor user settings
+- [ ] Cursor user settings match `tools/vscode/settings.json` after `questlog`
+- [ ] No project `.vscode/` files are created by `questlog`
 - [ ] `questlog --dry-run /path/to/project` makes no file changes

@@ -2,7 +2,7 @@
 .cursor
 .claude
 
-# .vscode/ # Intentionally not ignored
+# .vscode/ may exist locally; quest-log does not manage it
 *.swp
 *.swo
 *~
@@ -38,8 +38,6 @@ temp_*
 /list-changed-files-test.*/
 /prompt-test.*/
 /quest-log-test.*/
-/vscodeoverride-dest.*/
-/vscodeoverride-no-template.*/
 /hearthstone-mock.*/
 /trilliax-test.*/
 /talent-calculator-test.*/

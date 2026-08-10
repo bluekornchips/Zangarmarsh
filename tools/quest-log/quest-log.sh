@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Install the quest-log Cursor plugin and sync .vscode settings
+# Install the quest-log Cursor plugin and overwrite host Cursor user settings
 #
 
 _QUEST_LOG_SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
@@ -11,20 +11,20 @@ usage() {
 Usage: $0 [OPTIONS] [DIRECTORY]
 
 Install the quest-log Cursor plugin from tools/quest-log/plugin under
-~/.cursor/plugins/local/quest-log, sync tools/vscode into the target
-project's .vscode directory, and align Cursor user theme settings.
+~/.cursor/plugins/local/quest-log and overwrite host Cursor user settings
+from tools/vscode/settings.json.
 
 OPTIONS:
     -h, --help          Show this help message
     -r, --dry-run       Show planned changes without writing files
 
 EXAMPLES:
-    $0                  # Install plugin, sync .vscode in git root
-    $0 /path/to/dir     # Same, syncing .vscode into the given directory tree
+    $0                  # Install plugin and overwrite Cursor user settings
+    $0 /path/to/dir     # Same, using the given directory as the working tree
 EOF
 }
 
-# Statistics tracking, updated by write_if_changed during .vscode sync
+# Statistics tracking, updated by write_if_changed during Cursor settings sync
 STATS_CREATED=0
 STATS_UPDATED=0
 STATS_UNCHANGED=0
@@ -45,27 +45,27 @@ print_summary() {
 	printf '\nquest-log summary\n'
 
 	if ((STATS_ERRORS > 0)); then
-		printf '  vscode: %s error(s)\n' "${STATS_ERRORS}"
-		((STATS_CREATED > 0)) && printf '  vscode created: %s\n' "${STATS_CREATED}"
-		((STATS_UPDATED > 0)) && printf '  vscode updated: %s\n' "${STATS_UPDATED}"
-		((STATS_UNCHANGED > 0)) && printf '  vscode unchanged: %s\n' "${STATS_UNCHANGED}"
-		printf 'print_summary:: vscode sync failed\n' >&2
+		printf '  cursor: %s error(s)\n' "${STATS_ERRORS}"
+		((STATS_CREATED > 0)) && printf '  cursor created: %s\n' "${STATS_CREATED}"
+		((STATS_UPDATED > 0)) && printf '  cursor updated: %s\n' "${STATS_UPDATED}"
+		((STATS_UNCHANGED > 0)) && printf '  cursor unchanged: %s\n' "${STATS_UNCHANGED}"
+		printf 'print_summary:: cursor settings sync failed\n' >&2
 		return 1
 	fi
 
 	if ((total_processed == 0)); then
-		printf '  vscode: no files synced\n'
+		printf '  cursor: no files synced\n'
 	else
-		((STATS_CREATED > 0)) && printf '  vscode created: %s\n' "${STATS_CREATED}"
-		((STATS_UPDATED > 0)) && printf '  vscode updated: %s\n' "${STATS_UPDATED}"
-		((STATS_UNCHANGED > 0)) && printf '  vscode unchanged: %s\n' "${STATS_UNCHANGED}"
-		printf '  vscode total: %s\n' "${total_processed}"
+		((STATS_CREATED > 0)) && printf '  cursor created: %s\n' "${STATS_CREATED}"
+		((STATS_UPDATED > 0)) && printf '  cursor updated: %s\n' "${STATS_UPDATED}"
+		((STATS_UNCHANGED > 0)) && printf '  cursor unchanged: %s\n' "${STATS_UNCHANGED}"
+		printf '  cursor total: %s\n' "${total_processed}"
 	fi
 
 	return 0
 }
 
-# Determine the target directory for .vscode sync
+# Determine the working directory for this quest-log run
 #
 # Side Effects:
 # - Sets TARGET_DIR to git root when no explicit target was supplied
@@ -89,61 +89,63 @@ determine_target_directory() {
 	return 0
 }
 
-# Set Cursor user theme keys to match tools/vscode/settings.json
+# Overwrite host Cursor user settings from tools/vscode/settings.json
 #
 # Reads environment:
 # - ZANGARMARSH_ROOT, HOME, DRY_RUN
 #
 # Side Effects:
-# - Updates ${HOME}/.config/Cursor/User/settings.json when needed
+# - Replaces ${HOME}/.config/Cursor/User/settings.json with the template
 #
 # Returns:
 # - 0 on success
-# - 1 when theme cannot be read or settings cannot be written
-sync_cursor_theme() {
+# - 1 when the template cannot be read or settings cannot be written
+sync_cursor_user_settings() {
 	local template="${ZANGARMARSH_ROOT}/tools/vscode/settings.json"
 	local settings_file="${HOME}/.config/Cursor/User/settings.json"
-	local theme
 	local new_content
+	local theme
 
-	theme="$(sed -n 's/.*"workbench.colorTheme"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "${template}" | head -n 1)"
-	if [[ -z "${theme}" ]]; then
-		echo "sync_cursor_theme:: workbench.colorTheme not found in ${template}" >&2
+	if [[ -z "${HOME:-}" ]]; then
+		echo "sync_cursor_user_settings:: HOME is required" >&2
 		return 1
 	fi
 
-	if [[ "${DRY_RUN:-}" == true ]]; then
-		echo "sync_cursor_theme: would set theme to ${theme} in ${settings_file}"
-		return 0
-	fi
-
-	if [[ -z "${HOME:-}" ]]; then
-		echo "sync_cursor_theme:: HOME is required" >&2
+	if [[ ! -f "${template}" ]]; then
+		echo "sync_cursor_user_settings:: template not found: ${template}" >&2
 		return 1
 	fi
 
 	if ! command -v jq >/dev/null 2>&1; then
-		echo "sync_cursor_theme:: jq is required" >&2
+		echo "sync_cursor_user_settings:: jq is required" >&2
 		return 1
 	fi
 
-	ensure_dir "$(dirname "${settings_file}")" "sync_cursor_theme" || return 1
-
-	if [[ -f "${settings_file}" ]]; then
-		new_content="$(jq --indent 4 --arg theme "${theme}" '
-			.["workbench.preferredDarkColorTheme"] = $theme
-			| .["workbench.colorTheme"] = $theme
-		' "${settings_file}")" || return 1
-	else
-		new_content="$(jq --indent 4 --null-input --arg theme "${theme}" '
-			{
-				"workbench.preferredDarkColorTheme": $theme,
-				"workbench.colorTheme": $theme
-			}
-		')" || return 1
+	if ! jq -e 'type == "object"' "${template}" >/dev/null 2>&1; then
+		echo "sync_cursor_user_settings:: template is not a JSON object: ${template}" >&2
+		return 1
 	fi
 
-	write_if_changed "${settings_file}" "${new_content}"$'\n' "rule" "sync_cursor_theme" || return 1
+	theme="$(jq -r '.["workbench.colorTheme"] // empty' "${template}")"
+	if [[ -z "${theme}" ]]; then
+		echo "sync_cursor_user_settings:: workbench.colorTheme not found in ${template}" >&2
+		return 1
+	fi
+
+	if [[ "${DRY_RUN:-}" == true ]]; then
+		echo "sync_cursor_user_settings: would overwrite ${settings_file} from ${template}"
+		return 0
+	fi
+
+	ensure_dir "$(dirname "${settings_file}")" "sync_cursor_user_settings" || return 1
+
+	new_content="$(jq --indent 4 -n --slurpfile template "${template}" --arg theme "${theme}" '
+		$template[0]
+		| .["workbench.preferredDarkColorTheme"] = $theme
+		| .["workbench.colorTheme"] = $theme
+	')" || return 1
+
+	write_if_changed "${settings_file}" "${new_content}"$'\n' "rule" "sync_cursor_user_settings" || return 1
 
 	return 0
 }
@@ -154,7 +156,7 @@ sync_cursor_theme() {
 # - All command line arguments
 #
 # Side Effects:
-# - Installs the plugin, syncs .vscode, prints summary
+# - Installs the plugin, overwrites host Cursor user settings, prints summary
 # - Exits with appropriate status code
 run_quest_log() {
 	local summary_exit_code
@@ -165,11 +167,6 @@ run_quest_log() {
 	fi
 
 	source "${ZANGARMARSH_ROOT}/tools/quest-log/lib/plugin.sh"
-	[[ -f "${ZANGARMARSH_ROOT}/tools/lib/vscodeoverride.sh" ]] || {
-		echo "quest-log:: vscodeoverride library not found" >&2
-		return 1
-	}
-	source "${ZANGARMARSH_ROOT}/tools/lib/vscodeoverride.sh"
 
 	if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
 		usage
@@ -219,8 +216,6 @@ run_quest_log() {
 	TARGET_DIR=${TARGET_DIR:-${PWD}}
 	determine_target_directory
 	export TARGET_DIR
-	GIT_ROOT="${TARGET_DIR}"
-	export GIT_ROOT
 	export DRY_RUN
 
 	cd "${TARGET_DIR}" || {
@@ -234,9 +229,7 @@ run_quest_log() {
 	}
 
 	install_quest_plugin "${PLUGIN_SOURCE_DIR}" || return 1
-
-	vscodeoverride || return 1
-	sync_cursor_theme || return 1
+	sync_cursor_user_settings || return 1
 
 	print_summary
 	summary_exit_code=$?

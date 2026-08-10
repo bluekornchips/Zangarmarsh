@@ -1,7 +1,6 @@
 #!/usr/bin/env bats
 #
-# Tests for determine_target_directory, print_summary, vscodeoverride,
-# and run_quest_log
+# Tests for determine_target_directory, print_summary, and run_quest_log
 #
 
 setup_file() {
@@ -65,7 +64,6 @@ quest_log_test_setup() {
 	export SCRIPT_DIR
 	export QUEST_LOG_ROOT
 	source "${ZANGARMARSH_ROOT}/tools/quest-log/lib/plugin.sh"
-	source "${ZANGARMARSH_ROOT}/tools/lib/vscodeoverride.sh"
 	trap - EXIT ERR
 	set +e
 
@@ -165,10 +163,10 @@ mock_git_not_in_repo() {
 	run print_summary
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "quest-log summary"
-	echo "$output" | grep -q "vscode created: 2"
-	echo "$output" | grep -q "vscode updated: 3"
-	echo "$output" | grep -q "vscode unchanged: 1"
-	echo "$output" | grep -q "vscode total: 6"
+	echo "$output" | grep -q "cursor created: 2"
+	echo "$output" | grep -q "cursor updated: 3"
+	echo "$output" | grep -q "cursor unchanged: 1"
+	echo "$output" | grep -q "cursor total: 6"
 }
 
 @test 'print_summary:: returns error status when errors exist' {
@@ -179,11 +177,11 @@ mock_git_not_in_repo() {
 
 	run print_summary
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "vscode: 1 error(s)"
-	echo "$output" | grep -q "print_summary:: vscode sync failed"
+	echo "$output" | grep -q "cursor: 1 error(s)"
+	echo "$output" | grep -q "print_summary:: cursor settings sync failed"
 }
 
-@test 'print_summary:: reports no vscode file sync when counters are zero' {
+@test 'print_summary:: reports no cursor file sync when counters are zero' {
 	STATS_CREATED=0
 	STATS_UPDATED=0
 	STATS_UNCHANGED=0
@@ -191,86 +189,33 @@ mock_git_not_in_repo() {
 
 	run print_summary
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "vscode: no files synced"
+	echo "$output" | grep -q "cursor: no files synced"
 }
 
 ########################################################
-# vscodeoverride
+# sync_cursor_user_settings / run_quest_log
 ########################################################
 
-@test 'vscodeoverride:: syncs when destination directory is empty' {
-	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
-	local test_git_root
-	test_git_root="$(mktemp -d "${base}/vscodeoverride-dest.XXXXXX")"
-	GIT_ROOT="${test_git_root}"
-	export GIT_ROOT
-
-	run vscodeoverride
-	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "vscodeoverride: complete"
-	[[ -d "${GIT_ROOT}/.vscode" ]]
-	[[ -f "${GIT_ROOT}/.vscode/settings.json" ]]
-	cmp -s "${GIT_ROOT}/.vscode/settings.json" "${ZANGARMARSH_VSCODE_DIR}/settings.json"
-}
-
-@test 'vscodeoverride:: replaces existing settings by default' {
-	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
-	local test_git_root
-	test_git_root="$(mktemp -d "${base}/vscodeoverride-dest.XXXXXX")"
-	mkdir -p "${test_git_root}/.vscode"
-	echo "existing" >"${test_git_root}/.vscode/settings.json"
-
-	GIT_ROOT="${test_git_root}"
-	export GIT_ROOT
-
-	run vscodeoverride
-	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "vscodeoverride: complete"
-	cmp -s "${GIT_ROOT}/.vscode/settings.json" "${ZANGARMARSH_VSCODE_DIR}/settings.json"
-}
-
-@test 'vscodeoverride:: fails when GIT_ROOT is not set' {
-	unset GIT_ROOT
-
-	run vscodeoverride
-	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "vscodeoverride:: GIT_ROOT is not set"
-}
-
-@test 'vscodeoverride:: fails when Zangarmarsh template is missing' {
-	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
-	local test_git_root
-	test_git_root="$(mktemp -d "${base}/vscodeoverride-dest.XXXXXX")"
-	local fake_root
-	fake_root="$(mktemp -d "${base}/vscodeoverride-no-template.XXXXXX")"
-
-	GIT_ROOT="${test_git_root}"
-	export GIT_ROOT
-
-	run vscodeoverride "${fake_root}"
-	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "vscodeoverride:: VSCode template directory not found"
-}
-
-@test 'run_quest_log:: sets Cursor preferredDarkColorTheme from template' {
+@test 'run_quest_log:: overwrites Cursor user settings from template' {
 	mock_git_in_repo
 
 	mkdir -p "${HOME}/.config/Cursor/User"
 	printf '%s\n' '{
     "window.autoDetectColorScheme": true,
-    "workbench.preferredDarkColorTheme": "Visual Studio Dark"
+    "workbench.preferredDarkColorTheme": "Visual Studio Dark",
+    "git.suggestSmartCommit": false
 }' >"${HOME}/.config/Cursor/User/settings.json"
 
 	run run_quest_log
 	[[ "$status" -eq 0 ]]
 	jq -e '.["workbench.preferredDarkColorTheme"] == "Default Dark+"' "${HOME}/.config/Cursor/User/settings.json"
 	jq -e '.["workbench.colorTheme"] == "Default Dark+"' "${HOME}/.config/Cursor/User/settings.json"
-	jq -e '.["window.autoDetectColorScheme"] == true' "${HOME}/.config/Cursor/User/settings.json"
+	jq -e '.["editor.formatOnSave"] == true' "${HOME}/.config/Cursor/User/settings.json"
+	jq -e '.["files.autoSave"] == "onFocusChange"' "${HOME}/.config/Cursor/User/settings.json"
+	jq -e 'has("window.autoDetectColorScheme") | not' "${HOME}/.config/Cursor/User/settings.json"
+	jq -e 'has("git.suggestSmartCommit") | not' "${HOME}/.config/Cursor/User/settings.json"
+	[[ ! -e "${TEST_TEMP_DIR}/.vscode" ]]
 }
-
-########################################################
-# Main
-########################################################
 
 @test 'run_quest_log:: fails when target directory does not exist' {
 	TARGET_DIR="/tmp/does-not-exist"
@@ -326,20 +271,21 @@ mock_git_not_in_repo() {
 	run run_quest_log "${target_dir}"
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "target_dir: ${target_dir}"
-	[[ -f "${target_dir}/.vscode/settings.json" ]]
-	[[ ! -f "${TEST_TEMP_DIR}/.vscode/settings.json" ]]
+	[[ ! -e "${target_dir}/.vscode" ]]
+	[[ ! -e "${TEST_TEMP_DIR}/.vscode" ]]
 }
 
-@test 'run_quest_log:: dry-run does not write plugin or VS Code files' {
+@test 'run_quest_log:: dry-run does not write plugin or Cursor settings' {
 	local target_dir="${TEST_TEMP_DIR}/dry-run-target"
 	mkdir -p "${target_dir}"
 
 	run run_quest_log --dry-run "${target_dir}"
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "would replace"
-	echo "$output" | grep -q "would write"
+	echo "$output" | grep -q "would overwrite"
 	[[ ! -e "${QUEST_LOG_PLUGIN_DIR}" ]]
 	[[ ! -e "${target_dir}/.vscode" ]]
+	[[ ! -e "${HOME}/.config/Cursor/User/settings.json" ]]
 }
 
 @test 'run_quest_log:: accepts the short dry-run flag' {
@@ -352,7 +298,7 @@ mock_git_not_in_repo() {
 	[[ ! -e "${QUEST_LOG_PLUGIN_DIR}" ]]
 }
 
-@test 'run_quest_log:: installs plugin under QUEST_LOG_PLUGIN_DIR and syncs vscode' {
+@test 'run_quest_log:: installs plugin and overwrites host Cursor settings' {
 	mock_git_in_repo
 
 	run run_quest_log
@@ -360,25 +306,23 @@ mock_git_not_in_repo() {
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc" ]]
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/skills/quest-review/SKILL.md" ]]
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/.cursor-plugin/plugin.json" ]]
-	[[ -f "$TEST_TEMP_DIR/.vscode/settings.json" ]]
+	[[ ! -e "$TEST_TEMP_DIR/.vscode" ]]
+	[[ -f "${HOME}/.config/Cursor/User/settings.json" ]]
+	jq -e '.["editor.formatOnSave"] == true' "${HOME}/.config/Cursor/User/settings.json"
+	jq -e --slurpfile t "${ZANGARMARSH_VSCODE_DIR}/settings.json" '
+		. as $u
+		| ($t[0]
+			| .["workbench.preferredDarkColorTheme"] = .["workbench.colorTheme"]
+			| .["workbench.colorTheme"] = .["workbench.colorTheme"]) as $want
+		| $u == $want
+	' "${HOME}/.config/Cursor/User/settings.json"
 }
 
 @test 'run_quest_log:: displays summary at end of execution' {
 	run run_quest_log
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "quest-log summary"
-	echo "$output" | grep -Eq 'vscode: no files synced|vscode total:'
-}
-
-@test 'vscodeoverride:: syncs when GIT_ROOT is the Zangarmarsh root' {
-	GIT_ROOT="${ZANGARMARSH_ROOT}"
-	export GIT_ROOT
-
-	run vscodeoverride
-	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "vscodeoverride: running"
-	echo "$output" | grep -q "vscodeoverride: complete"
-	! echo "$output" | grep -q "skipped, target is the Zangarmarsh root"
+	echo "$output" | grep -Eq 'cursor: no files synced|cursor total:'
 }
 
 @test 'run_quest_log:: reports no changes on a second identical run' {
