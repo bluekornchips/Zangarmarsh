@@ -25,8 +25,7 @@ questlog
 
 - Replaces `~/.cursor/plugins/local/quest-log` with a fresh copy of
   `tools/quest-log/plugin/` on every run, so stale files never survive
-- Overwrites `~/.config/Cursor/User/settings.json` from
-  `tools/vscode/settings.json` (host-wide only)
+- Overwrites host Cursor `User/settings.json` from `tools/vscode/settings.json`
 
 ## Usage
 
@@ -94,11 +93,13 @@ refresh the local copy.
 ## Cursor user settings
 
 Canonical host Cursor settings live in `tools/vscode/settings.json`. Each
-`questlog` run overwrites `~/.config/Cursor/User/settings.json` from that file.
-There is no project `.vscode/` sync.
+`questlog` run copies that file over the host Cursor user settings:
 
-`tools/vscode/extensions.json` is a recommended extensions list only; it is not
-installed automatically.
+- Linux: `~/.config/Cursor/User/settings.json`
+- macOS: `~/Library/Application Support/Cursor/User/settings.json`
+
+There is no project `.vscode/` sync. `tools/vscode/extensions.json` is a
+recommended extensions list only.
 
 Edit `tools/vscode/settings.json`, then run `questlog` (or `hearthstone`) to
 apply.

@@ -95,16 +95,15 @@ determine_target_directory() {
 # - ZANGARMARSH_ROOT, HOME, DRY_RUN
 #
 # Side Effects:
-# - Replaces ${HOME}/.config/Cursor/User/settings.json with the template
+# - Replaces the host Cursor User/settings.json with the template
 #
 # Returns:
 # - 0 on success
 # - 1 when the template cannot be read or settings cannot be written
 sync_cursor_user_settings() {
 	local template="${ZANGARMARSH_ROOT}/tools/vscode/settings.json"
-	local settings_file="${HOME}/.config/Cursor/User/settings.json"
+	local settings_file
 	local new_content
-	local theme
 
 	if [[ -z "${HOME:-}" ]]; then
 		echo "sync_cursor_user_settings:: HOME is required" >&2
@@ -116,35 +115,21 @@ sync_cursor_user_settings() {
 		return 1
 	fi
 
-	if ! command -v jq >/dev/null 2>&1; then
-		echo "sync_cursor_user_settings:: jq is required" >&2
-		return 1
-	fi
-
-	if ! jq -e 'type == "object"' "${template}" >/dev/null 2>&1; then
-		echo "sync_cursor_user_settings:: template is not a JSON object: ${template}" >&2
-		return 1
-	fi
-
-	theme="$(jq -r '.["workbench.colorTheme"] // empty' "${template}")"
-	if [[ -z "${theme}" ]]; then
-		echo "sync_cursor_user_settings:: workbench.colorTheme not found in ${template}" >&2
-		return 1
+	if [[ "$(uname -s)" == "Darwin" ]]; then
+		settings_file="${HOME}/Library/Application Support/Cursor/User/settings.json"
+	else
+		settings_file="${HOME}/.config/Cursor/User/settings.json"
 	fi
 
 	if [[ "${DRY_RUN:-}" == true ]]; then
-		echo "sync_cursor_user_settings: would overwrite ${settings_file} from ${template}"
+		echo "sync_cursor_user_settings: would overwrite ${settings_file}"
 		return 0
 	fi
 
 	ensure_dir "$(dirname "${settings_file}")" "sync_cursor_user_settings" || return 1
 
-	new_content="$(jq --indent 4 -n --slurpfile template "${template}" --arg theme "${theme}" '
-		$template[0]
-		| .["workbench.preferredDarkColorTheme"] = $theme
-		| .["workbench.colorTheme"] = $theme
-	')" || return 1
-
+	new_content="$(cat "${template}")" || return 1
+	echo "sync_cursor_user_settings: writing ${settings_file}"
 	write_if_changed "${settings_file}" "${new_content}"$'\n' "rule" "sync_cursor_user_settings" || return 1
 
 	return 0

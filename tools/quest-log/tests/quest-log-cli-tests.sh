@@ -208,13 +208,29 @@ mock_git_not_in_repo() {
 
 	run run_quest_log
 	[[ "$status" -eq 0 ]]
-	jq -e '.["workbench.preferredDarkColorTheme"] == "Default Dark+"' "${HOME}/.config/Cursor/User/settings.json"
+	echo "$output" | grep -q "sync_cursor_user_settings: writing"
 	jq -e '.["workbench.colorTheme"] == "Default Dark+"' "${HOME}/.config/Cursor/User/settings.json"
 	jq -e '.["editor.formatOnSave"] == true' "${HOME}/.config/Cursor/User/settings.json"
-	jq -e '.["files.autoSave"] == "onFocusChange"' "${HOME}/.config/Cursor/User/settings.json"
-	jq -e 'has("window.autoDetectColorScheme") | not' "${HOME}/.config/Cursor/User/settings.json"
 	jq -e 'has("git.suggestSmartCommit") | not' "${HOME}/.config/Cursor/User/settings.json"
 	[[ ! -e "${TEST_TEMP_DIR}/.vscode" ]]
+}
+
+@test 'run_quest_log:: writes macOS Application Support settings path' {
+	mock_git_in_repo
+	uname() {
+		[[ "$1" == "-s" ]] && {
+			echo "Darwin"
+			return 0
+		}
+		command uname "$@"
+	}
+	export -f uname
+
+	run run_quest_log
+	[[ "$status" -eq 0 ]]
+	[[ -f "${HOME}/Library/Application Support/Cursor/User/settings.json" ]]
+	jq -e '.["editor.formatOnSave"] == true' "${HOME}/Library/Application Support/Cursor/User/settings.json"
+	[[ ! -e "${HOME}/.config/Cursor/User/settings.json" ]]
 }
 
 @test 'run_quest_log:: fails when target directory does not exist' {
@@ -309,13 +325,7 @@ mock_git_not_in_repo() {
 	[[ ! -e "$TEST_TEMP_DIR/.vscode" ]]
 	[[ -f "${HOME}/.config/Cursor/User/settings.json" ]]
 	jq -e '.["editor.formatOnSave"] == true' "${HOME}/.config/Cursor/User/settings.json"
-	jq -e --slurpfile t "${ZANGARMARSH_VSCODE_DIR}/settings.json" '
-		. as $u
-		| ($t[0]
-			| .["workbench.preferredDarkColorTheme"] = .["workbench.colorTheme"]
-			| .["workbench.colorTheme"] = .["workbench.colorTheme"]) as $want
-		| $u == $want
-	' "${HOME}/.config/Cursor/User/settings.json"
+	jq -e --slurpfile t "${ZANGARMARSH_VSCODE_DIR}/settings.json" '. == $t[0]' "${HOME}/.config/Cursor/User/settings.json"
 }
 
 @test 'run_quest_log:: displays summary at end of execution' {
