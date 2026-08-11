@@ -260,9 +260,11 @@ EOF
 
 	echo "Creating virtual environment with ${python_version}: ${env_name}"
 	if ! "${python_version}" -m venv "${env_name}" 2>/dev/null; then
-		echo "penv:: Failed to create virtual environment" >&2
-		echo "penv:: Make sure ${python_version} has venv module installed" >&2
-		echo "penv:: Install Python with a working venv module, then retry" >&2
+		cat <<EOF >&2
+penv:: Failed to create virtual environment
+penv:: Make sure ${python_version} has venv module installed
+penv:: Install Python with a working venv module, then retry
+EOF
 		return 1
 	fi
 
@@ -278,7 +280,7 @@ EOF
 ========================================
 Virtual environment setup complete!
 Python version: $(python --version 2>/dev/null || echo "Version info unavailable")
-Environment: $PWD/$env_name
+Environment: ${PWD}/${env_name}
 ========================================
 
 EOF

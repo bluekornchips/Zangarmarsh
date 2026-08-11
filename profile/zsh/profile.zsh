@@ -2,14 +2,14 @@
 #
 # Zsh profile configuration with Oh My Zsh integration.
 
-ZSH="${ZSH:-$HOME/.oh-my-zsh}"
+ZSH="${ZSH:-${HOME}/.oh-my-zsh}"
 export ZSH
 ZSH_THEME="robbyrussell"
 
 plugins=(git zsh-autosuggestions)
 
 # Check and load Oh My Zsh
-if [[ ! -f "$ZSH/oh-my-zsh.sh" ]]; then
+if [[ ! -f "${ZSH}/oh-my-zsh.sh" ]]; then
 	cat <<EOF >&2
 Oh My Zsh is not installed.
 To install Oh My Zsh, run:
@@ -18,11 +18,11 @@ Or visit: https://ohmyz.sh/#install
 EOF
 else
 
-	source "$ZSH/oh-my-zsh.sh"
+	source "${ZSH}/oh-my-zsh.sh"
 fi
 
 # Check zsh-autosuggestions plugin
-if [[ ! -d "$ZSH/plugins/zsh-autosuggestions" ]]; then
+if [[ ! -d "${ZSH}/plugins/zsh-autosuggestions" ]]; then
 	cat <<EOF >&2
 zsh-autosuggestions plugin is not installed.
 To install zsh-autosuggestions, run:
@@ -32,7 +32,7 @@ EOF
 fi
 
 # Oh My Zsh loads zsh-autosuggestions from plugins=(); set highlight style only
-if [[ -z "$ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE" ]] && [[ -f "${ZSH}/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh" ]]; then
+if [[ -z "${ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE}" ]] && [[ -f "${ZSH}/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh" ]]; then
 	ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#00ffff,bg=#2d2f40,bold"
 fi
 
@@ -47,30 +47,30 @@ ZSH_FILES=(
 )
 
 for file in "${ZSH_FILES[@]}"; do
-	file_path="$ZANGARMARSH_ROOT/profile/zsh/$file"
-	if [[ -f "$file_path" ]]; then
+	file_path="${ZANGARMARSH_ROOT}/profile/zsh/${file}"
+	if [[ -f "${file_path}" ]]; then
 
-		source "$file_path" 2>/dev/null || {
-			[[ "$ZANGARMARSH_VERBOSE" == "true" ]] && echo "Failed to source $file_path" >&2
+		source "${file_path}" 2>/dev/null || {
+			[[ "${ZANGARMARSH_VERBOSE}" == "true" ]] && echo "profile.zsh:: Failed to source ${file_path}" >&2
 		}
 	fi
 done
 
 # Configure zsh history
 unset HISTFILE HISTSIZE HISTFILESIZE HISTCONTROL HISTIGNORE
-HISTFILE="$HOME/.zsh_history"
+HISTFILE="${HOME}/.zsh_history"
 export HISTFILE
 HISTSIZE=100000
 export HISTSIZE
 SAVEHIST=100000
 export SAVEHIST
 
-[[ "$ZANGARMARSH_VERBOSE" == "true" ]] && echo "Loading zsh history configuration" >&2
-[[ "$ZANGARMARSH_VERBOSE" == "true" ]] && echo "Set HISTFILE to: $HISTFILE" >&2
+[[ "${ZANGARMARSH_VERBOSE}" == "true" ]] && echo "profile.zsh:: Loading zsh history configuration" >&2
+[[ "${ZANGARMARSH_VERBOSE}" == "true" ]] && echo "profile.zsh:: Set HISTFILE to: ${HISTFILE}" >&2
 
-if [[ ! -f "$HISTFILE" ]]; then
-	touch "$HISTFILE" 2>/dev/null || {
-		[[ "$ZANGARMARSH_VERBOSE" == "true" ]] && echo "Cannot create history file $HISTFILE" >&2
+if [[ ! -f "${HISTFILE}" ]]; then
+	touch "${HISTFILE}" 2>/dev/null || {
+		[[ "${ZANGARMARSH_VERBOSE}" == "true" ]] && echo "profile.zsh:: Cannot create history file ${HISTFILE}" >&2
 	}
 fi
 
@@ -83,12 +83,12 @@ setopt \
 	extended_history
 
 # Configure zsh completion
-if [[ -z "$_comp_setup" ]]; then
+if [[ -z "${_comp_setup}" ]]; then
 	autoload -Uz compinit
 
 	# Use cached completion dump if it's fresh, less than 24 hours old
-	comp_dump="$HOME/.zcompdump"
-	if [[ -f "$comp_dump" && "$comp_dump" -nt "$HOME/.zshrc" ]]; then
+	comp_dump="${HOME}/.zcompdump"
+	if [[ -f "${comp_dump}" && "${comp_dump}" -nt "${HOME}/.zshrc" ]]; then
 		compinit -C
 	else
 		compinit

@@ -251,14 +251,10 @@ run_hearthstone() {
 		return $?
 	fi
 
-	if ! verify_git_repository; then
-		return 1
-	fi
+	verify_git_repository || return 1
 
 	if [[ "${SKIP_CONFIRMATION}" != "true" ]]; then
-		if ! confirm_proceed; then
-			return 1
-		fi
+		confirm_proceed || return 1
 	fi
 
 	cat <<EOF

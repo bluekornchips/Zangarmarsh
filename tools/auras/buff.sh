@@ -19,13 +19,9 @@ ensure_desktop_entry_writable() {
 		return 1
 	fi
 
-	if [[ ! -e "${desktop_path}" ]]; then
-		return 0
-	fi
+	[[ ! -e "${desktop_path}" ]] && return 0
 
-	if desktop_entry_is_auras_managed "${desktop_path}"; then
-		return 0
-	fi
+	desktop_entry_is_auras_managed "${desktop_path}" && return 0
 
 	echo "ensure_desktop_entry_writable:: refusing to overwrite unmanaged desktop file: ${desktop_path}" >&2
 
@@ -52,22 +48,16 @@ ensure_bin_link_writable() {
 		return 1
 	fi
 
-	if [[ ! -e "${link_path}" ]]; then
-		return 0
-	fi
+	[[ ! -e "${link_path}" ]] && return 0
 
 	if [[ -L "${link_path}" ]]; then
 		local current_target
 		current_target="$(readlink -f "${link_path}" 2>/dev/null || true)"
 
-		if [[ "${current_target}" == "${expected_target}" ]]; then
-			return 0
-		fi
+		[[ "${current_target}" == "${expected_target}" ]] && return 0
 	fi
 
-	if auras_manages_app_stem "${app_stem}"; then
-		return 0
-	fi
+	auras_manages_app_stem "${app_stem}" && return 0
 
 	if [[ -L "${link_path}" ]]; then
 		echo "ensure_bin_link_writable:: refusing to overwrite unmanaged bin symlink: ${link_path}" >&2
@@ -102,18 +92,12 @@ write_application_desktop() {
 		return 1
 	fi
 
-	if ! validate_app_name_segment "${app_stem}" "write_application_desktop"; then
-		return 1
-	fi
+	validate_app_name_segment "${app_stem}" "write_application_desktop" || return 1
 
-	if ! validate_appimage_path "${resolved_appimage_path}" "write_application_desktop"; then
-		return 1
-	fi
+	validate_appimage_path "${resolved_appimage_path}" "write_application_desktop" || return 1
 
 	local apps_root
-	if ! apps_root="$(applications_dir)"; then
-		return 1
-	fi
+	apps_root="$(applications_dir)" || return 1
 
 	if ! mkdir -p "${apps_root}"; then
 		echo "write_application_desktop:: could not create ${apps_root}" >&2
@@ -122,9 +106,7 @@ write_application_desktop() {
 
 	local desktop_path="${apps_root}/${app_stem}.desktop"
 
-	if ! ensure_desktop_entry_writable "${desktop_path}"; then
-		return 1
-	fi
+	ensure_desktop_entry_writable "${desktop_path}" || return 1
 
 	if ! cat <<EOF >"${desktop_path}"; then
 [Desktop Entry]
@@ -167,18 +149,12 @@ write_application_bin_link() {
 	fi
 
 	local link_path
-	if ! link_path="$(bin_link_path "${app_stem}")"; then
-		return 1
-	fi
+	link_path="$(bin_link_path "${app_stem}")" || return 1
 
-	if ! ensure_bin_link_writable "${link_path}" "${resolved_appimage_path}" "${app_stem}"; then
-		return 1
-	fi
+	ensure_bin_link_writable "${link_path}" "${resolved_appimage_path}" "${app_stem}" || return 1
 
 	local bin_root
-	if ! bin_root="$(bin_link_dir)"; then
-		return 1
-	fi
+	bin_root="$(bin_link_dir)" || return 1
 
 	if ! mkdir -p "${bin_root}"; then
 		echo "write_application_bin_link:: could not create ${bin_root}" >&2
@@ -243,9 +219,7 @@ buff_launcher() {
 	fi
 
 	local desktop_path
-	if ! desktop_path="$(desktop_path_for_stem "${app_stem}")"; then
-		return 1
-	fi
+	desktop_path="$(desktop_path_for_stem "${app_stem}")" || return 1
 
 	if ! write_application_desktop "${app_stem}" "${resolved_appimage_path}" "${app_stem}"; then
 		echo "buff_launcher:: failed to write desktop for ${resolved_appimage_path}" >&2
@@ -284,14 +258,10 @@ buff_main() {
 		return 1
 	fi
 
-	if ! validate_app_name_segment "${app_stem}" "main"; then
-		return 1
-	fi
+	validate_app_name_segment "${app_stem}" "main" || return 1
 
 	local resolved_appimage_path
-	if ! resolved_appimage_path="$(prepare_appimage_path "${raw_appimage_path}" "main")"; then
-		return 1
-	fi
+	resolved_appimage_path="$(prepare_appimage_path "${raw_appimage_path}" "main")" || return 1
 
 	buff_launcher "${app_stem}" "${resolved_appimage_path}"
 

@@ -188,13 +188,9 @@ prepare_appimage_path() {
 	local ctx="${2:-prepare_appimage_path}"
 
 	local resolved_appimage_path
-	if ! resolved_appimage_path="$(resolve_appimage_path "${raw_appimage_path}" "${ctx}")"; then
-		return 1
-	fi
+	resolved_appimage_path="$(resolve_appimage_path "${raw_appimage_path}" "${ctx}")" || return 1
 
-	if ! validate_appimage_path "${resolved_appimage_path}" "${ctx}"; then
-		return 1
-	fi
+	validate_appimage_path "${resolved_appimage_path}" "${ctx}" || return 1
 
 	echo "${resolved_appimage_path}"
 
@@ -249,14 +245,10 @@ bin_link_dir() {
 bin_link_path() {
 	local app_stem="$1"
 
-	if ! validate_app_name_segment "${app_stem}" "bin_link_path"; then
-		return 1
-	fi
+	validate_app_name_segment "${app_stem}" "bin_link_path" || return 1
 
 	local bin_root
-	if ! bin_root="$(bin_link_dir)"; then
-		return 1
-	fi
+	bin_root="$(bin_link_dir)" || return 1
 
 	echo "${bin_root}/${app_stem}"
 
@@ -277,14 +269,10 @@ bin_link_path() {
 desktop_path_for_stem() {
 	local app_stem="$1"
 
-	if ! validate_app_name_segment "${app_stem}" "desktop_path_for_stem"; then
-		return 1
-	fi
+	validate_app_name_segment "${app_stem}" "desktop_path_for_stem" || return 1
 
 	local apps_root
-	if ! apps_root="$(applications_dir)"; then
-		return 1
-	fi
+	apps_root="$(applications_dir)" || return 1
 
 	echo "${apps_root}/${app_stem}.desktop"
 
@@ -303,17 +291,11 @@ auras_manages_app_stem() {
 	local app_stem="$1"
 
 	local desktop_path
-	if ! desktop_path="$(desktop_path_for_stem "${app_stem}")"; then
-		return 1
-	fi
+	desktop_path="$(desktop_path_for_stem "${app_stem}")" || return 1
 
-	if [[ ! -f "${desktop_path}" ]]; then
-		return 1
-	fi
+	[[ ! -f "${desktop_path}" ]] && return 1
 
-	if ! desktop_entry_is_auras_managed "${desktop_path}"; then
-		return 1
-	fi
+	desktop_entry_is_auras_managed "${desktop_path}" || return 1
 
 	return 0
 }
@@ -329,17 +311,11 @@ auras_manages_app_stem() {
 desktop_entry_is_auras_managed() {
 	local desktop_path="$1"
 
-	if [[ -z "${desktop_path}" || ! -f "${desktop_path}" ]]; then
-		return 1
-	fi
+	[[ -z "${desktop_path}" || ! -f "${desktop_path}" ]] && return 1
 
-	if ! grep -Fxq "${AURAS_MANAGED_KEY}" "${desktop_path}"; then
-		return 1
-	fi
+	grep -Fxq "${AURAS_MANAGED_KEY}" "${desktop_path}" || return 1
 
-	if ! grep -Fxq "${AURAS_VERSION_KEY}" "${desktop_path}"; then
-		return 1
-	fi
+	grep -Fxq "${AURAS_VERSION_KEY}" "${desktop_path}" || return 1
 
 	return 0
 }

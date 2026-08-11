@@ -290,9 +290,7 @@ run_trilliax() {
 		esac
 	done
 
-	if ! validate_targets "${targets_string}" "${all_flag}"; then
-		return 1
-	fi
+	validate_targets "${targets_string}" "${all_flag}" || return 1
 
 	DRY_RUN="${DRY_RUN:-false}"
 	export DRY_RUN

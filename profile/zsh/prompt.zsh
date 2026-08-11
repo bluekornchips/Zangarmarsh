@@ -36,7 +36,7 @@ git_branch() {
 		local branch
 		# Use faster git branch --show-current for performance
 		branch=$(git branch --show-current 2>/dev/null || git rev-parse --short HEAD 2>/dev/null)
-		[[ -n "$branch" ]] && echo " ($branch)"
+		[[ -n "${branch}" ]] && echo " (${branch})"
 	fi
 }
 
@@ -54,12 +54,12 @@ shorten() {
 	local input_string="$1"
 	local str_length="$2"
 	local min_length=1
-	[[ $str_length -lt $min_length ]] && str_length=$min_length
+	[[ "${str_length}" -lt "${min_length}" ]] && str_length="${min_length}"
 
-	if [[ ${#input_string} -gt $str_length ]]; then
-		echo "${input_string:0:$str_length}"
+	if [[ ${#input_string} -gt "${str_length}" ]]; then
+		echo "${input_string:0:${str_length}}"
 	else
-		echo "$input_string"
+		echo "${input_string}"
 	fi
 }
 
@@ -70,9 +70,9 @@ get_hostname() {
 
 # Build the complete prompt string with caching
 build_prompt() {
-	local current_pwd="$PWD"
+	local current_pwd="${PWD}"
 
-	# Get current time (use date +%s for compatibility)
+	# Get current time (use date +%s for portability)
 	local current_time
 	current_time=$(date +%s)
 
@@ -84,80 +84,80 @@ build_prompt() {
 		cache_expired=true
 	fi
 
-	if [[ "$current_pwd" != "$_prompt_pwd_cache" ]]; then
+	if [[ "${current_pwd}" != "${_prompt_pwd_cache}" ]]; then
 		pwd_changed=true
 	fi
 
 	# Return cached prompt if still valid
-	if [[ "$cache_expired" == "false" && "$pwd_changed" == "false" && -n "$_prompt_cache" ]]; then
-		echo -e "$_prompt_cache"
-		return
+	if [[ "${cache_expired}" == "false" && "${pwd_changed}" == "false" && -n "${_prompt_cache}" ]]; then
+		echo -e "${_prompt_cache}"
+		return 0
 	fi
 
 	# Generate new prompt
 	local prompt=""
 
 	# Only check kube context if enabled and cache expired (expensive operation)
-	if [[ "$KUBE_PROMPT_ENABLED" == "true" ]]; then
+	if [[ "${KUBE_PROMPT_ENABLED}" == "true" ]]; then
 		local kube_ctx
-		if [[ "$cache_expired" == "true" ]]; then
+		if [[ "${cache_expired}" == "true" ]]; then
 			kube_ctx="$(kube_context)"
-			_prompt_kube_cache="$kube_ctx"
+			_prompt_kube_cache="${kube_ctx}"
 		else
-			kube_ctx="$_prompt_kube_cache"
+			kube_ctx="${_prompt_kube_cache}"
 		fi
-		[[ -n "$kube_ctx" ]] && prompt="${prompt}${CYAN}${kube_ctx}${RESET}"
+		[[ -n "${kube_ctx}" ]] && prompt="${prompt}${CYAN}${kube_ctx}${RESET}"
 	fi
 
 	# username@hostname, with configuration options
-	if [[ "$SHOW_USER" == "true" || "$SHOW_HOST" == "true" ]]; then
-		if [[ "$SHOW_USER" == "true" ]]; then
+	if [[ "${SHOW_USER}" == "true" || "${SHOW_HOST}" == "true" ]]; then
+		if [[ "${SHOW_USER}" == "true" ]]; then
 			local username
 			username="${USER:-$(whoami 2>/dev/null || echo 'user')}"
-			if [[ "$SHORTEN_NAMES" == "true" ]]; then
-				username="$(shorten "$username" 1)"
+			if [[ "${SHORTEN_NAMES}" == "true" ]]; then
+				username="$(shorten "${username}" 1)"
 			fi
 			prompt="${prompt} ${BLUE}${username}${RESET}"
 		fi
 
-		if [[ "$SHOW_USER" == "true" && "$SHOW_HOST" == "true" ]]; then
+		if [[ "${SHOW_USER}" == "true" && "${SHOW_HOST}" == "true" ]]; then
 			prompt="${prompt}${GREEN}@${RESET}"
 		fi
 
-		if [[ "$SHOW_HOST" == "true" ]]; then
+		if [[ "${SHOW_HOST}" == "true" ]]; then
 			local hostname
 			hostname="$(get_hostname)"
-			if [[ "$SHORTEN_NAMES" == "true" ]]; then
-				hostname="$(shorten "$hostname" 1)"
+			if [[ "${SHORTEN_NAMES}" == "true" ]]; then
+				hostname="$(shorten "${hostname}" 1)"
 			fi
 			prompt="${prompt}${BLUE}${hostname}${RESET}"
 		fi
 	fi
 
 	# git branch (check on pwd change or cache expiry) - only if enabled
-	if [[ "$GIT_PROMPT_ENABLED" == "true" ]]; then
+	if [[ "${GIT_PROMPT_ENABLED}" == "true" ]]; then
 		local git_info
-		if [[ "$pwd_changed" == "true" || "$cache_expired" == "true" ]]; then
+		if [[ "${pwd_changed}" == "true" || "${cache_expired}" == "true" ]]; then
 			git_info="$(git_branch)"
-			_prompt_git_cache="$git_info"
+			_prompt_git_cache="${git_info}"
 		else
-			git_info="$_prompt_git_cache"
+			git_info="${_prompt_git_cache}"
 		fi
 		prompt="${prompt}${GREEN}${git_info}${RESET}"
 	fi
 
 	# current working directory
-	prompt="${prompt} ${BLUE}${PWD/#$HOME/~}${RESET}"
+	prompt="${prompt} ${BLUE}${PWD/#${HOME}/~}${RESET}"
 
 	# configurable prompt symbol
 	prompt="${prompt} ${PROMPT_SYMBOL} "
 
 	# Update cache
-	_prompt_cache="$prompt"
-	_prompt_cache_time="$current_time"
-	_prompt_pwd_cache="$current_pwd"
+	_prompt_cache="${prompt}"
+	_prompt_cache_time="${current_time}"
+	_prompt_pwd_cache="${current_pwd}"
 
-	echo -e "$prompt"
+	echo -e "${prompt}"
 }
 
 # Set the prompt

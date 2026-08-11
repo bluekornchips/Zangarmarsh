@@ -63,7 +63,7 @@ The plugin follows this repository's GPL-3.0-only license.
 | `shell.mdc`      | Shared shell quoting, status, and destructive-path rules   |
 | `bash.mdc`       | Bash 3.2, locals, source guards, arrays, and Bats          |
 | `zsh.mdc`        | Zsh 5 profile and Zsh-owned module rules                   |
-| `python.mdc`     | Python typing, errors, imports, tests, and tooling         |
+| `python.mdc`     | User-reference Python standards; does not authorize agents |
 | `lua.mdc`        | Lua and WoW addon guidance                                 |
 | `javascript.mdc` | JavaScript modules, async work, errors, and tests          |
 | `typescript.mdc` | TypeScript typing, modules, async work, errors, and tests  |

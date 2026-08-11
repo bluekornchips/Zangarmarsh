@@ -83,9 +83,7 @@ mock_command_installed() {
 mock_command_not_installed() {
 	local cmd_name="$1"
 	command() {
-		if [[ "$1" == "-v" ]] && [[ "$2" == "${cmd_name}" ]]; then
-			return 1
-		fi
+		[[ "$1" == "-v" ]] && [[ "$2" == "${cmd_name}" ]] && return 1
 		builtin command "$@"
 	}
 	export -f command

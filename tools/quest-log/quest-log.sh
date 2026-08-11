@@ -176,7 +176,7 @@ run_quest_log() {
 	}
 
 	while [[ $# -gt 0 ]]; do
-		case $1 in
+		case "$1" in
 		-h | --help)
 			usage
 			return 0
@@ -223,7 +223,7 @@ run_quest_log() {
 		echo "quest-log: complete"
 	fi
 
-	return ${summary_exit_code}
+	return "${summary_exit_code}"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then

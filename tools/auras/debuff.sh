@@ -25,14 +25,10 @@ remove_application_bin_link() {
 	fi
 
 	local link_path
-	if ! link_path="$(bin_link_path "${app_stem}")"; then
-		return 1
-	fi
+	link_path="$(bin_link_path "${app_stem}")" || return 1
 
 	if [[ ! -L "${link_path}" ]]; then
-		if [[ ! -e "${link_path}" ]]; then
-			return 0
-		fi
+		[[ ! -e "${link_path}" ]] && return 0
 
 		echo "remove_application_bin_link:: refusing to remove unmanaged bin path: ${link_path}" >&2
 		return 1
@@ -75,19 +71,13 @@ debuff_appimage() {
 		return 1
 	fi
 
-	if ! validate_app_name_segment "${app_stem}" "debuff_appimage"; then
-		return 1
-	fi
+	validate_app_name_segment "${app_stem}" "debuff_appimage" || return 1
 
 	local desktop_path
-	if ! desktop_path="$(desktop_path_for_stem "${app_stem}")"; then
-		return 1
-	fi
+	desktop_path="$(desktop_path_for_stem "${app_stem}")" || return 1
 
 	local apps_root
-	if ! apps_root="$(applications_dir)"; then
-		return 1
-	fi
+	apps_root="$(applications_dir)" || return 1
 
 	if [[ ! -f "${desktop_path}" ]]; then
 		echo "debuff_appimage:: no desktop file: ${desktop_path}" >&2
@@ -100,18 +90,14 @@ debuff_appimage() {
 	fi
 
 	local exec_target
-	if ! exec_target="$(desktop_entry_exec_path "${desktop_path}")"; then
-		return 1
-	fi
+	exec_target="$(desktop_entry_exec_path "${desktop_path}")" || return 1
 
 	if ! rm -f "${desktop_path}"; then
 		echo "debuff_appimage:: could not remove ${desktop_path}" >&2
 		return 1
 	fi
 
-	if ! remove_application_bin_link "${app_stem}" "${exec_target}"; then
-		return 1
-	fi
+	remove_application_bin_link "${app_stem}" "${exec_target}" || return 1
 
 	echo "debuff_appimage:: removed ${apps_root}/${app_stem}.desktop"
 

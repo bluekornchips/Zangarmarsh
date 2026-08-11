@@ -131,9 +131,7 @@ check_is_installed() {
 		return 1
 	fi
 
-	if command -v "${cmd_name}" >/dev/null 2>&1; then
-		return 0
-	fi
+	command -v "${cmd_name}" >/dev/null 2>&1 && return 0
 
 	return 1
 }
@@ -346,9 +344,7 @@ run_talent_calculator() {
 
 	report_missing_package_tools
 
-	if ! install_other_tools; then
-		return 1
-	fi
+	install_other_tools || return 1
 
 	echo "run_talent_calculator:: Installation complete"
 	return 0
