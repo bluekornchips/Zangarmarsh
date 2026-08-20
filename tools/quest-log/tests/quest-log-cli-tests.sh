@@ -320,7 +320,7 @@ mock_git_not_in_repo() {
 	run run_quest_log
 	[[ "$status" -eq 0 ]]
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc" ]]
-	[[ -f "${QUEST_LOG_PLUGIN_DIR}/skills/quest-review/SKILL.md" ]]
+	[[ -f "${QUEST_LOG_PLUGIN_DIR}/skills/blue-review/SKILL.md" ]]
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/.cursor-plugin/plugin.json" ]]
 	[[ ! -e "$TEST_TEMP_DIR/.vscode" ]]
 	[[ -f "${HOME}/.config/Cursor/User/settings.json" ]]
@@ -368,7 +368,7 @@ mock_git_not_in_repo() {
 		[[ -f "${tracked_plugin}/rules/${rule}.mdc" ]]
 	done
 	local skill
-	for skill in quest-author quest-review quest-bash-review quest-lua-review quest-typescript-review quest-python-project-setup; do
+	for skill in blue-author blue-review blue-bash-review blue-lua-review blue-typescript-review blue-python-project-setup; do
 		[[ -f "${tracked_plugin}/skills/${skill}/SKILL.md" ]]
 	done
 	[[ ! -e "${tracked_plugin}/MCP.md" ]]
@@ -377,8 +377,8 @@ mock_git_not_in_repo() {
 @test 'tracked plugin:: install replaces a live tree with the declared assets' {
 	local tracked_plugin="${ZANGARMARSH_ROOT}/tools/quest-log/plugin"
 
-	mkdir -p "${QUEST_LOG_PLUGIN_DIR}/skills/quest-retired" "${QUEST_LOG_PLUGIN_DIR}/rules"
-	echo "stale" >"${QUEST_LOG_PLUGIN_DIR}/skills/quest-retired/SKILL.md"
+	mkdir -p "${QUEST_LOG_PLUGIN_DIR}/skills/blue-retired" "${QUEST_LOG_PLUGIN_DIR}/rules"
+	echo "stale" >"${QUEST_LOG_PLUGIN_DIR}/skills/blue-retired/SKILL.md"
 	echo "stale" >"${QUEST_LOG_PLUGIN_DIR}/rules/extra.mdc"
 
 	run install_quest_plugin "${tracked_plugin}"
@@ -386,9 +386,9 @@ mock_git_not_in_repo() {
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc" ]]
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/rules/bash.mdc" ]]
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/rules/zsh.mdc" ]]
-	[[ -f "${QUEST_LOG_PLUGIN_DIR}/skills/quest-author/SKILL.md" ]]
-	[[ -f "${QUEST_LOG_PLUGIN_DIR}/skills/quest-review/SKILL.md" ]]
+	[[ -f "${QUEST_LOG_PLUGIN_DIR}/skills/blue-author/SKILL.md" ]]
+	[[ -f "${QUEST_LOG_PLUGIN_DIR}/skills/blue-review/SKILL.md" ]]
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/.cursor-plugin/plugin.json" ]]
-	[[ ! -e "${QUEST_LOG_PLUGIN_DIR}/skills/quest-retired" ]]
+	[[ ! -e "${QUEST_LOG_PLUGIN_DIR}/skills/blue-retired" ]]
 	[[ ! -f "${QUEST_LOG_PLUGIN_DIR}/rules/extra.mdc" ]]
 }

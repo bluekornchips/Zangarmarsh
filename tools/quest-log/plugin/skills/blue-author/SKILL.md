@@ -1,6 +1,6 @@
 ---
-name: quest-author
-description: Creates accurate pr.md and issue.md delivery documents from current code changes. Use when the user explicitly invokes quest-author for PR or issue documentation.
+name: blue-author
+description: Creates accurate pr.md and issue.md delivery documents from current code changes. Use when the user explicitly invokes blue-author for PR or issue documentation.
 disable-model-invocation: true
 ---
 

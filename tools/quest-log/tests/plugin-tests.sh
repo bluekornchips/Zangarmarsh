@@ -176,7 +176,7 @@ plugin_lib_test_setup() {
 	[[ "$status" -eq 0 ]]
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/.cursor-plugin/plugin.json" ]]
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc" ]]
-	[[ -f "${QUEST_LOG_PLUGIN_DIR}/skills/quest-review/SKILL.md" ]]
+	[[ -f "${QUEST_LOG_PLUGIN_DIR}/skills/blue-review/SKILL.md" ]]
 	cmp -s "${PLUGIN_SOURCE_DIR}/rules/always.mdc" "${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc"
 }
 
@@ -198,12 +198,12 @@ plugin_lib_test_setup() {
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/rules/stale.mdc" ]]
 
 	rm -f "${PLUGIN_SOURCE_DIR}/rules/stale.mdc"
-	rm -rf "${PLUGIN_SOURCE_DIR}/skills/quest-review"
+	rm -rf "${PLUGIN_SOURCE_DIR}/skills/blue-review"
 
 	run install_quest_plugin "${PLUGIN_SOURCE_DIR}"
 	[[ "$status" -eq 0 ]]
 	[[ ! -f "${QUEST_LOG_PLUGIN_DIR}/rules/stale.mdc" ]]
-	[[ ! -f "${QUEST_LOG_PLUGIN_DIR}/skills/quest-review/SKILL.md" ]]
+	[[ ! -f "${QUEST_LOG_PLUGIN_DIR}/skills/blue-review/SKILL.md" ]]
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc" ]]
 }
 

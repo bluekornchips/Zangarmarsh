@@ -50,7 +50,7 @@ questlog --dry-run /path/to/project
 plugin/
   .cursor-plugin/plugin.json   # plugin manifest
   rules/*.mdc                  # Cursor rules
-  skills/quest-*/SKILL.md      # quest-* skills
+  skills/blue-*/SKILL.md       # blue-* skills
 ```
 
 This tracked plugin is the canonical agent configuration for this repository.
@@ -70,14 +70,14 @@ The plugin follows this repository's GPL-3.0-only license.
 
 ## Skills
 
-| Skill                        | Role                                        |
-| ---------------------------- | ------------------------------------------- |
-| `quest-author`               | Current PR and issue delivery documents     |
-| `quest-bash-review`          | Bash repository review checklist            |
-| `quest-lua-review`           | Lua review checklist                        |
-| `quest-python-project-setup` | Python project bootstrap notes for the user |
-| `quest-review`               | Strict maintainability review               |
-| `quest-typescript-review`    | TypeScript review checklist                 |
+| Skill                       | Role                                        |
+| --------------------------- | ------------------------------------------- |
+| `blue-author`               | Current PR and issue delivery documents     |
+| `blue-bash-review`          | Bash repository review checklist            |
+| `blue-lua-review`           | Lua review checklist                        |
+| `blue-python-project-setup` | Python project bootstrap notes for the user |
+| `blue-review`               | Strict maintainability review               |
+| `blue-typescript-review`    | TypeScript review checklist                 |
 
 To add or change a rule or skill, edit the files under `plugin/` directly and
 run `questlog` to install the update.
@@ -118,7 +118,7 @@ without Bats.
 ## Verification Steps
 
 - [ ] `~/.cursor/plugins/local/quest-log/rules/always.mdc` exists after `questlog`
-- [ ] `~/.cursor/plugins/local/quest-log/skills/quest-review/SKILL.md` exists after `questlog`
+- [ ] `~/.cursor/plugins/local/quest-log/skills/blue-review/SKILL.md` exists after `questlog`
 - [ ] Running `questlog` again reports "No changes" for Cursor user settings
 - [ ] Cursor user settings match `tools/vscode/settings.json` after `questlog`
 - [ ] No project `.vscode/` files are created by `questlog`

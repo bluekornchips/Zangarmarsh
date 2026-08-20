@@ -1,5 +1,5 @@
 ---
-name: quest-python-project-setup
+name: blue-python-project-setup
 description: Python Project Setup
 disable-model-invocation: true
 ---

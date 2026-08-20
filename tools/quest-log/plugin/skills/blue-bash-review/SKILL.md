@@ -1,5 +1,5 @@
 ---
-name: quest-bash-review
+name: blue-bash-review
 description: Bash Repository Review Criteria
 disable-model-invocation: true
 ---

@@ -1,5 +1,5 @@
 ---
-name: quest-lua-review
+name: blue-lua-review
 description: Lua Repository Review Criteria
 disable-model-invocation: true
 ---
