@@ -10,7 +10,6 @@ alias bats="bats --verbose-run --timing"
 alias batso="bats --show-output-of-passing-tests"
 alias cbats="clear && bats"
 alias cbatso="clear && bats --show-output-of-passing-tests"
-alias shfmt="shfmt --ln=bats -w"
 
 # Development
 alias drun='docker run -it --rm --entrypoint /usr/bin/env bash'

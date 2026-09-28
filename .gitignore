@@ -40,8 +40,6 @@ temp_*
 /quest-log-test.*/
 /hearthstone-mock.*/
 /trilliax-test.*/
-/talent-calculator-test.*/
-/other-tools-test.*/
 
 # Backup files
 *.bak
