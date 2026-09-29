@@ -44,8 +44,8 @@ EOF
 # - 1 when ZANGARMARSH_ROOT is unset or sourcing fails
 _auras_load_lib() {
 	if [[ -z "${ZANGARMARSH_ROOT:-}" || ! -f "${ZANGARMARSH_ROOT}/zangarmarsh.sh" ]]; then
-		source "${_AURAS_DIR}/../lib/root.sh" || return 1
-		ensure_zangarmarsh_root "${_AURAS_DIR}" || return 1
+		source "${_AURAS_DIR}/../lib/repo.sh" || return 1
+		ensure_zangarmarsh_repo "${_AURAS_DIR}" || return 1
 	fi
 
 	source "${ZANGARMARSH_ROOT}/tools/auras/lib/auras.sh" || return 1

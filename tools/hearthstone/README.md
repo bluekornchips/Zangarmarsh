@@ -7,9 +7,9 @@ install the local quest-log plugin, and overwrite host Cursor user settings from
 
 ## Requirements
 
-- `ZANGARMARSH_ROOT` must be set, normally by sourcing `zangarmarsh.sh`
+- The script resolves `ZANGARMARSH_ROOT` from its location when the variable is unset
 - External commands used by the script or your shell: `questlog` is normally
-  provided by Zangarmarsh aliases, see [profile/aliases.sh](../../profile/aliases.sh).
+  provided by Zangarmarsh functions, see [profile/aliases.sh](../../profile/aliases.sh).
   `trilliax` is invoked only when `--force` is set.
 
 ## Operations order
@@ -17,7 +17,7 @@ install the local quest-log plugin, and overwrite host Cursor user settings from
 1. `build_deck` — ensure `jq` is on `PATH`; this step does not install packages
 2. `trilliax --all "$ZANGARMARSH_ROOT"` — **only when `--force`** — cleanup the
    verified Zangarmarsh root before the sync
-3. `questlog "$ZANGARMARSH_ROOT"` — install the quest-log plugin under
+3. `questlog` — install the quest-log plugin under
    `~/.cursor/plugins/local/quest-log` and overwrite host Cursor user settings
    from `tools/vscode/settings.json` via `tools/quest-log/quest-log.sh`
 
