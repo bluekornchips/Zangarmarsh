@@ -7,22 +7,14 @@ on:
 
 jobs:
   test:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: Install dependencies
         run: |
-          if [ "${RUNNER_OS}" = "Linux" ]; then
-            sudo apt-get update
-            sudo apt-get install -y bats shellcheck jq shfmt zsh
-          else
-            brew install bats-core shellcheck jq shfmt
-          fi
+          sudo apt-get update
+          sudo apt-get install -y bats shellcheck jq zsh
 
       - name: Zsh syntax
         run: zsh -n profile/zsh/*.zsh

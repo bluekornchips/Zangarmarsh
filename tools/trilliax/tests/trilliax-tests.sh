@@ -13,7 +13,7 @@ setup_file() {
 
 	SCRIPT="${ZANGARMARSH_ROOT}/tools/trilliax/trilliax.sh"
 	if [[ ! -f "${SCRIPT}" ]]; then
-		echo "Script not found: ${SCRIPT}" >&2
+		echo "setup_file:: Script not found: ${SCRIPT}" >&2
 		return 1
 	fi
 	export SCRIPT
@@ -122,7 +122,7 @@ teardown_file() {
 	echo "$output" | grep -q "Would remove: $test_dir/level1/level2/level3" && false || true
 }
 
-@test "fs target:: cleans empty directories with run_trilliax function" {
+@test "run_trilliax:: cleans empty directories with fs target" {
 	local test_dir="$TEST_CLEANUP_DIR"
 	mkdir -p "$test_dir/empty_to_clean"
 
@@ -131,7 +131,7 @@ teardown_file() {
 	[[ ! -d "$test_dir/empty_to_clean" ]]
 }
 
-@test "fs target:: dry-run shows empty directories" {
+@test "run_trilliax:: dry-run shows empty directories for fs target" {
 	local test_dir="$TEST_CLEANUP_DIR"
 	mkdir -p "$test_dir/empty_to_preview"
 
@@ -187,13 +187,13 @@ teardown_file() {
 }
 
 @test "main:: rejects DRY_RUN environment variable without targets" {
-	run bash -c "DRY_RUN=true $SCRIPT $TEST_CLEANUP_DIR"
+	run bash -c "DRY_RUN=true \"${SCRIPT}\" \"${TEST_CLEANUP_DIR}\""
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "validate_targets:: No targets specified"
 }
 
 @test "main:: rejects DRY_RUN override without targets" {
-	run bash -c "DRY_RUN=false $SCRIPT --dry-run $TEST_CLEANUP_DIR"
+	run bash -c "DRY_RUN=false \"${SCRIPT}\" --dry-run \"${TEST_CLEANUP_DIR}\""
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "validate_targets:: No targets specified"
 }
@@ -330,7 +330,7 @@ teardown_file() {
 @test "run_trilliax:: fails when sourced without targets" {
 	run run_trilliax "$TEST_CLEANUP_DIR"
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "run_trilliax:: No targets selected for cleanup."
+	echo "$output" | grep -q "validate_targets:: No targets specified"
 }
 
 @test "run_trilliax:: handles non-existent directory" {
@@ -341,9 +341,10 @@ teardown_file() {
 
 @test "run_trilliax:: fails when no directory argument provided" {
 	cd "$TEST_CLEANUP_DIR" || return 1
+
 	run run_trilliax
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "run_trilliax:: No targets selected for cleanup."
+	echo "$output" | grep -q "validate_targets:: No targets specified"
 }
 
 @test "run_trilliax:: fails with relative path without targets" {
@@ -353,7 +354,7 @@ teardown_file() {
 
 	run run_trilliax "${ZANGARMARSH_ROOT}/${relative_path}"
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "run_trilliax:: No targets selected for cleanup."
+	echo "$output" | grep -q "validate_targets:: No targets specified"
 }
 
 ########################################################
@@ -472,7 +473,7 @@ teardown_file() {
 
 	DRY_RUN=true run run_trilliax "$test_dir"
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "run_trilliax:: No targets selected for cleanup."
+	echo "$output" | grep -q "validate_targets:: No targets specified"
 }
 
 ########################################################
@@ -483,7 +484,7 @@ teardown_file() {
 
 	run run_trilliax "$test_dir"
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "run_trilliax:: No targets selected for cleanup."
+	echo "$output" | grep -q "validate_targets:: No targets specified"
 }
 
 @test "run_trilliax:: cleanup fails to preserve files without targets" {
@@ -496,7 +497,7 @@ teardown_file() {
 
 	run run_trilliax "$test_dir"
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "run_trilliax:: No targets selected for cleanup."
+	echo "$output" | grep -q "validate_targets:: No targets specified"
 }
 
 @test "run_trilliax:: cleanup fails to preserve .env and .nvmrc without targets" {
@@ -507,7 +508,7 @@ teardown_file() {
 
 	run run_trilliax "$test_dir"
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "run_trilliax:: No targets selected for cleanup."
+	echo "$output" | grep -q "validate_targets:: No targets specified"
 }
 
 ########################################################
@@ -519,7 +520,7 @@ teardown_file() {
 
 	run run_trilliax "$empty_dir"
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "run_trilliax:: No targets selected for cleanup."
+	echo "$output" | grep -q "validate_targets:: No targets specified"
 }
 
 @test "run_trilliax:: handles directory with spaces fails without targets" {
@@ -530,7 +531,7 @@ teardown_file() {
 
 	run run_trilliax "$spaced_dir"
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "run_trilliax:: No targets selected for cleanup."
+	echo "$output" | grep -q "validate_targets:: No targets specified"
 }
 
 @test "run_trilliax:: handles nested directory fails without targets" {
@@ -539,5 +540,35 @@ teardown_file() {
 
 	run run_trilliax "$TEST_DIR/nested"
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "run_trilliax:: No targets selected for cleanup."
+	echo "$output" | grep -q "validate_targets:: No targets specified"
+}
+
+@test "execute_clean:: honors MAX_DEPTH" {
+	local test_dir="$TEST_CLEANUP_DIR"
+	mkdir -p "$test_dir/.cursor"
+	mkdir -p "$test_dir/a/.cursor"
+	mkdir -p "$test_dir/a/b/.cursor"
+
+	MAX_DEPTH=2
+	export MAX_DEPTH
+
+	DRY_RUN=true run execute_clean "clean_cursor" "$test_dir" -type d -name ".cursor"
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Would remove: $test_dir/.cursor"
+	echo "$output" | grep -q "Would remove: $test_dir/a/.cursor"
+	! echo "$output" | grep -q "Would remove: $test_dir/a/b/.cursor"
+}
+
+@test "execute_clean:: returns 1 when rm fails" {
+	local test_dir="$TEST_CLEANUP_DIR"
+	mkdir -p "$test_dir/empty_fail"
+
+	rm() {
+		echo "rm mocked failure" >&2
+		return 1
+	}
+
+	DRY_RUN=false run execute_clean "clean_fs" "$test_dir" -depth -type d -empty
+	[[ "$status" -eq 1 ]]
+	echo "$output" | grep -q "Failed to remove"
 }

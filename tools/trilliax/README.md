@@ -74,6 +74,7 @@ source /path/to/zangarmarsh/zangarmarsh.sh
 ## Environment Variables
 
 - `DRY_RUN=true`: Enable dry-run mode
+- `MAX_DEPTH`: Maximum `find` depth, default `10`
 
 ## Safety Features
 
