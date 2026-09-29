@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 #
-# Tests for determine_target_directory, print_summary, and run_quest_log
+# Tests for print_summary, apply_quest_log, and run_quest_log
 #
 
 setup_file() {
@@ -63,7 +63,7 @@ quest_log_test_setup() {
 	SCRIPT_DIR="${QUEST_LOG_ROOT}"
 	export SCRIPT_DIR
 	export QUEST_LOG_ROOT
-	source "${ZANGARMARSH_ROOT}/tools/quest-log/lib/plugin.sh"
+	source "${ZANGARMARSH_ROOT}/tools/quest-log/lib/apply.sh"
 	trap - EXIT ERR
 	set +e
 
@@ -76,78 +76,9 @@ quest_log_test_setup() {
 	STATS_UPDATED=0
 	STATS_UNCHANGED=0
 	STATS_ERRORS=0
+	PLUGIN_ACTION=""
 
 	return 0
-}
-
-mock_git_in_repo() {
-	git() {
-		case "$1" in
-		"rev-parse")
-			if [[ "$2" == "--show-toplevel" ]]; then
-				echo "$TEST_TEMP_DIR"
-				return 0
-			fi
-			;;
-		esac
-		command git "$@"
-	}
-	export -f git
-
-	return 0
-}
-
-mock_git_not_in_repo() {
-	git() {
-		case "$1" in
-		"rev-parse")
-			if [[ "$2" == "--show-toplevel" ]]; then
-				echo "fatal: not a git repository" >&2
-				return 128
-			fi
-			;;
-		esac
-		command git "$@"
-	}
-	export -f git
-
-	return 0
-}
-
-########################################################
-# determine_target_directory
-########################################################
-
-@test 'determine_target_directory:: uses git root when in git repo' {
-	mock_git_in_repo
-	TARGET_DIR="/some/other/path"
-	export TARGET_DIR
-
-	determine_target_directory
-	[[ "$TARGET_DIR" == "$TEST_TEMP_DIR" ]]
-
-	run determine_target_directory
-	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "git_root: ${TEST_TEMP_DIR}"
-}
-
-@test 'determine_target_directory:: uses current directory when not in git repo' {
-	mock_git_not_in_repo
-	TARGET_DIR="$TEST_TEMP_DIR"
-
-	run determine_target_directory
-	[[ "$status" -eq 0 ]]
-	[[ "$TARGET_DIR" == "$TEST_TEMP_DIR" ]]
-	echo "$output" | grep -q "git_root: none"
-}
-
-@test 'determine_target_directory:: uses PWD when TARGET_DIR not set and not in git repo' {
-	mock_git_not_in_repo
-	unset TARGET_DIR
-
-	run determine_target_directory
-	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "git_root: none"
 }
 
 ########################################################
@@ -159,10 +90,12 @@ mock_git_not_in_repo() {
 	STATS_UPDATED=3
 	STATS_UNCHANGED=1
 	STATS_ERRORS=0
+	PLUGIN_ACTION="installed"
 
 	run print_summary
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "quest-log summary"
+	echo "$output" | grep -q "plugin: installed"
 	echo "$output" | grep -q "cursor created: 2"
 	echo "$output" | grep -q "cursor updated: 3"
 	echo "$output" | grep -q "cursor unchanged: 1"
@@ -197,8 +130,6 @@ mock_git_not_in_repo() {
 ########################################################
 
 @test 'run_quest_log:: overwrites Cursor user settings from template' {
-	mock_git_in_repo
-
 	mkdir -p "${HOME}/.config/Cursor/User"
 	printf '%s\n' '{
     "window.autoDetectColorScheme": true,
@@ -208,15 +139,13 @@ mock_git_not_in_repo() {
 
 	run run_quest_log
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "sync_cursor_user_settings: writing"
+	echo "$output" | grep -q "sync_cursor_user_settings:: writing"
 	jq -e '.["workbench.colorTheme"] == "Default Dark+"' "${HOME}/.config/Cursor/User/settings.json"
 	jq -e '.["editor.formatOnSave"] == true' "${HOME}/.config/Cursor/User/settings.json"
 	jq -e 'has("git.suggestSmartCommit") | not' "${HOME}/.config/Cursor/User/settings.json"
-	[[ ! -e "${TEST_TEMP_DIR}/.vscode" ]]
 }
 
 @test 'run_quest_log:: writes macOS Application Support settings path' {
-	mock_git_in_repo
 	uname() {
 		[[ "$1" == "-s" ]] && {
 			echo "Darwin"
@@ -233,21 +162,13 @@ mock_git_not_in_repo() {
 	[[ ! -e "${HOME}/.config/Cursor/User/settings.json" ]]
 }
 
-@test 'run_quest_log:: fails when target directory does not exist' {
-	TARGET_DIR="/tmp/does-not-exist"
-
-	run run_quest_log
-	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "run_quest_log:: Failed to change to target directory"
-}
-
 @test 'run_quest_log:: fails when plugin source is missing' {
 	PLUGIN_SOURCE_DIR="/tmp/does-not-exist-plugin"
 	export PLUGIN_SOURCE_DIR
 
 	run run_quest_log
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "run_quest_log:: plugin source not found"
+	echo "$output" | grep -q "plugin source not found"
 }
 
 @test 'run_quest_log:: displays help message' {
@@ -263,66 +184,34 @@ mock_git_not_in_repo() {
 	echo "$output" | grep -q "run_quest_log:: Unknown option"
 }
 
-@test 'run_quest_log:: uses git root when in git repository' {
-	mock_git_in_repo
-
-	run run_quest_log
-	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "git_root: ${TEST_TEMP_DIR}"
-}
-
-@test 'run_quest_log:: uses specified directory when not in git repository' {
-	mock_git_not_in_repo
-
-	run run_quest_log
-	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "git_root: none"
-}
-
-@test 'run_quest_log:: preserves an explicit target directory inside another git repository' {
-	local target_dir="${TEST_TEMP_DIR}/external-target"
-	mkdir -p "${target_dir}"
-	mock_git_in_repo
-
-	run run_quest_log "${target_dir}"
-	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "target_dir: ${target_dir}"
-	[[ ! -e "${target_dir}/.vscode" ]]
-	[[ ! -e "${TEST_TEMP_DIR}/.vscode" ]]
+@test 'run_quest_log:: rejects leftover directory arguments' {
+	run run_quest_log /tmp/some-project
+	[[ "$status" -eq 1 ]]
+	echo "$output" | grep -q "run_quest_log:: Unexpected argument"
 }
 
 @test 'run_quest_log:: dry-run does not write plugin or Cursor settings' {
-	local target_dir="${TEST_TEMP_DIR}/dry-run-target"
-	mkdir -p "${target_dir}"
-
-	run run_quest_log --dry-run "${target_dir}"
+	run run_quest_log --dry-run
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "would replace"
 	echo "$output" | grep -q "would overwrite"
 	[[ ! -e "${QUEST_LOG_PLUGIN_DIR}" ]]
-	[[ ! -e "${target_dir}/.vscode" ]]
 	[[ ! -e "${HOME}/.config/Cursor/User/settings.json" ]]
 }
 
 @test 'run_quest_log:: accepts the short dry-run flag' {
-	local target_dir="${TEST_TEMP_DIR}/short-dry-run-target"
-	mkdir -p "${target_dir}"
-
-	run run_quest_log -r "${target_dir}"
+	run run_quest_log -r
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "would replace"
 	[[ ! -e "${QUEST_LOG_PLUGIN_DIR}" ]]
 }
 
 @test 'run_quest_log:: installs plugin and overwrites host Cursor settings' {
-	mock_git_in_repo
-
 	run run_quest_log
 	[[ "$status" -eq 0 ]]
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc" ]]
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/skills/blue-review/SKILL.md" ]]
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/.cursor-plugin/plugin.json" ]]
-	[[ ! -e "$TEST_TEMP_DIR/.vscode" ]]
 	[[ -f "${HOME}/.config/Cursor/User/settings.json" ]]
 	jq -e '.["editor.formatOnSave"] == true' "${HOME}/.config/Cursor/User/settings.json"
 	jq -e --slurpfile t "${ZANGARMARSH_VSCODE_DIR}/settings.json" '. == $t[0]' "${HOME}/.config/Cursor/User/settings.json"
@@ -332,6 +221,7 @@ mock_git_not_in_repo() {
 	run run_quest_log
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "quest-log summary"
+	echo "$output" | grep -q "plugin: installed"
 	echo "$output" | grep -Eq 'cursor: no files synced|cursor total:'
 }
 
@@ -354,6 +244,29 @@ mock_git_not_in_repo() {
 	run run_quest_log -f
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "run_quest_log:: Unknown option"
+}
+
+@test 'apply_quest_log:: plugin-only skips Cursor settings' {
+	run apply_quest_log --plugin-only
+	[[ "$status" -eq 0 ]]
+	[[ -f "${QUEST_LOG_PLUGIN_DIR}/.cursor-plugin/plugin.json" ]]
+	[[ ! -e "${HOME}/.config/Cursor/User/settings.json" ]]
+}
+
+@test 'apply_quest_log:: restores plugin when settings sync fails' {
+	mkdir -p "${QUEST_LOG_PLUGIN_DIR}/rules"
+	echo "previous-plugin" >"${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc"
+
+	sync_cursor_user_settings() {
+		echo "sync_cursor_user_settings:: forced failure" >&2
+		return 1
+	}
+
+	run apply_quest_log
+	[[ "$status" -eq 1 ]]
+	[[ -f "${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc" ]]
+	grep -q "previous-plugin" "${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc"
+	[[ ! -e "${HOME}/.config/Cursor/User/settings.json" ]]
 }
 
 ########################################################
@@ -391,4 +304,10 @@ mock_git_not_in_repo() {
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/.cursor-plugin/plugin.json" ]]
 	[[ ! -e "${QUEST_LOG_PLUGIN_DIR}/skills/blue-retired" ]]
 	[[ ! -f "${QUEST_LOG_PLUGIN_DIR}/rules/extra.mdc" ]]
+}
+
+@test 'quest-log.sh:: --help works without a pre-set ZANGARMARSH_ROOT' {
+	run env -u ZANGARMARSH_ROOT HOME="${HOME}" PATH="${PATH}" bash "${SCRIPT}" --help
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Install the quest-log Cursor plugin"
 }
