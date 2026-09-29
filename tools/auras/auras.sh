@@ -37,18 +37,21 @@ EOF
 # Load shared Auras helpers after the repository root is known
 #
 # Side Effects:
-# - Sources tools/auras/lib/auras.sh
+# - Sources tools/auras/lib/auras.sh once per shell
 #
 # Returns:
 # - 0 on success
 # - 1 when ZANGARMARSH_ROOT is unset or sourcing fails
 _auras_load_lib() {
+	[[ -n "${_AURAS_LIBS_LOADED:-}" ]] && return 0
+
 	if [[ -z "${ZANGARMARSH_ROOT:-}" || ! -f "${ZANGARMARSH_ROOT}/zangarmarsh.sh" ]]; then
 		source "${_AURAS_DIR}/../lib/repo.sh" || return 1
 		ensure_zangarmarsh_repo "${_AURAS_DIR}" || return 1
 	fi
 
 	source "${ZANGARMARSH_ROOT}/tools/auras/lib/auras.sh" || return 1
+	_AURAS_LIBS_LOADED=1
 
 	return 0
 }
@@ -127,9 +130,8 @@ main() {
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
 	set -eo pipefail
 	umask 077
-	_auras_load_lib || exit 1
 	main "$@"
 	exit $?
 elif [[ -n "${ZANGARMARSH_ROOT:-}" ]]; then
-	source "${ZANGARMARSH_ROOT}/tools/auras/lib/auras.sh"
+	_auras_load_lib || return 1
 fi

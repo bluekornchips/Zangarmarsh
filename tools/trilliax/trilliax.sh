@@ -5,6 +5,7 @@
 #
 
 ENABLED_TARGETS=()
+ALL_TARGETS=(cursor python node fs)
 DEFAULT_MAX_DEPTH=10
 
 # Display usage information
@@ -68,11 +69,16 @@ EOF
 validate_targets() {
 	local targets_string="$1"
 	local all_flag="${2:-false}"
+	local available
+	available="$(
+		IFS=,
+		echo "${ALL_TARGETS[*]}"
+	)"
 
 	ENABLED_TARGETS=()
 
 	if [[ "${all_flag}" == "true" ]]; then
-		ENABLED_TARGETS=(cursor python node fs)
+		ENABLED_TARGETS=("${ALL_TARGETS[@]}")
 		return 0
 	fi
 
@@ -84,17 +90,22 @@ validate_targets() {
 	local requested_targets
 	IFS=',' read -ra requested_targets <<<"${targets_string}"
 	local target
+	local known
+	local matched
 	for target in "${requested_targets[@]}"; do
 		target=$(echo "${target}" | xargs)
-		case "${target}" in
-		cursor | python | node | fs)
-			ENABLED_TARGETS+=("${target}")
-			;;
-		*)
-			echo "validate_targets:: Invalid target '${target}'. Available targets: cursor,python,node,fs" >&2
+		matched=false
+		for known in "${ALL_TARGETS[@]}"; do
+			if [[ "${target}" == "${known}" ]]; then
+				ENABLED_TARGETS+=("${target}")
+				matched=true
+				break
+			fi
+		done
+		if [[ "${matched}" != true ]]; then
+			echo "validate_targets:: Invalid target '${target}'. Available targets: ${available}" >&2
 			return 1
-			;;
-		esac
+		fi
 	done
 
 	return 0
@@ -369,29 +380,18 @@ run_trilliax() {
 	popd >/dev/null
 	echo "run_trilliax:: Cleaning directory: ${target_dir}"
 
-	if [[ ${#ENABLED_TARGETS[@]} -eq 0 ]]; then
-		echo "run_trilliax:: No targets selected for cleanup." >&2
-		return 1
-	fi
-
 	echo "run_trilliax:: Filthy, filthy, FILTHY!"
 	local errors=0
 	local target
+	local clean_fn
 	for target in "${ENABLED_TARGETS[@]}"; do
-		case "${target}" in
-		cursor)
-			clean_cursor "${target_dir}" || errors=$((errors + 1))
-			;;
-		python)
-			clean_python "${target_dir}" || errors=$((errors + 1))
-			;;
-		node)
-			clean_node "${target_dir}" || errors=$((errors + 1))
-			;;
-		fs)
-			clean_fs "${target_dir}" || errors=$((errors + 1))
-			;;
-		esac
+		clean_fn="clean_${target}"
+		if ! declare -F "${clean_fn}" >/dev/null 2>&1; then
+			echo "run_trilliax:: missing cleaner for target '${target}'" >&2
+			errors=$((errors + 1))
+			continue
+		fi
+		"${clean_fn}" "${target_dir}" || errors=$((errors + 1))
 	done
 
 	echo "run_trilliax:: Please don't say such things! The master is back, and things need to be kept tidy."

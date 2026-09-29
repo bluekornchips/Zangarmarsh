@@ -153,7 +153,7 @@ EOF
 # Print a macOS-specific install hint when the host is macOS
 #
 # Reads environment:
-# - PLATFORM_OS, PLATFORM
+# - PLATFORM_OS, set by apply_platform_env in zangarmarsh.sh
 #
 # Side Effects:
 # - Writes a python.org hint to stderr on macOS
@@ -161,18 +161,9 @@ EOF
 # Returns:
 # - 0 always
 _penv_macos_hint() {
-	local os="${PLATFORM_OS:-}"
-	if [[ -z "${os}" ]]; then
-		case "${PLATFORM:-}" in
-		darwin*)
-			os="macos"
-			;;
-		esac
+	if [[ "${PLATFORM_OS:-}" == "macos" ]]; then
+		echo "penv:: Try installing Python from https://www.python.org/downloads/" >&2
 	fi
-	if [[ -z "${os}" && "$(uname -s 2>/dev/null)" == "Darwin" ]]; then
-		os="macos"
-	fi
-	[[ "${os}" == "macos" ]] && echo "penv:: Try installing Python from https://www.python.org/downloads/" >&2
 
 	return 0
 }

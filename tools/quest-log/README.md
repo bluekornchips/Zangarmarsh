@@ -32,7 +32,8 @@ questlog
 - Replaces `~/.cursor/plugins/local/quest-log` with a fresh copy of
   `tools/quest-log/plugin/` on every run, so stale files never survive
 - Overwrites host Cursor `User/settings.json` from `tools/vscode/settings.json`
-- Rolls plugin and settings back together when a later write fails
+- In full apply mode, restores a successful plugin install when settings sync fails
+  afterward. Plugin install itself stays self-atomic.
 
 ## Usage
 

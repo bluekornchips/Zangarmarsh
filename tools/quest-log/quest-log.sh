@@ -181,8 +181,6 @@ run_quest_log() {
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
 	set -eo pipefail
 	umask 077
-	source "${_QUEST_LOG_DIR}/../lib/repo.sh"
-	ensure_zangarmarsh_repo "${_QUEST_LOG_DIR}"
 	run_quest_log "$@"
 	exit $?
 fi

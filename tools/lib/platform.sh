@@ -84,11 +84,10 @@ platform_os_from_id() {
 #
 # Reads environment:
 # - PLATFORM, reused when already set
-# - PLATFORM_OS, reused when already set
 #
 # Side Effects:
 # - Exports PLATFORM as a canonical id when unset
-# - Exports PLATFORM_OS as macos or linux when unset
+# - Exports PLATFORM_OS as the macos or linux projection of PLATFORM
 #
 # Returns:
 # - 0 on success
@@ -99,9 +98,7 @@ apply_platform_env() {
 	fi
 	export PLATFORM
 
-	if [[ -z "${PLATFORM_OS:-}" ]]; then
-		PLATFORM_OS="$(platform_os_from_id "${PLATFORM}")" || return 1
-	fi
+	PLATFORM_OS="$(platform_os_from_id "${PLATFORM}")" || return 1
 	export PLATFORM_OS
 
 	return 0

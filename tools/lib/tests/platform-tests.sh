@@ -50,12 +50,12 @@ setup() {
 	[[ "${PLATFORM_OS}" == "macos" || "${PLATFORM_OS}" == "linux" ]]
 }
 
-@test "apply_platform_env:: preserves an existing PLATFORM_OS" {
+@test "apply_platform_env:: derives PLATFORM_OS from PLATFORM even when sticky" {
 	PLATFORM="linux-amd64"
 	PLATFORM_OS="macos"
 	export PLATFORM
 	export PLATFORM_OS
 
 	apply_platform_env
-	[[ "${PLATFORM_OS}" == "macos" ]]
+	[[ "${PLATFORM_OS}" == "linux" ]]
 }

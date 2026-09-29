@@ -12,9 +12,9 @@ else
 fi
 
 # Always resolve from this file's location. An inherited ZANGARMARSH_ROOT from
-# another tree would make a sourced copy keep the wrong root.
+# another tree would make a sourced copy keep the wrong root. Do not call
+# ensure_zangarmarsh_repo here; that helper reuses a valid inherited root.
 LOADER_DIR="$(cd "$(dirname "${SCRIPT_PATH}")" && pwd)"
-source "${LOADER_DIR}/tools/lib/repo.sh"
 ZANGARMARSH_ROOT="${LOADER_DIR}"
 export ZANGARMARSH_ROOT
 

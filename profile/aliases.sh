@@ -29,22 +29,45 @@ alias tfa='terraform apply temp.plan'
 # Custom Functions and Tools
 ########################################################
 # Zangarmarsh Tools as functions so short names work in non-interactive shells
+
+# Run one tool script under ZANGARMARSH_ROOT
+#
+# Inputs:
+# - $1 relpath, path under the repository root
+# - $@ forwarded to the tool script
+#
+# Returns:
+# - Tool exit status
+# - 1 when ZANGARMARSH_ROOT is unset
+_zangarmarsh_tool() {
+	local relpath="${1:-}"
+
+	if [[ -z "${ZANGARMARSH_ROOT:-}" ]]; then
+		echo "_zangarmarsh_tool:: ZANGARMARSH_ROOT is required" >&2
+		return 1
+	fi
+
+	if [[ -z "${relpath}" ]]; then
+		echo "_zangarmarsh_tool:: tool path is required" >&2
+		return 1
+	fi
+
+	shift
+	"${ZANGARMARSH_ROOT}/${relpath}" "$@"
+}
+
 questlog() {
-	"${ZANGARMARSH_ROOT}/tools/quest-log/quest-log.sh" "$@"
+	_zangarmarsh_tool tools/quest-log/quest-log.sh "$@"
 }
 
 trilliax() {
-	"${ZANGARMARSH_ROOT}/tools/trilliax/trilliax.sh" "$@"
+	_zangarmarsh_tool tools/trilliax/trilliax.sh "$@"
 }
 
 hearthstone() {
-	"${ZANGARMARSH_ROOT}/tools/hearthstone/hearthstone.sh" "$@"
-}
-
-talents() {
-	"${ZANGARMARSH_ROOT}/tools/talent-calculator/talent-calculator.sh" "$@"
+	_zangarmarsh_tool tools/hearthstone/hearthstone.sh "$@"
 }
 
 auras() {
-	"${ZANGARMARSH_ROOT}/tools/auras/auras.sh" "$@"
+	_zangarmarsh_tool tools/auras/auras.sh "$@"
 }
