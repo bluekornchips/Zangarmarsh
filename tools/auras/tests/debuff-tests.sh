@@ -23,8 +23,6 @@ setup_file() {
 setup() {
 	source "$(dirname "${BATS_TEST_FILENAME}")/fixtures.sh"
 	source "${SCRIPT}"
-	source "${ZANGARMARSH_ROOT}/tools/auras/buff.sh"
-	source "${ZANGARMARSH_ROOT}/tools/auras/debuff.sh"
 	auras_home_setup
 
 	return 0

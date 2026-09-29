@@ -52,9 +52,9 @@ ensure_bin_link_writable() {
 
 	if [[ -L "${link_path}" ]]; then
 		local current_target
-		current_target="$(readlink -f "${link_path}" 2>/dev/null || true)"
+		current_target="$(resolve_symlink_path "${link_path}" "ensure_bin_link_writable" 2>/dev/null || true)"
 
-		[[ "${current_target}" == "${expected_target}" ]] && return 0
+		[[ -n "${current_target}" && "${current_target}" == "${expected_target}" ]] && return 0
 	fi
 
 	auras_manages_app_stem "${app_stem}" && return 0

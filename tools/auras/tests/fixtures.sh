@@ -4,6 +4,12 @@
 # Requires GIT_ROOT / ZANGARMARSH_ROOT from the calling setup_file.
 #
 
+auras_source_library() {
+	source "${ZANGARMARSH_ROOT}/tools/auras/lib/auras.sh"
+
+	return 0
+}
+
 auras_home_setup() {
 	local bats_tmp="${BATS_TMPDIR:-/tmp}"
 

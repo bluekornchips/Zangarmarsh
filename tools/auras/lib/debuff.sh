@@ -35,7 +35,7 @@ remove_application_bin_link() {
 	fi
 
 	local current_target
-	current_target="$(readlink -f "${link_path}" 2>/dev/null || true)"
+	current_target="$(resolve_symlink_path "${link_path}" "remove_application_bin_link")" || return 1
 
 	if [[ "${current_target}" != "${expected_target}" ]]; then
 		echo "remove_application_bin_link:: refusing to remove bin symlink with unexpected target: ${link_path}" >&2

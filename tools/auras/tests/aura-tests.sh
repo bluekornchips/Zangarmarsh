@@ -23,8 +23,6 @@ setup_file() {
 setup() {
 	source "$(dirname "${BATS_TEST_FILENAME}")/fixtures.sh"
 	source "${SCRIPT}"
-	source "${ZANGARMARSH_ROOT}/tools/auras/buff.sh"
-	source "${ZANGARMARSH_ROOT}/tools/auras/debuff.sh"
 	auras_home_setup
 
 	return 0
@@ -154,6 +152,34 @@ teardown_file() {
 }
 
 ########################################################
+# resolve_symlink_path
+########################################################
+@test "resolve_symlink_path:: resolves absolute symlink targets without GNU readlink -f" {
+	local appdir="${AURAS_TEST_HOME}/apps"
+	make_appimage "${appdir}" "demoapp.AppImage"
+	local appimage="${appdir}/demoapp.AppImage"
+	local link_path="${AURAS_TEST_HOME}/demoapp-link"
+	ln -sf "${appimage}" "${link_path}"
+
+	run resolve_symlink_path "${link_path}"
+	[[ "$status" -eq 0 ]]
+	[[ "$output" == "${appimage}" ]]
+}
+
+@test "resolve_symlink_path:: resolves relative symlink targets" {
+	local appdir="${AURAS_TEST_HOME}/apps"
+	make_appimage "${appdir}" "demoapp.AppImage"
+	local appimage="${appdir}/demoapp.AppImage"
+	local link_dir="${AURAS_TEST_HOME}/bin"
+	mkdir -p "${link_dir}"
+	ln -sf "../apps/demoapp.AppImage" "${link_dir}/demoapp"
+
+	run resolve_symlink_path "${link_dir}/demoapp"
+	[[ "$status" -eq 0 ]]
+	[[ "$output" == "${appimage}" ]]
+}
+
+########################################################
 # desktop_entry_is_auras_managed
 ########################################################
 @test "desktop_entry_is_auras_managed:: accepts current marker and version" {
@@ -236,7 +262,7 @@ teardown_file() {
 	[[ "$status" -eq 0 ]]
 
 	[[ -f "${HOME}/.local/share/applications/demoapp.desktop" ]]
-	[[ "$(readlink -f "${HOME}/.local/bin/demoapp")" == "${appimage}" ]]
+	[[ "$(resolve_symlink_path "${HOME}/.local/bin/demoapp")" == "${appimage}" ]]
 
 	make_managed_desktop "curseforge" "${appimage}"
 	make_managed_bin_link "curseforge" "${appimage}"
