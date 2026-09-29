@@ -116,8 +116,8 @@ run_quest_log() {
 	local summary_exit_code
 
 	if [[ -z "${ZANGARMARSH_ROOT:-}" || ! -f "${ZANGARMARSH_ROOT}/zangarmarsh.sh" ]]; then
-		source "${_QUEST_LOG_DIR}/../lib/root.sh" || return 1
-		ensure_zangarmarsh_root "${_QUEST_LOG_DIR}" || return 1
+		source "${_QUEST_LOG_DIR}/../lib/repo.sh" || return 1
+		ensure_zangarmarsh_repo "${_QUEST_LOG_DIR}" || return 1
 	fi
 
 	_quest_log_load_libs || return 1
@@ -181,8 +181,8 @@ run_quest_log() {
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
 	set -eo pipefail
 	umask 077
-	source "${_QUEST_LOG_DIR}/../lib/root.sh"
-	ensure_zangarmarsh_root "${_QUEST_LOG_DIR}"
+	source "${_QUEST_LOG_DIR}/../lib/repo.sh"
+	ensure_zangarmarsh_repo "${_QUEST_LOG_DIR}"
 	run_quest_log "$@"
 	exit $?
 fi

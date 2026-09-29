@@ -21,11 +21,11 @@ Zangarmarsh is a zone in World of Warcraft overwhelmed by blue ambiance, dampnes
 
 After you `source zangarmarsh.sh`, both shells load shared files under `profile/`:
 
-- `aliases.sh` and `functions.sh`: tool aliases, `penv`, `nvm` lazy load when enabled, `gw`, and related helpers
+- `aliases.sh` and `functions.sh`: tool commands as functions, `penv`, `nvm` lazy load when enabled, `gw`, and related helpers
 
-Zsh also loads `profile/zsh/profile.zsh`, which pulls in Oh My Zsh, `profile/zsh/platform.zsh` for macOS and Linux PATH and aliases, and `profile/zsh/prompt.zsh` for the customizable prompt with Git branch and kubectl context.
+Both shells load `tools/lib/platform.sh` so `PLATFORM` and `PLATFORM_OS` are set. Zsh also loads `profile/zsh/profile.zsh`, which pulls in Oh My Zsh, Zsh-only PATH and display aliases, and `profile/zsh/prompt.zsh` for the customizable prompt with Git branch and kubectl context.
 
-Bash loads `profile/bash/profile.sh` for history and readline options only. It does not load the Zsh prompt or platform module.
+Bash loads `profile/bash/profile.sh` for history and readline options only. It does not load the Zsh prompt.
 
 ## Install
 
@@ -59,13 +59,12 @@ The quest-log Cursor plugin lives under `tools/quest-log/plugin/` as tracked fil
 source zangarmarsh.sh
 questlog
 
-questlog --dry-run /path/to/project
+questlog --dry-run
 ```
 
 ## Notes on destructive tools
 
 - Trilliax and Hearthstone `--force` can delete generated trees and caches
-- Talent Calculator `--spec` may run remote upstream installers for script-managed tools such as Bun and Helm
 
 ## Configuration
 
@@ -99,28 +98,29 @@ These apply when `profile/zsh/prompt.zsh` runs:
 
 ## Features
 
-| Feature                      | Bash | Zsh |
-| ---------------------------- | ---- | --- |
-| Shared aliases and tools     | Yes  | Yes |
-| Git branch in prompt         | No   | Yes |
-| Kubernetes context in prompt | No   | Yes |
-| Platform PATH setup          | No   | Yes |
-| Python venv helpers          | Yes  | Yes |
-| Node.js via NVM              | Yes  | Yes |
-| Oh My Zsh integration        | No   | Yes |
-| Basic completion             | No   | Yes |
+| Feature                       | Bash | Zsh |
+| ----------------------------- | ---- | --- |
+| Shared aliases and tools      | Yes  | Yes |
+| Git branch in prompt          | No   | Yes |
+| Kubernetes context in prompt  | No   | Yes |
+| Platform PATH setup           | No   | Yes |
+| Shared PLATFORM / PLATFORM_OS | Yes  | Yes |
+| Python venv helpers           | Yes  | Yes |
+| Node.js via NVM               | Yes  | Yes |
+| Oh My Zsh integration         | No   | Yes |
+| Basic completion              | No   | Yes |
 
 ## Tools
 
-After sourcing, aliases map to scripts under `tools/`:
+After sourcing, functions map to scripts under `tools/` and work in interactive and non-interactive shells. Each script can also run standalone and resolve `ZANGARMARSH_ROOT` from its location.
 
-| Alias         | Tool              | Role                                                                  |
-| ------------- | ----------------- | --------------------------------------------------------------------- |
-| `questlog`    | Quest Log         | Install plugin; overwrite host Cursor user settings                   |
-| `trilliax`    | Trilliax          | Cleanup for caches and artifacts                                      |
-| `talents`     | Talent Calculator | Check workstation CLIs; install script-managed tools with `--spec`    |
-| `hearthstone` | Hearthstone       | Sync VS Code settings and quest log; optional Trilliax with `--force` |
-| `auras`       | Auras             | AppImage `.desktop` launchers and `~/.local/bin` commands             |
+| Command       | Tool              | Role                                                               |
+| ------------- | ----------------- | ------------------------------------------------------------------ |
+| `questlog`    | Quest Log         | Install plugin; overwrite host Cursor user settings                |
+| `trilliax`    | Trilliax          | Cleanup for caches and artifacts                                   |
+| `talents`     | Talent Calculator | Check workstation CLIs; install script-managed tools with `--spec` |
+| `hearthstone` | Hearthstone       | Ensure jq, run questlog; optional Trilliax with `--force`          |
+| `auras`       | Auras             | AppImage `.desktop` launchers and `~/.local/bin` commands          |
 
 Per-tool docs: [tools/README.md](tools/README.md).
 

@@ -28,9 +28,23 @@ alias tfa='terraform apply temp.plan'
 ########################################################
 # Custom Functions and Tools
 ########################################################
-# Zangarmarsh Tools
-alias questlog="\$ZANGARMARSH_ROOT/tools/quest-log/quest-log.sh"
-alias trilliax="\$ZANGARMARSH_ROOT/tools/trilliax/trilliax.sh"
-alias hearthstone="\$ZANGARMARSH_ROOT/tools/hearthstone/hearthstone.sh"
-alias talents="\$ZANGARMARSH_ROOT/tools/talent-calculator/talent-calculator.sh"
-alias auras="\$ZANGARMARSH_ROOT/tools/auras/auras.sh"
+# Zangarmarsh Tools as functions so short names work in non-interactive shells
+questlog() {
+	"${ZANGARMARSH_ROOT}/tools/quest-log/quest-log.sh" "$@"
+}
+
+trilliax() {
+	"${ZANGARMARSH_ROOT}/tools/trilliax/trilliax.sh" "$@"
+}
+
+hearthstone() {
+	"${ZANGARMARSH_ROOT}/tools/hearthstone/hearthstone.sh" "$@"
+}
+
+talents() {
+	"${ZANGARMARSH_ROOT}/tools/talent-calculator/talent-calculator.sh" "$@"
+}
+
+auras() {
+	"${ZANGARMARSH_ROOT}/tools/auras/auras.sh" "$@"
+}

@@ -48,12 +48,15 @@ ZSH_FILES=(
 
 for file in "${ZSH_FILES[@]}"; do
 	file_path="${ZANGARMARSH_ROOT}/profile/zsh/${file}"
-	if [[ -f "${file_path}" ]]; then
-
-		source "${file_path}" 2>/dev/null || {
-			[[ "${ZANGARMARSH_VERBOSE}" == "true" ]] && echo "profile.zsh:: Failed to source ${file_path}" >&2
-		}
+	if [[ ! -f "${file_path}" ]]; then
+		echo "profile.zsh:: Required file not found: ${file_path}" >&2
+		return 1
 	fi
+
+	source "${file_path}" || {
+		echo "profile.zsh:: Failed to source ${file_path}" >&2
+		return 1
+	}
 done
 
 # Configure zsh history
@@ -65,12 +68,12 @@ export HISTSIZE
 SAVEHIST=100000
 export SAVEHIST
 
-[[ "${ZANGARMARSH_VERBOSE}" == "true" ]] && echo "profile.zsh:: Loading zsh history configuration" >&2
-[[ "${ZANGARMARSH_VERBOSE}" == "true" ]] && echo "profile.zsh:: Set HISTFILE to: ${HISTFILE}" >&2
+[[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "profile.zsh:: Loading zsh history configuration" >&2
+[[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "profile.zsh:: Set HISTFILE to: ${HISTFILE}" >&2
 
 if [[ ! -f "${HISTFILE}" ]]; then
 	touch "${HISTFILE}" 2>/dev/null || {
-		[[ "${ZANGARMARSH_VERBOSE}" == "true" ]] && echo "profile.zsh:: Cannot create history file ${HISTFILE}" >&2
+		[[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "profile.zsh:: Cannot create history file ${HISTFILE}" >&2
 	}
 fi
 

@@ -1,53 +1,17 @@
 #!/usr/bin/env zsh
 #
-# Platform detection and configuration for Zsh
-# Detects macOS and Linux environments
+# Zsh-only PATH and display aliases. Detection lives in tools/lib/platform.sh.
 
-# Detect platform with architecture
-#
-# Purpose:
-# - Detects the operating system platform and architecture
-# - Returns platform identifier in format: os_arch (e.g., macos_arm64, linux_x86_64)
-#
-# Inputs:
-# - None (uses OSTYPE and uname)
-#
-# Side Effects:
-# - None (pure function)
-#
-# Returns:
-# - 0 on success
-# - Outputs platform string to stdout (e.g., "macos_arm64", "linux_x86_64")
-detect_platform() {
-	local os_type
-	if [[ "${OSTYPE}" == "darwin"* ]]; then
-		os_type="macos"
-	else
-		os_type="linux"
-	fi
+if [[ -z "${ZANGARMARSH_ROOT:-}" ]]; then
+	echo "platform.zsh:: ZANGARMARSH_ROOT is required" >&2
+	return 1
+fi
 
-	local arch
-	arch=$(uname -m)
-	echo "${os_type}_${arch}"
-}
+source "${ZANGARMARSH_ROOT}/tools/lib/platform.sh"
+apply_platform_env || return 1
 
-PLATFORM="${PLATFORM:-$(detect_platform)}"
-export PLATFORM
-
-# OS family for profile helpers that expect macos or linux
-case "${PLATFORM}" in
-macos*)
-	PLATFORM_OS="${PLATFORM_OS:-macos}"
-	export PLATFORM_OS
-	;;
-*)
-	PLATFORM_OS="${PLATFORM_OS:-linux}"
-	export PLATFORM_OS
-	;;
-esac
-
-case "${PLATFORM}" in
-macos_*)
+case "${PLATFORM_OS}" in
+macos)
 	PATH="/usr/local/bin:/usr/local/sbin:${PATH}"
 	export PATH
 
@@ -55,7 +19,7 @@ macos_*)
 		alias ls='gls --color=auto'
 	fi
 	;;
-linux_*)
+linux)
 	PATH="/usr/local/bin:/usr/local/sbin:${PATH}"
 	export PATH
 
@@ -66,4 +30,8 @@ linux_*)
 	;;
 esac
 
-[[ "${ZANGARMARSH_VERBOSE}" == "true" ]] && echo "Platform detected: ${PLATFORM}" >&2
+if [[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]]; then
+	echo "Platform detected: ${PLATFORM} os=${PLATFORM_OS}" >&2
+fi
+
+return 0
