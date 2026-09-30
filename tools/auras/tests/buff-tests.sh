@@ -23,8 +23,6 @@ setup_file() {
 setup() {
 	source "$(dirname "${BATS_TEST_FILENAME}")/fixtures.sh"
 	source "${SCRIPT}"
-	source "${ZANGARMARSH_ROOT}/tools/auras/buff.sh"
-	source "${ZANGARMARSH_ROOT}/tools/auras/debuff.sh"
 	auras_home_setup
 
 	return 0
@@ -162,7 +160,7 @@ setup_appimage_fixture() {
 	[[ "$status" -eq 0 ]]
 
 	[[ -L "${HOME}/.local/bin/demoapp" ]]
-	[[ "$(readlink -f "${HOME}/.local/bin/demoapp")" == "${appimage}" ]]
+	[[ "$(resolve_symlink_path "${HOME}/.local/bin/demoapp")" == "${appimage}" ]]
 }
 
 @test "write_application_bin_link:: refuses unmanaged existing regular file" {
@@ -188,7 +186,7 @@ setup_appimage_fixture() {
 	[[ "$status" -eq 0 ]]
 
 	grep -q "Exec=\"${APPIMAGE_EXPECTED}\" %u" "${HOME}/.local/share/applications/demoapp.desktop"
-	[[ "$(readlink -f "${HOME}/.local/bin/demoapp")" == "${APPIMAGE_EXPECTED}" ]]
+	[[ "$(resolve_symlink_path "${HOME}/.local/bin/demoapp")" == "${APPIMAGE_EXPECTED}" ]]
 }
 
 @test "buff_launcher:: writes from relative AppImage path" {
@@ -200,7 +198,7 @@ setup_appimage_fixture() {
 	[[ "$status" -eq 0 ]]
 
 	grep -q "Exec=\"${APPIMAGE_EXPECTED}\" %u" "${HOME}/.local/share/applications/demoapp.desktop"
-	[[ "$(readlink -f "${HOME}/.local/bin/demoapp")" == "${APPIMAGE_EXPECTED}" ]]
+	[[ "$(resolve_symlink_path "${HOME}/.local/bin/demoapp")" == "${APPIMAGE_EXPECTED}" ]]
 }
 
 @test "buff_launcher:: rolls back desktop when bin link fails" {
@@ -253,5 +251,5 @@ setup_appimage_fixture() {
 	[[ "$status" -eq 0 ]]
 
 	[[ -f "${HOME}/.local/share/applications/demoapp.desktop" ]]
-	[[ "$(readlink -f "${HOME}/.local/bin/demoapp")" == "${appimage}" ]]
+	[[ "$(resolve_symlink_path "${HOME}/.local/bin/demoapp")" == "${appimage}" ]]
 }

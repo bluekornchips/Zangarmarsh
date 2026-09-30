@@ -165,7 +165,8 @@ install_shell_rcs() {
 # - Non-zero when validation or plugin install fails
 install_cursor_plugin() {
 	validate_install_env || return 1
-	install_quest_plugin "${ZANGARMARSH_ROOT}/tools/quest-log/plugin"
+	source "${ZANGARMARSH_ROOT}/tools/quest-log/lib/apply.sh"
+	apply_quest_log --plugin-only
 
 	return $?
 }
@@ -348,18 +349,10 @@ main() {
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
 	set -euo pipefail
 
-	# Cold bootstrap: profile load has not run yet, so find the install tree once.
-	if [[ -z "${ZANGARMARSH_ROOT:-}" ]]; then
-		_install_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-		ZANGARMARSH_ROOT="$(git -C "${_install_dir}" rev-parse --show-toplevel 2>/dev/null)" || true
-		if [[ -z "${ZANGARMARSH_ROOT}" ]]; then
-			ZANGARMARSH_ROOT="$(cd "${_install_dir}/.." && pwd)"
-		fi
-		unset _install_dir
-	fi
-	export ZANGARMARSH_ROOT
-
-	source "${ZANGARMARSH_ROOT}/tools/quest-log/lib/plugin.sh"
+	install_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+	source "${install_dir}/../tools/lib/repo.sh"
+	ensure_zangarmarsh_repo "${install_dir}"
+	source "${ZANGARMARSH_ROOT}/tools/quest-log/lib/apply.sh"
 
 	main "$@"
 fi

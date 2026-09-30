@@ -49,6 +49,27 @@ create_mock_git_repo() {
 	git commit -m "Initial commit" >/dev/null 2>&1
 }
 
+# Resolve GIT_ROOT from the current worktree and load shared fixtures
+#
+# Side Effects:
+# - Exports GIT_ROOT and ZANGARMARSH_ROOT
+#
+# Returns:
+# - 0 on success
+# - 1 when git root cannot be determined
+zangarmarsh_bats_setup_file() {
+	if [[ -z "${GIT_ROOT:-}" ]]; then
+		if ! GIT_ROOT="$(git rev-parse --show-toplevel)"; then
+			echo "zangarmarsh_bats_setup_file:: Failed to get git root" >&2
+			return 1
+		fi
+	fi
+
+	load_shared_fixtures || return 1
+
+	return 0
+}
+
 # Tests must set GIT_ROOT before sourcing this file.
 if [[ "${_ZANGARMARSH_SHARED_FIXTURES_LOADED:-}" != "1" ]]; then
 	load_shared_fixtures || return 1

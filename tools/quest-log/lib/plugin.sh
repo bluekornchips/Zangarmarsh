@@ -154,7 +154,9 @@ install_quest_plugin() {
 
 	if ! mv "${staging_dir}" "${install_dir}"; then
 		if [[ -e "${backup_dir}" || -L "${backup_dir}" ]]; then
-			mv "${backup_dir}" "${install_dir}" || true
+			if ! mv "${backup_dir}" "${install_dir}"; then
+				echo "install_quest_plugin:: Failed to restore previous installation" >&2
+			fi
 		fi
 		rm -rf "${staging_dir}"
 		echo "install_quest_plugin:: Failed to activate staged installation" >&2

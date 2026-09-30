@@ -3,15 +3,19 @@ SHELL_FILES  := $(shell find . -name '*.sh' -type f ! -path './.git/*' ! -name '
 BATS_JOBS    ?= $(shell nproc 2>/dev/null || echo 4)
 BATS_COMMAND := bats --timing --verbose-run --formatter pretty --jobs $(BATS_JOBS) --no-parallelize-within-files
 
-.PHONY: test shellcheck install uninstall
+.PHONY: test shellcheck install uninstall syntax
 
 .DEFAULT_GOAL := ci
 
 test:
-	@$(BATS_COMMAND) $(TEST_FILES)
+	@TERM="$${TERM:-xterm}" $(BATS_COMMAND) $(TEST_FILES)
+
+syntax:
+	@bash -n $(SHELL_FILES)
+	@zsh -n profile/zsh/*.zsh
 
 shellcheck:
-	@shellcheck --rcfile=.shellcheckrc $(SHELL_FILES)
+	@shellcheck $(SHELL_FILES)
 
 install:
 	@profile/install.sh
@@ -19,4 +23,4 @@ install:
 uninstall:
 	@profile/install.sh --uninstall
 
-ci: shellcheck test
+ci: syntax shellcheck test

@@ -4,11 +4,12 @@
 #
 
 _QUEST_LOG_SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
+_QUEST_LOG_DIR="$(cd "$(dirname "${_QUEST_LOG_SCRIPT_PATH}")" && pwd)"
 
 # Display usage information
 usage() {
 	cat <<EOF
-Usage: $0 [OPTIONS] [DIRECTORY]
+Usage: $0 [OPTIONS]
 
 Install the quest-log Cursor plugin from tools/quest-log/plugin under
 ~/.cursor/plugins/local/quest-log and overwrite host Cursor user settings
@@ -20,7 +21,7 @@ OPTIONS:
 
 EXAMPLES:
     $0                  # Install plugin and overwrite Cursor user settings
-    $0 /path/to/dir     # Same, using the given directory as the working tree
+    $0 --dry-run        # Show planned plugin and settings writes
 EOF
 }
 
@@ -29,6 +30,7 @@ STATS_CREATED=0
 STATS_UPDATED=0
 STATS_UNCHANGED=0
 STATS_ERRORS=0
+PLUGIN_ACTION=""
 
 # Print summary of quest-log work
 #
@@ -43,6 +45,18 @@ print_summary() {
 	total_processed=$((STATS_CREATED + STATS_UPDATED + STATS_UNCHANGED))
 
 	printf '\nquest-log summary\n'
+
+	case "${PLUGIN_ACTION:-}" in
+	installed)
+		printf '  plugin: installed\n'
+		;;
+	dry-run)
+		printf '  plugin: dry-run\n'
+		;;
+	skipped)
+		printf '  plugin: skipped\n'
+		;;
+	esac
 
 	if ((STATS_ERRORS > 0)); then
 		printf '  cursor: %s error(s)\n' "${STATS_ERRORS}"
@@ -65,72 +79,24 @@ print_summary() {
 	return 0
 }
 
-# Determine the working directory for this quest-log run
+# Load quest-log libraries after ZANGARMARSH_ROOT is known
 #
 # Side Effects:
-# - Sets TARGET_DIR to git root when no explicit target was supplied
-# - Preserves an explicit target directory
-# - Outputs status messages for testing
-determine_target_directory() {
-	local git_root
-	if [[ "${TARGET_DIR_IS_EXPLICIT:-false}" == true ]]; then
-		echo "target_dir: ${TARGET_DIR}"
-		return 0
-	fi
-
-	if git_root=$(git rev-parse --show-toplevel 2>/dev/null); then
-		TARGET_DIR="${git_root}"
-		echo "git_root: ${git_root}"
-	else
-		TARGET_DIR=${TARGET_DIR:-${PWD}}
-		echo "git_root: none"
-	fi
-
-	return 0
-}
-
-# Overwrite host Cursor user settings from tools/vscode/settings.json
-#
-# Reads environment:
-# - ZANGARMARSH_ROOT, HOME, DRY_RUN
-#
-# Side Effects:
-# - Replaces the host Cursor User/settings.json with the template
+# - Sources apply.sh and its plugin/settings helpers
 #
 # Returns:
 # - 0 on success
-# - 1 when the template cannot be read or settings cannot be written
-sync_cursor_user_settings() {
-	local template="${ZANGARMARSH_ROOT}/tools/vscode/settings.json"
-	local settings_file
-	local new_content
+# - 1 when ZANGARMARSH_ROOT is unset or sourcing fails
+_quest_log_load_libs() {
+	[[ -n "${_QUEST_LOG_LIBS_LOADED:-}" ]] && return 0
 
-	if [[ -z "${HOME:-}" ]]; then
-		echo "sync_cursor_user_settings:: HOME is required" >&2
+	if [[ -z "${ZANGARMARSH_ROOT:-}" ]]; then
+		echo "_quest_log_load_libs:: ZANGARMARSH_ROOT is required" >&2
 		return 1
 	fi
 
-	if [[ ! -f "${template}" ]]; then
-		echo "sync_cursor_user_settings:: template not found: ${template}" >&2
-		return 1
-	fi
-
-	if [[ "$(uname -s)" == "Darwin" ]]; then
-		settings_file="${HOME}/Library/Application Support/Cursor/User/settings.json"
-	else
-		settings_file="${HOME}/.config/Cursor/User/settings.json"
-	fi
-
-	if [[ "${DRY_RUN:-}" == true ]]; then
-		echo "sync_cursor_user_settings: would overwrite ${settings_file}"
-		return 0
-	fi
-
-	ensure_dir "$(dirname "${settings_file}")" "sync_cursor_user_settings" || return 1
-
-	new_content="$(cat "${template}")" || return 1
-	echo "sync_cursor_user_settings: writing ${settings_file}"
-	write_if_changed "${settings_file}" "${new_content}"$'\n' "rule" "sync_cursor_user_settings" || return 1
+	source "${ZANGARMARSH_ROOT}/tools/quest-log/lib/apply.sh" || return 1
+	_QUEST_LOG_LIBS_LOADED=1
 
 	return 0
 }
@@ -142,16 +108,19 @@ sync_cursor_user_settings() {
 #
 # Side Effects:
 # - Installs the plugin, overwrites host Cursor user settings, prints summary
-# - Exits with appropriate status code
+#
+# Returns:
+# - 0 on success
+# - 1 on validation or apply failure
 run_quest_log() {
 	local summary_exit_code
 
-	if [[ -z "${ZANGARMARSH_ROOT:-}" ]]; then
-		echo "quest-log:: ZANGARMARSH_ROOT is required" >&2
-		return 1
+	if [[ -z "${ZANGARMARSH_ROOT:-}" || ! -f "${ZANGARMARSH_ROOT}/zangarmarsh.sh" ]]; then
+		source "${_QUEST_LOG_DIR}/../lib/repo.sh" || return 1
+		ensure_zangarmarsh_repo "${_QUEST_LOG_DIR}" || return 1
 	fi
 
-	source "${ZANGARMARSH_ROOT}/tools/quest-log/lib/plugin.sh"
+	_quest_log_load_libs || return 1
 
 	if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
 		usage
@@ -164,16 +133,11 @@ run_quest_log() {
 	SCRIPT_DIR="${ZANGARMARSH_ROOT}/tools/quest-log"
 	QUEST_LOG_ROOT="${SCRIPT_DIR}"
 	PLUGIN_SOURCE_DIR="${PLUGIN_SOURCE_DIR:-${QUEST_LOG_ROOT}/plugin}"
-	TARGET_DIR_IS_EXPLICIT=false
-	DRY_RUN=false
+	DRY_RUN="${DRY_RUN:-false}"
+	PLUGIN_ACTION=""
 	export SCRIPT_DIR
 	export QUEST_LOG_ROOT
 	export PLUGIN_SOURCE_DIR
-
-	[[ -d "${PLUGIN_SOURCE_DIR}" ]] || {
-		echo "run_quest_log:: plugin source not found: ${PLUGIN_SOURCE_DIR}" >&2
-		return 1
-	}
 
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
@@ -191,30 +155,18 @@ run_quest_log() {
 			return 1
 			;;
 		*)
-			TARGET_DIR="${1}"
-			TARGET_DIR_IS_EXPLICIT=true
-			shift
+			echo "run_quest_log:: Unexpected argument: ${1}" >&2
+			usage
+			return 1
 			;;
 		esac
 	done
 
-	TARGET_DIR=${TARGET_DIR:-${PWD}}
-	determine_target_directory
-	export TARGET_DIR
 	export DRY_RUN
 
-	cd "${TARGET_DIR}" || {
-		echo "run_quest_log:: Failed to change to target directory: ${TARGET_DIR}" >&2
-		return 1
-	}
-
-	[[ -d "${TARGET_DIR}" ]] || {
-		echo "run_quest_log:: Target directory is required" >&2
-		return 1
-	}
-
-	install_quest_plugin "${PLUGIN_SOURCE_DIR}" || return 1
-	sync_cursor_user_settings || return 1
+	# CLI flags are already consumed; apply reads DRY_RUN and PLUGIN_SOURCE_DIR.
+	# shellcheck disable=SC2119
+	apply_quest_log || return 1
 
 	print_summary
 	summary_exit_code=$?

@@ -28,6 +28,8 @@ If a target `.desktop` file already exists, Auras overwrites it only when both c
 
 ## Usage
 
+The CLI can run standalone and resolves `ZANGARMARSH_ROOT` from its location.
+
 ```bash
 # Create or refresh one managed launcher and shell command
 ./tools/auras/auras.sh --buff demoapp --appimage "$HOME/Apps/DemoApp/DemoApp-1.0.0.AppImage"

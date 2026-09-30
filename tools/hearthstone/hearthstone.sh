@@ -3,8 +3,30 @@
 # Hearthstone setup and sync tool
 #
 
+_HEARTHSTONE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+
 # Default values
 DEFAULT_FORCE=false
+
+# Load shared repo helpers and export ZANGARMARSH_ROOT when needed
+#
+# Side Effects:
+# - Sources tools/lib/repo.sh
+# - Exports ZANGARMARSH_ROOT
+#
+# Returns:
+# - 0 on success
+# - 1 when bootstrap fails
+_hearthstone_bootstrap() {
+	if [[ -n "${ZANGARMARSH_ROOT:-}" && -f "${ZANGARMARSH_ROOT}/zangarmarsh.sh" ]]; then
+		return 0
+	fi
+
+	source "${_HEARTHSTONE_DIR}/../lib/repo.sh" || return 1
+	ensure_zangarmarsh_repo "${_HEARTHSTONE_DIR}" || return 1
+
+	return 0
+}
 
 usage() {
 	cat <<EOF
@@ -68,8 +90,8 @@ health_check() {
 # - 0 if user confirms with y/yes/Y
 # - 1 if user declines or provides invalid input
 confirm_proceed() {
-	local build_deck_msg="build_deck: Build the deck, install packages, etc."
-	local questlog_msg="questlog: Install the local quest-log plugin, sync VSCode settings"
+	local build_deck_msg="build_deck: Ensure jq is available on PATH"
+	local questlog_msg="questlog: Install the local quest-log plugin, overwrite Cursor user settings"
 	local trilliax_msg="trilliax --all: Clean generated files and directories"
 
 	cat <<EOF
@@ -192,8 +214,8 @@ execute_operations() {
 		}
 	fi
 
-	echo "execute_operations:: Running: questlog ${ZANGARMARSH_ROOT}"
-	"${QUESTLOG_SCRIPT}" "${ZANGARMARSH_ROOT}" || {
+	echo "execute_operations:: Running: questlog"
+	"${QUESTLOG_SCRIPT}" || {
 		echo "execute_operations:: Failed to execute: questlog" >&2
 		return 1
 	}
@@ -206,10 +228,7 @@ run_hearthstone() {
 	FORCE="${FORCE:-${DEFAULT_FORCE}}"
 	SKIP_CONFIRMATION=false
 
-	if [[ -z "${ZANGARMARSH_ROOT:-}" ]]; then
-		printf 'hearthstone:: ZANGARMARSH_ROOT is required\n' >&2
-		return 1
-	fi
+	_hearthstone_bootstrap || return 1
 
 	while [[ $# -gt 0 ]]; do
 		case "$1" in
@@ -282,6 +301,7 @@ EOF
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
 	set -eo pipefail
 	umask 077
+	_hearthstone_bootstrap || exit 1
 	run_hearthstone "$@"
 	exit $?
 fi

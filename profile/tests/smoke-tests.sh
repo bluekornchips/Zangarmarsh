@@ -53,17 +53,21 @@ teardown_file() {
 
 measure_warm_zsh_load_ms() {
 	rm -f "${HOME}/.zcompdump"
-	zsh -i -c 'exit' >/dev/null 2>&1
+	# Warm-up; ignore exit status so an empty stub omz tree does not abort timing.
+	zsh -i -c 'exit' >/dev/null 2>&1 || true
 
 	local start_ns
-	start_ns=$(date +%s%N)
-
-	run zsh -i -c 'exit'
-	[[ "${status}" -eq 0 ]] || return 1
-
 	local end_ns
-	end_ns=$(date +%s%N)
 	local load_ms
+	start_ns="$(date +%s%N)"
+
+	# Do not use bats run here; this helper is called from command substitution.
+	if ! zsh -i -c 'exit' >/dev/null 2>&1; then
+		echo "measure_warm_zsh_load_ms:: zsh -i exited nonzero" >&2
+		return 1
+	fi
+
+	end_ns="$(date +%s%N)"
 	load_ms=$(((end_ns - start_ns) / 1000000))
 	echo "${load_ms}"
 
@@ -87,9 +91,9 @@ source "\${ZSH}/oh-my-zsh.sh"
 autoload -Uz compinit
 comp_dump="\${HOME}/.zcompdump"
 if [[ -f "\${comp_dump}" && "\${comp_dump}" -nt "\${HOME}/.zshrc" ]]; then
-	compinit -C
+	compinit -u -C
 else
-	compinit
+	compinit -u
 fi
 EOF
 	local omz_ms

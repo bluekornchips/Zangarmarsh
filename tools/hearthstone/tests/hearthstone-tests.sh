@@ -200,7 +200,7 @@ EOF
 	run execute_operations
 	[[ "$status" -eq 0 ]]
 	grep -Fq "trilliax args:--all ${ZANGARMARSH_ROOT}" <<<"$output"
-	grep -Fq "questlog args:${ZANGARMARSH_ROOT}" <<<"$output"
+	grep -Fxq "questlog args:" <<<"$output"
 }
 
 ########################################################

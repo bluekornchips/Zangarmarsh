@@ -78,6 +78,96 @@ _penv_install_dependencies() {
 	return 0
 }
 
+# Remove Python cache directories and compiled files under the current directory
+#
+# Side Effects:
+# - Deletes matching cache directories and .pyc files
+#
+# Returns:
+# - 0 on success
+# - 1 when the current directory is invalid
+_penv_clean_caches() {
+	local current_dir
+	current_dir="$(pwd)"
+	if [[ -z "${current_dir}" ]] || [[ ! -d "${current_dir}" ]]; then
+		echo "_penv_clean_caches:: Invalid current directory" >&2
+		return 1
+	fi
+
+	local cache_dirs
+	cache_dirs=(
+		"__pycache__"
+		".mypy_cache"
+		".pytest_cache"
+	)
+
+	local cache_files
+	cache_files=("*.pyc")
+	local cache_dir
+	for cache_dir in "${cache_dirs[@]}"; do
+		find "${current_dir}" -type d -name "${cache_dir}" -prune -exec rm -rf {} + 2>/dev/null || true
+	done
+
+	local cache_file
+	for cache_file in "${cache_files[@]}"; do
+		find "${current_dir}" -type f -name "${cache_file}" -exec rm -f {} + 2>/dev/null || true
+	done
+
+	return 0
+}
+
+# Create a .venv with the requested interpreter and activate it
+#
+# Inputs:
+# - $1 python_version, interpreter command
+# - $2 env_name, virtualenv directory name
+#
+# Side Effects:
+# - Creates env_name and sources its activate script
+#
+# Returns:
+# - 0 on success
+# - 1 when venv creation or activation fails
+_penv_create_or_activate() {
+	local python_version="$1"
+	local env_name="$2"
+
+	echo "Creating virtual environment with ${python_version}: ${env_name}"
+	if ! "${python_version}" -m venv "${env_name}" 2>/dev/null; then
+		cat <<EOF >&2
+_penv_create_or_activate:: Failed to create virtual environment
+_penv_create_or_activate:: Make sure ${python_version} has venv module installed
+_penv_create_or_activate:: Install Python with a working venv module, then retry
+EOF
+		return 1
+	fi
+
+	if ! source "${env_name}/bin/activate" >/dev/null 2>&1; then
+		echo "_penv_create_or_activate:: Failed to activate virtual environment" >&2
+		return 1
+	fi
+
+	return 0
+}
+
+# Print a macOS-specific install hint when the host is macOS
+#
+# Reads environment:
+# - PLATFORM_OS, set by apply_platform_env in zangarmarsh.sh
+#
+# Side Effects:
+# - Writes a python.org hint to stderr on macOS
+#
+# Returns:
+# - 0 always
+_penv_macos_hint() {
+	if [[ "${PLATFORM_OS:-}" == "macos" ]]; then
+		echo "penv:: Try installing Python from https://www.python.org/downloads/" >&2
+	fi
+
+	return 0
+}
+
 # Run git worktree from the git root
 #
 # Encapsulates git worktree so it always runs relative to the repository root,
@@ -206,7 +296,7 @@ EOF
 			fi
 		done
 		[[ "${python_count}" -eq 0 ]] && echo "penv:: No Python versions found in common paths" >&2
-		[[ "${PLATFORM_OS:-${PLATFORM}}" == "macos" ]] && echo "penv:: Try installing Python from https://www.python.org/downloads/" >&2
+		_penv_macos_hint
 		return 1
 	fi
 
@@ -232,46 +322,10 @@ EOF
 		}
 	fi
 
-	# Explicit path validation: only clean cache files in current directory tree
 	echo "Cleaning up cache files."
-	local current_dir
-	current_dir="$(pwd)"
-	if [[ -z "${current_dir}" ]] || [[ ! -d "${current_dir}" ]]; then
-		echo "penv:: Invalid current directory" >&2
-		return 1
-	fi
+	_penv_clean_caches || return 1
 
-	local cache_dirs
-	cache_dirs=(
-		"__pycache__"
-		".mypy_cache"
-		".pytest_cache"
-	)
-
-	local cache_files
-	cache_files=("*.pyc")
-	for cache_dir in "${cache_dirs[@]}"; do
-		find "${current_dir}" -type d -name "${cache_dir}" -prune -exec rm -rf {} + 2>/dev/null || true
-	done
-
-	for cache_file in "${cache_files[@]}"; do
-		find "${current_dir}" -type f -name "${cache_file}" -exec rm -f {} + 2>/dev/null || true
-	done
-
-	echo "Creating virtual environment with ${python_version}: ${env_name}"
-	if ! "${python_version}" -m venv "${env_name}" 2>/dev/null; then
-		cat <<EOF >&2
-penv:: Failed to create virtual environment
-penv:: Make sure ${python_version} has venv module installed
-penv:: Install Python with a working venv module, then retry
-EOF
-		return 1
-	fi
-
-	if ! source "${env_name}/bin/activate" >/dev/null 2>&1; then
-		echo "penv:: Failed to activate virtual environment" >&2
-		return 1
-	fi
+	_penv_create_or_activate "${python_version}" "${env_name}" || return 1
 
 	_penv_install_dependencies
 

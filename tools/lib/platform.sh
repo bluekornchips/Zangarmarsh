@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 #
-# Shared platform detection for Zangarmarsh tools
+# Shared platform detection for Zangarmarsh profile helpers and tools
 #
-# Profile zsh keeps its own detect_platform in profile/zsh/platform.zsh
-# and uses macos_arm64 style ids. This helper returns darwin-arm64 style
-# ids for bash tools such as talent-calculator.
+# Canonical platform ids use uname style names such as darwin-arm64.
+# PLATFORM_OS is the profile family: macos or linux.
 #
 
 # Detect OS and architecture as a canonical id
@@ -44,4 +43,63 @@ _detect_platform() {
 		return 1
 		;;
 	esac
+}
+
+# Map a platform identifier to macos or linux
+#
+# Inputs:
+# - $1 platform_id, canonical id such as darwin-arm64 or linux-amd64
+#
+# Outputs:
+# - Prints macos or linux
+#
+# Returns:
+# - 0 when the id is recognized
+# - 1 when the id cannot be mapped
+platform_os_from_id() {
+	local platform_id="${1:-}"
+
+	if [[ -z "${platform_id}" ]]; then
+		echo "platform_os_from_id:: platform id is required" >&2
+		return 1
+	fi
+
+	case "${platform_id}" in
+	darwin*)
+		echo "macos"
+		return 0
+		;;
+	linux*)
+		echo "linux"
+		return 0
+		;;
+	*)
+		echo "platform_os_from_id:: Unsupported platform id: ${platform_id}" >&2
+		return 1
+		;;
+	esac
+}
+
+# Export PLATFORM and PLATFORM_OS for the current host
+#
+# Reads environment:
+# - PLATFORM, reused when already set
+#
+# Side Effects:
+# - Exports PLATFORM as a canonical id when unset
+# - Exports PLATFORM_OS as the macos or linux projection of PLATFORM
+#
+# Returns:
+# - 0 on success
+# - 1 when platform detection fails and PLATFORM is unset
+apply_platform_env() {
+	if [[ -z "${PLATFORM:-}" ]]; then
+		PLATFORM="$(_detect_platform)" || return 1
+	fi
+	export PLATFORM
+
+	PLATFORM_OS="$(platform_os_from_id "${PLATFORM}")" || return 1
+	export PLATFORM_OS
+
+	return 0
 }

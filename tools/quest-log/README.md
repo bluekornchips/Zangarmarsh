@@ -7,6 +7,9 @@ Install the tracked plugin tree in this directory under
 `tools/vscode/settings.json`. There is no generation step: `plugin/` is the
 plugin. Quest-log does not write project `.vscode/` files.
 
+`make install` installs the plugin only. `questlog` installs the plugin and
+overwrites Cursor user settings. Both paths share `apply_quest_log`.
+
 ## Prerequisites
 
 - Bash 3.2 or greater
@@ -17,8 +20,11 @@ plugin. Quest-log does not write project `.vscode/` files.
 # Source the main script
 source /path/to/zangarmarsh/zangarmarsh.sh
 
-# Quest-log will be available as an alias
+# Quest-log is available as a function in interactive and non-interactive shells
 questlog
+
+# Standalone, no prior source required
+./tools/quest-log/quest-log.sh --help
 ```
 
 ## Features
@@ -26,6 +32,8 @@ questlog
 - Replaces `~/.cursor/plugins/local/quest-log` with a fresh copy of
   `tools/quest-log/plugin/` on every run, so stale files never survive
 - Overwrites host Cursor `User/settings.json` from `tools/vscode/settings.json`
+- In full apply mode, restores a successful plugin install when settings sync fails
+  afterward. Plugin install itself stays self-atomic.
 
 ## Usage
 
@@ -33,13 +41,11 @@ questlog
 # Install plugin and overwrite host Cursor user settings
 questlog
 
-# Same, using a specific working directory
-questlog /path/to/project
+# Show planned writes
+questlog --dry-run
 
 # Show help
 questlog --help
-
-questlog --dry-run /path/to/project
 ```
 
 ## Plugin source layout
@@ -73,10 +79,10 @@ The plugin follows this repository's GPL-3.0-only license.
 | Skill                       | Role                                        |
 | --------------------------- | ------------------------------------------- |
 | `blue-author`               | Current PR and issue delivery documents     |
+| `blue-review`               | Strict maintainability review               |
 | `blue-bash-review`          | Bash repository review checklist            |
 | `blue-lua-review`           | Lua review checklist                        |
 | `blue-python-project-setup` | Python project bootstrap notes for the user |
-| `blue-review`               | Strict maintainability review               |
 | `blue-typescript-review`    | TypeScript review checklist                 |
 
 To add or change a rule or skill, edit the files under `plugin/` directly and
@@ -101,7 +107,7 @@ Canonical host Cursor settings live in `tools/vscode/settings.json`. Each
 There is no project `.vscode/` sync. `tools/vscode/extensions.json` is a
 recommended extensions list only.
 
-Edit `tools/vscode/settings.json`, then run `questlog` (or `hearthstone`) to
+Edit `tools/vscode/settings.json`, then run `questlog` or `hearthstone` to
 apply.
 
 ## Testing
@@ -110,6 +116,7 @@ Install a Bats package so the `bats` binary is on your `PATH`, then run:
 
 ```bash
 bats tools/quest-log/tests/quest-log-cli-tests.sh
+bats tools/quest-log/tests/plugin-tests.sh
 ```
 
 You can also run `bash -n tools/quest-log/quest-log.sh` for a quick syntax check
@@ -122,4 +129,4 @@ without Bats.
 - [ ] Running `questlog` again reports "No changes" for Cursor user settings
 - [ ] Cursor user settings match `tools/vscode/settings.json` after `questlog`
 - [ ] No project `.vscode/` files are created by `questlog`
-- [ ] `questlog --dry-run /path/to/project` makes no file changes
+- [ ] `questlog --dry-run` makes no file changes
