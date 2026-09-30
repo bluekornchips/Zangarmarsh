@@ -15,7 +15,7 @@ syntax:
 	@zsh -n profile/zsh/*.zsh
 
 shellcheck:
-	@shellcheck --rcfile=.shellcheckrc $(SHELL_FILES)
+	@shellcheck $(SHELL_FILES)
 
 install:
 	@profile/install.sh
