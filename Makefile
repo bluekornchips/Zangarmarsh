@@ -8,7 +8,7 @@ BATS_COMMAND := bats --timing --verbose-run --formatter pretty --jobs $(BATS_JOB
 .DEFAULT_GOAL := ci
 
 test:
-	@$(BATS_COMMAND) $(TEST_FILES)
+	@TERM="$${TERM:-xterm}" $(BATS_COMMAND) $(TEST_FILES)
 
 syntax:
 	@bash -n $(SHELL_FILES)

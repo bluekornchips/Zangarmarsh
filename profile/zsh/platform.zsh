@@ -1,10 +1,17 @@
 #!/usr/bin/env zsh
 #
-# Zsh-only PATH and display aliases. Detection runs once in zangarmarsh.sh.
+# Zsh-only PATH and display aliases. Detection lives in tools/lib/platform.sh.
+# zangarmarsh.sh normally exports PLATFORM_OS first; fall back when profile.zsh
+# is sourced on its own.
 
 if [[ -z "${PLATFORM_OS:-}" ]]; then
-	echo "platform.zsh:: PLATFORM_OS is required; source zangarmarsh.sh first" >&2
-	return 1
+	if [[ -z "${ZANGARMARSH_ROOT:-}" ]]; then
+		echo "platform.zsh:: PLATFORM_OS or ZANGARMARSH_ROOT is required" >&2
+		return 1
+	fi
+
+	source "${ZANGARMARSH_ROOT}/tools/lib/platform.sh"
+	apply_platform_env || return 1
 fi
 
 case "${PLATFORM_OS}" in
