@@ -20,10 +20,8 @@ show_diff() {
 		return 1
 	}
 
-	trap 'rm -f "${temp_file}"' EXIT ERR
 	chmod 0600 "${temp_file}"
-
-	echo "${new_content}" >"${temp_file}"
+	printf '%s\n' "${new_content}" >"${temp_file}"
 
 	if [[ -f "${file_path}" ]]; then
 		if ! diff -u --color=always "${file_path}" "${temp_file}"; then
@@ -32,7 +30,6 @@ show_diff() {
 	fi
 
 	rm -f "${temp_file}"
-	trap - EXIT ERR
 
 	return 0
 }
@@ -107,7 +104,7 @@ write_if_changed() {
 	fi
 
 	show_diff "${file_path}" "${new_content}"
-	echo "${new_content}" >"${file_path}"
+	printf '%s\n' "${new_content}" >"${file_path}"
 	if [[ ! -f "${file_path}" ]]; then
 		echo "${error_label}:: Failed to write file: ${display_path}" >&2
 		STATS_ERRORS=$((STATS_ERRORS + 1))

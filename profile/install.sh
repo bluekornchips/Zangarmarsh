@@ -50,6 +50,21 @@ validate_install_env() {
 	return 0
 }
 
+# Print the shell rc source command with a quoted path
+#
+# Reads environment:
+# - ZANGARMARSH_ROOT
+#
+# Outputs:
+# - The source command without a trailing newline, to stdout
+_install_source_command() {
+	local quoted
+	quoted="$(printf '%q' "${ZANGARMARSH_ROOT}/zangarmarsh.sh")"
+	printf 'source %s' "${quoted}"
+
+	return 0
+}
+
 # Print the exact shell rc source line, including its trailing newline
 #
 # Reads environment:
@@ -58,7 +73,10 @@ validate_install_env() {
 # Outputs:
 # - The source line, terminated with a newline, to stdout
 write_source_line() {
-	printf 'source "%s/zangarmarsh.sh"\n' "${ZANGARMARSH_ROOT}"
+	_install_source_command
+	printf '\n'
+
+	return 0
 }
 
 # Exact source-line text without a trailing newline, for matching existing lines
@@ -69,7 +87,9 @@ write_source_line() {
 # Outputs:
 # - The source line without a trailing newline, to stdout
 source_line_text() {
-	printf 'source "%s/zangarmarsh.sh"' "${ZANGARMARSH_ROOT}"
+	_install_source_command
+
+	return 0
 }
 
 # Check whether RC_FILE already sources zangarmarsh.sh
@@ -148,7 +168,7 @@ install_shell_rcs() {
 		install_zangarmarsh || errors=$((errors + 1))
 	done
 
-	[[ "${errors}" -eq 0 ]] && return 0
+	((errors == 0)) && return 0
 	return 1
 }
 
@@ -244,7 +264,7 @@ uninstall_shell_rcs() {
 		uninstall_zangarmarsh || errors=$((errors + 1))
 	done
 
-	[[ "${errors}" -eq 0 ]] && return 0
+	((errors == 0)) && return 0
 	return 1
 }
 
@@ -291,7 +311,7 @@ main() {
 	unset RC_FILE
 	unset INSTALL_RC_FILES
 
-	while [[ $# -gt 0 ]]; do
+	while (($# > 0)); do
 		case "$1" in
 		-h | --help)
 			usage
@@ -331,7 +351,7 @@ main() {
 	if [[ "${uninstall}" == true ]]; then
 		uninstall_shell_rcs || errors=$((errors + 1))
 		uninstall_cursor_plugin || errors=$((errors + 1))
-		[[ "${errors}" -eq 0 ]] && return 0
+		((errors == 0)) && return 0
 		return 1
 	fi
 
@@ -348,6 +368,7 @@ main() {
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
 	set -euo pipefail
+	umask 077
 
 	install_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 	source "${install_dir}/../tools/lib/repo.sh"

@@ -246,6 +246,23 @@ quest_log_test_setup() {
 	echo "$output" | grep -q "run_quest_log:: Unknown option"
 }
 
+@test 'apply_quest_log:: backup trap does not evaluate TMPDIR metacharacters' {
+	local marker="${TEST_TEMP_DIR}/pwned"
+	local tricky="${TEST_TEMP_DIR}/tmp-a\"; touch ${marker}; echo \""
+	mkdir -p "${tricky}"
+
+	sync_cursor_user_settings() {
+		return 0
+	}
+
+	TMPDIR="${tricky}"
+	export TMPDIR
+
+	run apply_quest_log --settings-only
+	[[ "$status" -eq 0 ]]
+	[[ ! -e "${marker}" ]]
+}
+
 @test 'apply_quest_log:: plugin-only skips Cursor settings' {
 	run apply_quest_log --plugin-only
 	[[ "$status" -eq 0 ]]

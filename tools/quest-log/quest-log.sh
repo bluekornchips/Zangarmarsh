@@ -23,6 +23,8 @@ EXAMPLES:
     $0                  # Install plugin and overwrite Cursor user settings
     $0 --dry-run        # Show planned plugin and settings writes
 EOF
+
+	return 0
 }
 
 # Statistics tracking, updated by write_if_changed during Cursor settings sync
@@ -129,17 +131,12 @@ run_quest_log() {
 
 	echo "quest-log: running"
 
-	SCRIPT_PATH="${_QUEST_LOG_SCRIPT_PATH}"
-	SCRIPT_DIR="${ZANGARMARSH_ROOT}/tools/quest-log"
-	QUEST_LOG_ROOT="${SCRIPT_DIR}"
-	PLUGIN_SOURCE_DIR="${PLUGIN_SOURCE_DIR:-${QUEST_LOG_ROOT}/plugin}"
+	PLUGIN_SOURCE_DIR="${PLUGIN_SOURCE_DIR:-${ZANGARMARSH_ROOT}/tools/quest-log/plugin}"
 	DRY_RUN="${DRY_RUN:-false}"
 	PLUGIN_ACTION=""
-	export SCRIPT_DIR
-	export QUEST_LOG_ROOT
 	export PLUGIN_SOURCE_DIR
 
-	while [[ $# -gt 0 ]]; do
+	while (($# > 0)); do
 		case "$1" in
 		-h | --help)
 			usage

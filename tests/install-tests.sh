@@ -85,10 +85,21 @@ teardown_file() {
 }
 
 @test "write_source_line:: emits a trailing newline" {
+	local expected
+	expected="$(printf 'source %q' "${ZANGARMARSH_ROOT}/zangarmarsh.sh")"
+
 	run write_source_line
 	[[ "${status}" -eq 0 ]]
-	[[ "${output}" == "source \"${ZANGARMARSH_ROOT}/zangarmarsh.sh\"" ]]
+	[[ "${output}" == "${expected}" ]]
 	[[ "$(write_source_line | wc -c)" -eq $((${#output} + 1)) ]]
+}
+
+@test "write_source_line:: quotes a root that contains shell metacharacters" {
+	local marker="${TEST_HOME}/pwned"
+	ZANGARMARSH_ROOT="${TEST_HOME}/a\"b; touch ${marker}; echo \""
+
+	run bash -c "$(write_source_line)"
+	[[ ! -e "${marker}" ]]
 }
 
 ########################################################
@@ -133,7 +144,7 @@ teardown_file() {
 	[[ "${status}" -eq 0 ]]
 
 	local expected_file="${HOME}/expected.zshrc"
-	printf 'alias ll="ls -l"\nsource "%s/zangarmarsh.sh"\n' "${ZANGARMARSH_ROOT}" >"${expected_file}"
+	printf 'alias ll="ls -l"\n%s\n' "$(source_line_text)" >"${expected_file}"
 	cmp -s "${expected_file}" "${RC_FILE}"
 	[[ "$(wc -l <"${RC_FILE}")" -eq 2 ]]
 }
@@ -283,8 +294,10 @@ teardown_file() {
 	[[ -f "${TEST_HOME}/.zshrc" ]]
 	[[ -f "${TEST_HOME}/.bashrc" ]]
 	[[ -f "${TEST_HOME}/.cursor/plugins/local/quest-log/.cursor-plugin/plugin.json" ]]
-	grep -Fqx "source \"${ZANGARMARSH_ROOT}/zangarmarsh.sh\"" "${TEST_HOME}/.zshrc"
-	grep -Fqx "source \"${ZANGARMARSH_ROOT}/zangarmarsh.sh\"" "${TEST_HOME}/.bashrc"
+	local expected
+	expected="$(printf 'source %q' "${ZANGARMARSH_ROOT}/zangarmarsh.sh")"
+	grep -Fqx "${expected}" "${TEST_HOME}/.zshrc"
+	grep -Fqx "${expected}" "${TEST_HOME}/.bashrc"
 	[[ ! -e "${TEST_HOME}/.aliases" ]]
 
 	run "${SCRIPT}" --uninstall
@@ -297,14 +310,18 @@ teardown_file() {
 @test "main:: --zsh installs only into ~/.zshrc" {
 	run "${SCRIPT}" --zsh
 	[[ "${status}" -eq 0 ]]
-	grep -Fqx "source \"${ZANGARMARSH_ROOT}/zangarmarsh.sh\"" "${TEST_HOME}/.zshrc"
+	local expected
+	expected="$(printf 'source %q' "${ZANGARMARSH_ROOT}/zangarmarsh.sh")"
+	grep -Fqx "${expected}" "${TEST_HOME}/.zshrc"
 	[[ ! -e "${TEST_HOME}/.bashrc" ]]
 }
 
 @test "main:: --bash installs only into ~/.bashrc" {
 	run "${SCRIPT}" --bash
 	[[ "${status}" -eq 0 ]]
-	grep -Fqx "source \"${ZANGARMARSH_ROOT}/zangarmarsh.sh\"" "${TEST_HOME}/.bashrc"
+	local expected
+	expected="$(printf 'source %q' "${ZANGARMARSH_ROOT}/zangarmarsh.sh")"
+	grep -Fqx "${expected}" "${TEST_HOME}/.bashrc"
 	[[ ! -e "${TEST_HOME}/.zshrc" ]]
 }
 

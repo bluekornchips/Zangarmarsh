@@ -89,6 +89,64 @@ _restore_quest_log_plugin() {
 	return 0
 }
 
+# Copy an existing plugin tree into the apply backup directory
+#
+# Inputs:
+# - $1 backup_root, temporary directory created for this apply
+# - $2 plugin_dir, live plugin install path
+#
+# Side Effects:
+# - Sets had_plugin when a plugin tree is copied
+#
+# Returns:
+# - 0 when the backup copy succeeds or no plugin exists
+# - 1 when the copy fails
+_quest_log_backup_plugin() {
+	local backup_root="$1"
+	local plugin_dir="$2"
+
+	if [[ -e "${plugin_dir}" || -L "${plugin_dir}" ]]; then
+		if ! cp -R "${plugin_dir}" "${backup_root}/plugin"; then
+			echo "apply_quest_log:: Failed to back up existing plugin" >&2
+			return 1
+		fi
+		had_plugin=true
+	fi
+
+	return 0
+}
+
+# Copy existing Cursor settings into the apply backup directory
+#
+# Inputs:
+# - $1 backup_root, temporary directory created for this apply
+# - $2 settings_file, live Cursor settings path
+#
+# Side Effects:
+# - Sets had_settings when settings.json is copied
+#
+# Returns:
+# - 0 when the backup copy succeeds or no settings file exists
+# - 1 when the copy or permission change fails
+_quest_log_backup_settings() {
+	local backup_root="$1"
+	local settings_file="$2"
+
+	if [[ -f "${settings_file}" ]]; then
+		if ! cp "${settings_file}" "${backup_root}/settings.json"; then
+			echo "apply_quest_log:: Failed to back up existing Cursor settings" >&2
+			return 1
+		fi
+		chmod 0600 "${backup_root}/settings.json" || {
+			echo "apply_quest_log:: Failed to harden Cursor settings backup permissions" >&2
+			return 1
+		}
+		had_settings=true
+	fi
+
+	return 0
+}
+
 # Apply plugin install and/or Cursor settings overwrite
 #
 # Inputs:
@@ -115,7 +173,7 @@ apply_quest_log() {
 	local settings_file
 	local restore_status=0
 
-	while [[ $# -gt 0 ]]; do
+	while (($# > 0)); do
 		case "$1" in
 		--plugin-only)
 			mode="plugin"
@@ -163,6 +221,14 @@ apply_quest_log() {
 	plugin_dir="$(quest_log_plugin_dir)" || return 1
 	settings_file="$(cursor_user_settings_path)" || return 1
 
+	if [[ "${mode}" != "settings" ]]; then
+		echo "apply_quest_log:: plugin destination: ${plugin_dir}"
+	fi
+
+	if [[ "${mode}" != "plugin" ]]; then
+		echo "apply_quest_log:: settings destination: ${settings_file}"
+	fi
+
 	if [[ "${DRY_RUN:-false}" == true ]]; then
 		if [[ "${mode}" != "settings" ]]; then
 			install_quest_plugin "${PLUGIN_SOURCE_DIR}" || return 1
@@ -171,86 +237,43 @@ apply_quest_log() {
 		if [[ "${mode}" != "plugin" ]]; then
 			sync_cursor_user_settings || return 1
 		fi
+
 		return 0
 	fi
 
-	case "${mode}" in
-	plugin)
+	if [[ "${mode}" == "plugin" ]]; then
 		install_quest_plugin "${PLUGIN_SOURCE_DIR}" || return 1
 		PLUGIN_ACTION="installed"
-		return 0
-		;;
-	settings)
-		backup_root="$(mktemp -d "${TMPDIR:-/tmp}/quest-log-apply.XXXXXX")" || {
-			echo "apply_quest_log:: Failed to create apply backup directory" >&2
-			return 1
-		}
-		trap 'rm -rf -- "'"${backup_root}"'"' RETURN
-
-		if [[ -f "${settings_file}" ]]; then
-			if ! cp "${settings_file}" "${backup_root}/settings.json"; then
-				echo "apply_quest_log:: Failed to back up existing Cursor settings" >&2
-				return 1
-			fi
-			chmod 0600 "${backup_root}/settings.json" || {
-				echo "apply_quest_log:: Failed to harden Cursor settings backup permissions" >&2
-				return 1
-			}
-			had_settings=true
-		fi
-
-		if ! sync_cursor_user_settings; then
-			_restore_quest_log_settings "${backup_root}" "${settings_file}" "${had_settings}" || return 1
-			return 1
-		fi
 
 		return 0
-		;;
-	both)
-		backup_root="$(mktemp -d "${TMPDIR:-/tmp}/quest-log-apply.XXXXXX")" || {
-			echo "apply_quest_log:: Failed to create apply backup directory" >&2
-			return 1
-		}
-		trap 'rm -rf -- "'"${backup_root}"'"' RETURN
+	fi
 
-		if [[ -e "${plugin_dir}" ]]; then
-			if ! cp -R "${plugin_dir}" "${backup_root}/plugin"; then
-				echo "apply_quest_log:: Failed to back up existing plugin" >&2
-				return 1
-			fi
-			had_plugin=true
-		fi
-
-		if [[ -f "${settings_file}" ]]; then
-			if ! cp "${settings_file}" "${backup_root}/settings.json"; then
-				echo "apply_quest_log:: Failed to back up existing Cursor settings" >&2
-				return 1
-			fi
-			chmod 0600 "${backup_root}/settings.json" || {
-				echo "apply_quest_log:: Failed to harden Cursor settings backup permissions" >&2
-				return 1
-			}
-			had_settings=true
-		fi
-
-		# Plugin install owns its own rollback. Do not outer-restore on install failure.
-		if ! install_quest_plugin "${PLUGIN_SOURCE_DIR}"; then
-			return 1
-		fi
-		PLUGIN_ACTION="installed"
-
-		if ! sync_cursor_user_settings; then
-			_restore_quest_log_plugin "${backup_root}" "${plugin_dir}" "${had_plugin}" || restore_status=1
-			_restore_quest_log_settings "${backup_root}" "${settings_file}" "${had_settings}" || restore_status=1
-			[[ "${restore_status}" -eq 0 ]] || return 1
-			return 1
-		fi
-
-		return 0
-		;;
-	*)
-		echo "apply_quest_log:: unknown mode: ${mode}" >&2
+	backup_root="$(mktemp -d "${TMPDIR:-/tmp}/quest-log-apply.XXXXXX")" || {
+		echo "apply_quest_log:: Failed to create apply backup directory" >&2
 		return 1
-		;;
-	esac
+	}
+	trap 'rm -rf -- "$backup_root"' RETURN
+
+	if [[ "${mode}" == "both" ]]; then
+		_quest_log_backup_plugin "${backup_root}" "${plugin_dir}" || return 1
+	fi
+	_quest_log_backup_settings "${backup_root}" "${settings_file}" || return 1
+
+	if [[ "${mode}" == "both" ]]; then
+		# Plugin install owns its own rollback. Do not outer-restore on install failure.
+		install_quest_plugin "${PLUGIN_SOURCE_DIR}" || return 1
+		PLUGIN_ACTION="installed"
+	fi
+
+	if ! sync_cursor_user_settings; then
+		if [[ "${mode}" == "both" ]]; then
+			_restore_quest_log_plugin "${backup_root}" "${plugin_dir}" "${had_plugin}" || restore_status=1
+		fi
+		_restore_quest_log_settings "${backup_root}" "${settings_file}" "${had_settings}" || restore_status=1
+		((restore_status == 0)) || return 1
+
+		return 1
+	fi
+
+	return 0
 }

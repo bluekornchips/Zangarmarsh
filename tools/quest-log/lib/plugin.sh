@@ -40,6 +40,73 @@ quest_log_plugin_dir() {
 	return 0
 }
 
+# Resolve a path under HOME without following symlinks below HOME
+#
+# Inputs:
+# - $1, path, absolute path that must sit under HOME
+#
+# Outputs:
+# - Resolved path on stdout
+#
+# Returns:
+# - 0 when the path is free of symlinks below HOME
+# - 1 when the path escapes HOME or contains a symlink
+_plugin_resolve_under_home() {
+	local path="$1"
+	local base="${HOME}"
+
+	if [[ "${path}" != "${HOME}" && "${path}" != "${HOME}/"* ]]; then
+		echo "validate_plugin_install_dir:: install path must be below ${HOME}/.cursor/plugins/local" >&2
+		return 1
+	fi
+
+	if [[ -d "${base}" || -L "${base}" ]]; then
+		base="$(cd "${base}" && pwd -P)" || {
+			echo "validate_plugin_install_dir:: cannot resolve HOME" >&2
+			return 1
+		}
+	fi
+
+	local rest="${path#"${HOME}"}"
+	rest="${rest#/}"
+	local component
+	local cursor="${base}"
+	local remaining="${rest}"
+
+	while [[ -n "${remaining}" ]]; do
+		component="${remaining%%/*}"
+		if [[ "${remaining}" == */* ]]; then
+			remaining="${remaining#*/}"
+		else
+			remaining=""
+		fi
+
+		if [[ -z "${component}" || "${component}" == "." || "${component}" == ".." ]]; then
+			echo "validate_plugin_install_dir:: path traversal is not allowed" >&2
+			return 1
+		fi
+
+		cursor="${cursor}/${component}"
+		if [[ -L "${cursor}" ]]; then
+			echo "validate_plugin_install_dir:: refusing symlink: ${cursor}" >&2
+			return 1
+		fi
+
+		if [[ ! -e "${cursor}" ]]; then
+			if [[ -n "${remaining}" ]]; then
+				cursor="${cursor}/${remaining}"
+			fi
+			printf '%s\n' "${cursor}"
+
+			return 0
+		fi
+	done
+
+	printf '%s\n' "${cursor}"
+
+	return 0
+}
+
 # Validate the plugin installation path before any deletion
 #
 # Inputs:
@@ -54,6 +121,11 @@ validate_plugin_install_dir() {
 
 	if [[ -z "${HOME:-}" || -z "${install_dir}" || "${install_dir}" != /* ]]; then
 		echo "validate_plugin_install_dir:: absolute install path is required" >&2
+		return 1
+	fi
+
+	if [[ "${install_dir}" == */ ]]; then
+		echo "validate_plugin_install_dir:: trailing slash is not allowed" >&2
 		return 1
 	fi
 
@@ -72,10 +144,18 @@ validate_plugin_install_dir() {
 		;;
 	esac
 
-	if [[ "${install_dir}" == "${allowed_root}" || "${install_dir}" == */. || "${install_dir}" == */.. ]]; then
+	local resolved_install
+	local resolved_root
+	resolved_install="$(_plugin_resolve_under_home "${install_dir}")" || return 1
+	resolved_root="$(_plugin_resolve_under_home "${allowed_root}")" || return 1
+
+	case "${resolved_install}" in
+	"${resolved_root}"/*) ;;
+	*)
 		echo "validate_plugin_install_dir:: refusing unsafe install path: ${install_dir}" >&2
 		return 1
-	fi
+		;;
+	esac
 
 	return 0
 }

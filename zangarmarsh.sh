@@ -3,6 +3,21 @@
 # Zangarmarsh shell configuration loader
 # This script should be sourced, not executed
 
+if [[ -n "${BASH_VERSION:-}" && "${BASH_SOURCE[0]}" == "$0" ]]; then
+	echo "zangarmarsh:: source this file instead of executing it" >&2
+	exit 1
+fi
+
+if [[ -n "${ZSH_VERSION:-}" ]]; then
+	case ${ZSH_EVAL_CONTEXT:-} in
+	*:file*) ;;
+	*)
+		echo "zangarmarsh:: source this file instead of executing it" >&2
+		exit 1
+		;;
+	esac
+fi
+
 if [[ -n "${BASH_SOURCE[0]}" ]]; then
 	SCRIPT_PATH="${BASH_SOURCE[0]}"
 elif [[ -n "${0}" ]]; then

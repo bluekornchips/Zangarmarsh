@@ -127,6 +127,30 @@ plugin_lib_test_setup() {
 	echo "$output" | grep -q "install path must be below"
 }
 
+@test 'validate_plugin_install_dir:: rejects a trailing slash' {
+	run validate_plugin_install_dir "${HOME}/.cursor/plugins/local/quest-log/"
+	[[ "$status" -eq 1 ]]
+	echo "$output" | grep -q "trailing slash is not allowed"
+}
+
+@test 'validate_plugin_install_dir:: rejects a symlinked install directory' {
+	mkdir -p "${HOME}/.cursor/plugins/local" "${TEST_TEMP_DIR}/outside"
+	ln -s "${TEST_TEMP_DIR}/outside" "${HOME}/.cursor/plugins/local/quest-log"
+
+	run validate_plugin_install_dir "${HOME}/.cursor/plugins/local/quest-log"
+	[[ "$status" -eq 1 ]]
+	echo "$output" | grep -q "refusing symlink"
+}
+
+@test 'validate_plugin_install_dir:: rejects a symlinked plugins directory' {
+	mkdir -p "${TEST_TEMP_DIR}/outside/local" "${HOME}/.cursor"
+	ln -s "${TEST_TEMP_DIR}/outside" "${HOME}/.cursor/plugins"
+
+	run validate_plugin_install_dir "${HOME}/.cursor/plugins/local/quest-log"
+	[[ "$status" -eq 1 ]]
+	echo "$output" | grep -q "refusing symlink"
+}
+
 @test 'validate_plugin_install_dir:: rejects the local plugins root itself' {
 	run validate_plugin_install_dir "${HOME}/.cursor/plugins/local"
 	[[ "$status" -eq 1 ]]

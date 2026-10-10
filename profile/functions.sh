@@ -142,6 +142,11 @@ EOF
 		return 1
 	fi
 
+	if [[ -L "${env_name}/bin/activate" || ! -f "${env_name}/bin/activate" ]]; then
+		echo "_penv_create_or_activate:: refusing to source ${env_name}/bin/activate" >&2
+		return 1
+	fi
+
 	if ! source "${env_name}/bin/activate" >/dev/null 2>&1; then
 		echo "_penv_create_or_activate:: Failed to activate virtual environment" >&2
 		return 1
@@ -214,6 +219,11 @@ gw() {
 	local worktree_name="${1}"
 	local base_branch="${2:-}"
 
+	if [[ "${worktree_name}" == -* || "${worktree_name}" == *"/"* || "${worktree_name}" == *".."* ]]; then
+		echo "gw:: name must not contain a slash or .., and must not start with a dash" >&2
+		return 1
+	fi
+
 	if [[ -z "${base_branch}" ]]; then
 		base_branch="$(git -C "${git_root}" symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null)"
 	fi
@@ -244,7 +254,8 @@ gw() {
 # - Creates/activates .venv in the current directory
 # - Removes existing .venv if -d is passed
 # - Cleans __pycache__, .mypy_cache, .pytest_cache, and .pyc files
-# - Installs dependencies from pyproject.toml with uv
+# - Installs dependencies from pyproject.toml with uv when creating or recreating .venv
+# - Activates an existing .venv without installing when -d is absent
 #
 # Returns:
 # - 0 on success
@@ -252,7 +263,7 @@ gw() {
 penv() {
 	local python_version="python3"
 	local force_recreate=false
-	while [[ $# -gt 0 ]]; do
+	while (($# > 0)); do
 		case "$1" in
 		-d | --delete)
 			force_recreate=true
@@ -271,7 +282,12 @@ Examples:
 EOF
 			return 0
 			;;
-		python[0-9].[0-9]*)
+		python[0-9]*)
+			if [[ ! "$1" =~ ^python[0-9]+([.][0-9]+)*$ ]]; then
+				echo "penv:: Unknown option '${1}'" >&2
+				echo "penv:: Use 'penv --help' for usage information" >&2
+				return 1
+			fi
 			python_version="${1}"
 			shift
 			;;
@@ -292,10 +308,10 @@ EOF
 			if [[ -x "${python_candidate}" ]]; then
 				echo "${python_candidate}" >&2
 				python_count=$((python_count + 1))
-				[[ "${python_count}" -ge 5 ]] && break
+				((python_count >= 5)) && break
 			fi
 		done
-		[[ "${python_count}" -eq 0 ]] && echo "penv:: No Python versions found in common paths" >&2
+		((python_count == 0)) && echo "penv:: No Python versions found in common paths" >&2
 		_penv_macos_hint
 		return 1
 	fi
@@ -304,12 +320,22 @@ EOF
 	echo "Version: $("${python_version}" --version 2>/dev/null || echo "Version info unavailable")"
 
 	local env_name=".venv"
+	local activate_path="${env_name}/bin/activate"
 	if [[ -d "${env_name}" && "${force_recreate}" != true ]]; then
-		echo "Virtual environment exists, activating: ${env_name}"
+		if [[ -e "${activate_path}" || -L "${activate_path}" ]]; then
+			if [[ -L "${activate_path}" || ! -f "${activate_path}" ]]; then
+				echo "penv:: refusing to source ${activate_path}" >&2
+				return 1
+			fi
 
-		if source "${env_name}/bin/activate" >/dev/null 2>&1; then
-			echo "Activated existing environment: ${env_name}"
-			return 0
+			echo "Virtual environment exists, activating: ${env_name}"
+			if source "${activate_path}" >/dev/null 2>&1; then
+				echo "Activated existing environment: ${env_name}"
+				return 0
+			fi
+
+			echo "penv:: Failed to activate ${env_name}" >&2
+			return 1
 		fi
 	fi
 
@@ -327,7 +353,7 @@ EOF
 
 	_penv_create_or_activate "${python_version}" "${env_name}" || return 1
 
-	_penv_install_dependencies
+	_penv_install_dependencies || return 1
 
 	cat <<EOF
 

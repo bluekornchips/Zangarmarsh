@@ -118,12 +118,12 @@ debuff_main() {
 	local appimage_path="$2"
 
 	if [[ -n "${appimage_path}" ]]; then
-		echo "main:: --appimage is only valid with --buff" >&2
+		echo "debuff_main:: --appimage is only valid with --buff" >&2
 		return 1
 	fi
 
 	if [[ -z "${app_stem}" ]]; then
-		echo "main:: --debuff requires NAME" >&2
+		echo "debuff_main:: --debuff requires NAME" >&2
 		return 1
 	fi
 

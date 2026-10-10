@@ -102,9 +102,9 @@ mock_commands_failure() {
 ########################################################
 # execute_operations
 ########################################################
-@test "execute_operations:: runs all commands successfully without FORCE" {
+@test "execute_operations:: runs all commands successfully without force" {
 	mock_commands_success
-	FORCE=false
+	FORCE=true
 	export FORCE
 
 	run execute_operations
@@ -114,65 +114,54 @@ mock_commands_failure() {
 	grep -q "execute_operations:: Running: questlog" <<<"$output"
 }
 
-@test "execute_operations:: runs all commands including trilliax with FORCE" {
+@test "execute_operations:: runs all commands including trilliax with force" {
 	mock_commands_success
-	FORCE=true
-	export FORCE
 
-	run execute_operations
+	run execute_operations true
 	[[ "$status" -eq 0 ]]
 
 	grep -q "execute_operations:: Running: trilliax --all" <<<"$output"
 	grep -q "execute_operations:: Running: questlog" <<<"$output"
 }
 
-@test "execute_operations:: fails when trilliax fails with FORCE" {
+@test "execute_operations:: fails when trilliax fails with force" {
 	mock_commands_failure
-	FORCE=true
-	export FORCE
 
-	run execute_operations
+	run execute_operations true
 	[[ "$status" -eq 1 ]]
 
 	grep -q "execute_operations:: Failed to execute: trilliax --all" <<<"$output"
 }
 
-########################################################
-# build_deck
-########################################################
-@test "build_deck:: succeeds when jq is installed" {
-	ensure_jq() {
-		echo "ensure_jq:: jq installed"
-		return 0
-	}
-	export -f ensure_jq
-
-	run build_deck
-	[[ "$status" -eq 0 ]]
-}
-
-@test "build_deck:: succeeds when ensure_jq succeeds after missing PATH check" {
-	ensure_jq() {
-		echo "ensure_jq:: jq installed"
-		return 0
-	}
-	export -f ensure_jq
-
-	run build_deck
-	[[ "$status" -eq 0 ]]
-}
-
-@test "build_deck:: fails when jq is missing" {
+@test "execute_operations:: fails when jq is missing" {
+	mock_commands_success
 	ensure_jq() {
 		echo "ensure_jq:: jq not found" >&2
-		echo "ensure_jq:: Install jq with your OS package manager, then re-run" >&2
 		return 1
 	}
 	export -f ensure_jq
 
-	run build_deck
+	run execute_operations
 	[[ "$status" -eq 1 ]]
-	grep -q "build_deck:: Failed to ensure jq" <<<"$output"
+	grep -q "execute_operations:: Failed to execute: ensure_jq" <<<"$output"
+}
+
+@test "confirm_proceed:: omits trilliax unless force is set" {
+	run confirm_proceed false <<EOF
+n
+EOF
+	[[ "$status" -eq 1 ]]
+	grep -q "ensure_jq:" <<<"$output"
+	! grep -q "trilliax" <<<"$output"
+	grep -q "confirm_proceed:: Operation cancelled by user" <<<"$output"
+}
+
+@test "confirm_proceed:: lists trilliax when force is set" {
+	run confirm_proceed true <<EOF
+n
+EOF
+	[[ "$status" -eq 1 ]]
+	grep -q "trilliax --all:" <<<"$output"
 }
 
 @test "execute_operations:: passes ZANGARMARSH_ROOT to trilliax and questlog" {
@@ -194,10 +183,9 @@ EOF
 
 	TRILLIAX_SCRIPT="$mock_dir/trilliax.sh"
 	QUESTLOG_SCRIPT="$mock_dir/questlog.sh"
-	FORCE=true
-	export TRILLIAX_SCRIPT QUESTLOG_SCRIPT FORCE
+	export TRILLIAX_SCRIPT QUESTLOG_SCRIPT
 
-	run execute_operations
+	run execute_operations true
 	[[ "$status" -eq 0 ]]
 	grep -Fq "trilliax args:--all ${ZANGARMARSH_ROOT}" <<<"$output"
 	grep -Fxq "questlog args:" <<<"$output"
@@ -248,6 +236,16 @@ EOF
 
 	grep -q "\-f, \-\-force" <<<"$output"
 	grep -q "Force operations" <<<"$output"
+}
+
+@test "main:: ignores ambient FORCE" {
+	mock_commands_success
+	FORCE=true
+	export FORCE
+
+	run bash "$SCRIPT" --yes
+	[[ "$status" -eq 0 ]]
+	! grep -q "execute_operations:: Running: trilliax --all" <<<"$output"
 }
 
 @test "main:: script accepts force flag" {

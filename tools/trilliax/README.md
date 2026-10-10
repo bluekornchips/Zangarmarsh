@@ -22,7 +22,7 @@ The name [Trilliax](https://www.wowhead.com/npc=104288/trilliax) comes from a Wo
 # Ensure script is executable
 chmod +x tools/trilliax/trilliax.sh
 
-# Optionally, Zangarmarsh provides a trilliax alias when sourced
+# Optionally, sourcing Zangarmarsh provides a trilliax function
 source /path/to/zangarmarsh/zangarmarsh.sh
 ```
 
@@ -57,14 +57,13 @@ source /path/to/zangarmarsh/zangarmarsh.sh
 
 ### Python Target
 
-- Virtual environments (`venv/`, `.venv/`, `env/`)
+- Virtual environments (`venv/`, `.venv/`)
 - Python cache files (`__pycache__/`, `*.pyc`, `*.pyo`)
 
 ### Node Target
 
 - `node_modules/` directories
-- NPM and Yarn cache directories (`.npm/`, `.yarn/`)
-- Yarn config (`.yarnrc.yml`)
+- NPM cache directories (`.npm/`)
 - NPM and Yarn debug logs
 
 ### Filesystem Target

@@ -149,6 +149,26 @@ teardown_file() {
 	[[ "$output" == *"gw:: shortcut accepts at most two arguments"* ]]
 }
 
+@test "gw:: rejects a name that leaves the sibling directory" {
+	create_mock_git_repo "${TEST_DIR}"
+	cd "${TEST_DIR}" || return 1
+
+	run gw "../outside"
+	[[ "$status" -eq 1 ]]
+	echo "$output" | grep -q "gw:: name must not contain a slash"
+}
+
+@test "gw:: rejects a name that starts with a dash" {
+	create_mock_git_repo "${TEST_DIR}"
+	cd "${TEST_DIR}" || return 1
+
+	local dashed_name="-feature"
+
+	run gw "${dashed_name}"
+	[[ "$status" -eq 1 ]]
+	echo "$output" | grep -q "gw:: name must not contain a slash"
+}
+
 @test "gw:: fails when no shortcut name is provided" {
 	create_mock_git_repo "${TEST_DIR}"
 	cd "${TEST_DIR}" || return 1

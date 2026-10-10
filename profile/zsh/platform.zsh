@@ -14,19 +14,16 @@ if [[ -z "${PLATFORM_OS:-}" ]]; then
 	apply_platform_env || return 1
 fi
 
+PATH="/usr/local/bin:/usr/local/sbin:${PATH}"
+export PATH
+
 case "${PLATFORM_OS}" in
 macos)
-	PATH="/usr/local/bin:/usr/local/sbin:${PATH}"
-	export PATH
-
 	if command -v gls >/dev/null 2>&1; then
 		alias ls='gls --color=auto'
 	fi
 	;;
 linux)
-	PATH="/usr/local/bin:/usr/local/sbin:${PATH}"
-	export PATH
-
 	if [[ -x /usr/bin/dircolors ]]; then
 		alias ls='ls --color=auto'
 		alias grep='grep --color=auto'

@@ -39,7 +39,7 @@ ENVIRONMENT VARIABLES:
 CLEANUP OPERATIONS:
   - .cursor directories (recursively)
   - Python files (virtual environments, cache files, compiled files)
-  - Node.js files (node_modules, npm/yarn cache directories, log files)
+  - Node.js files (node_modules, npm cache directories, debug logs)
   - Empty directories (recursively removes all empty directories up to ${DEFAULT_MAX_DEPTH} levels deep)
 
 EXAMPLES:
@@ -143,7 +143,7 @@ execute_clean() {
 		return 1
 	fi
 
-	if [[ ${#find_args[@]} -eq 0 ]]; then
+	if ((${#find_args[@]} == 0)); then
 		echo "${function_name}:: find_args are required" >&2
 		return 1
 	fi
@@ -156,6 +156,10 @@ execute_clean() {
 	fi
 
 	local max_depth="${MAX_DEPTH:-${DEFAULT_MAX_DEPTH}}"
+	if [[ ! "${max_depth}" =~ ^[0-9]+$ ]]; then
+		echo "${function_name}:: MAX_DEPTH must be an integer" >&2
+		return 1
+	fi
 	local list_file
 	list_file="$(mktemp "${TMPDIR:-/tmp}/trilliax-find.XXXXXX")" || {
 		echo "${function_name}:: Failed to create find listing file" >&2
@@ -171,7 +175,11 @@ execute_clean() {
 	local errors=0
 	local item
 	while IFS= read -r -d '' item || [[ -n "${item}" ]]; do
-		if [[ -z "${item}" ]] || [[ "${item}" != "${target_dir_abs}"* ]]; then
+		if [[ -z "${item}" ]]; then
+			continue
+		fi
+
+		if [[ "${item}" != "${target_dir_abs}" && "${item}" != "${target_dir_abs}/"* ]]; then
 			continue
 		fi
 
@@ -187,7 +195,7 @@ execute_clean() {
 	done <"${list_file}"
 
 	rm -f "${list_file}"
-	[[ "${errors}" -eq 0 ]] || return 1
+	((errors == 0)) || return 1
 
 	return 0
 }
@@ -241,7 +249,7 @@ clean_cursor() {
 # - $1, target_dir, directory to clean Python files from
 #
 # Side Effects:
-# - Removes Python virtual environments, cache files, and compiled files
+# - Removes venv and .venv directories, cache files, and compiled files
 #
 # Returns:
 # - 0 on success
@@ -255,7 +263,6 @@ clean_python() {
 		\( \
 		-type d -name "venv" \
 		-o -type d -name ".venv" \
-		-o -type d -name "env" \
 		-o -type d -name "__pycache__" \
 		-o -name "*.pyc" \
 		-o -name "*.pyo" \
@@ -270,7 +277,7 @@ clean_python() {
 # - $1, target_dir, directory to clean Node.js files from
 #
 # Side Effects:
-# - Removes node_modules directories, npm/yarn cache directories, and log files
+# - Removes node_modules directories, npm cache directories, and debug logs
 #
 # Returns:
 # - 0 on success
@@ -284,8 +291,6 @@ clean_node() {
 		\( \
 		-type d -name "node_modules" \
 		-o -type d -name ".npm" \
-		-o -type d -name ".yarn" \
-		-o -name ".yarnrc.yml" \
 		-o -name "npm-debug.log*" \
 		-o -name "yarn-debug.log*" \
 		-o -name "yarn-error.log*" \
@@ -310,7 +315,7 @@ run_trilliax() {
 	local target_dir="."
 	local targets_string=""
 	local all_flag="false"
-	while [[ $# -gt 0 ]]; do
+	while (($# > 0)); do
 		case "$1" in
 		-d | --dir)
 			if [[ -z "${2:-}" ]] || [[ "${2:-}" == -* ]]; then
@@ -395,7 +400,7 @@ run_trilliax() {
 	done
 
 	echo "run_trilliax:: Please don't say such things! The master is back, and things need to be kept tidy."
-	[[ "${errors}" -eq 0 ]] || return 1
+	((errors == 0)) || return 1
 
 	return 0
 }

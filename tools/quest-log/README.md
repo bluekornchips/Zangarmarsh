@@ -7,8 +7,9 @@ Install the tracked plugin tree in this directory under
 `tools/vscode/settings.json`. There is no generation step: `plugin/` is the
 plugin. Quest-log does not write project `.vscode/` files.
 
-`make install` installs the plugin only. `questlog` installs the plugin and
-overwrites Cursor user settings. Both paths share `apply_quest_log`.
+`make install` installs the plugin and appends a source line to `~/.zshrc` and
+`~/.bashrc`. `questlog` installs the plugin and overwrites Cursor user settings.
+Both paths share `apply_quest_log`.
 
 ## Prerequisites
 

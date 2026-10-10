@@ -108,7 +108,8 @@ These apply when `profile/zsh/prompt.zsh` runs:
 | Python venv helpers           | Yes  | Yes |
 | Node.js via NVM               | Yes  | Yes |
 | Oh My Zsh integration         | No   | Yes |
-| Basic completion              | No   | Yes |
+| Case-insensitive readline     | Yes  | No  |
+| Programmable completion       | No   | Yes |
 
 ## Tools
 

@@ -116,6 +116,11 @@ validate_appimage_path() {
 		return 1
 	fi
 
+	if [[ "${appimage_path}" == *\"* || "${appimage_path}" == *%* ]]; then
+		echo "${ctx}:: AppImage path must not contain a quote or percent sign" >&2
+		return 1
+	fi
+
 	if [[ "${appimage_path}" != *.AppImage && "${appimage_path}" != *.appimage ]]; then
 		echo "${ctx}:: AppImage path must end with .AppImage or .appimage: ${appimage_path}" >&2
 		return 1
@@ -230,7 +235,7 @@ resolve_symlink_path() {
 	local max_depth=32
 	local link_target
 	local link_dir
-	while [[ -L "${path}" && "${depth}" -lt "${max_depth}" ]]; do
+	while [[ -L "${path}" ]] && ((depth < max_depth)); do
 		link_target="$(readlink "${path}")" || {
 			echo "${ctx}:: failed to read symlink: ${path}" >&2
 			return 1

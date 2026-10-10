@@ -4,7 +4,7 @@
 
 # Bash history configuration
 [[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "Loading bash history configuration" >&2
-HISTFILE="${HISTFILE:-$HOME/.bash_history}"
+HISTFILE="${HISTFILE:-${HOME}/.bash_history}"
 export HISTFILE
 HISTSIZE=100000
 export HISTSIZE
@@ -24,8 +24,10 @@ bind 'set horizontal-scroll-mode off' 2>/dev/null || true
 bind 'set completion-ignore-case on' 2>/dev/null || true
 
 # Ensure history file exists and is writable
-if [[ ! -f "$HISTFILE" ]]; then
-	touch "$HISTFILE" 2>/dev/null || {
-		[[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "Cannot create history file $HISTFILE" >&2
-	}
+if [[ ! -f "${HISTFILE}" ]]; then
+	if ! touch "${HISTFILE}"; then
+		echo "profile.sh:: Cannot create history file ${HISTFILE}" >&2
+	elif ! chmod 600 "${HISTFILE}"; then
+		echo "profile.sh:: Cannot set history file mode ${HISTFILE}" >&2
+	fi
 fi

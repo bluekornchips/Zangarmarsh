@@ -59,6 +59,12 @@ teardown_file() {
 	return 0
 }
 
+@test "zangarmarsh:: refuses execution" {
+	run bash "${SCRIPT}"
+	[[ "$status" -eq 1 ]]
+	echo "$output" | grep -q "zangarmarsh:: source this file instead of executing it"
+}
+
 @test "zangarmarsh:: load successfully with default settings" {
 	run source "$SCRIPT"
 	[[ "$status" -eq 0 ]]

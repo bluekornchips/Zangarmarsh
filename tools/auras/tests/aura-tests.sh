@@ -110,6 +110,12 @@ teardown_file() {
 	grep -q "validate_appimage_path:: AppImage path must be absolute" <<<"$output"
 }
 
+@test "validate_appimage_path:: rejects a quote or percent sign" {
+	run validate_appimage_path "/tmp/bad%name.AppImage" "validate_appimage_path"
+	[[ "$status" -eq 1 ]]
+	grep -q "must not contain a quote or percent sign" <<<"$output"
+}
+
 @test "validate_appimage_path:: rejects non-AppImage extension" {
 	local appdir="${AURAS_TEST_HOME}/apps"
 	mkdir -p "${appdir}"

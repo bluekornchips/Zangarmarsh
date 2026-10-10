@@ -35,7 +35,6 @@ temp_*
 /profile-test.*/
 /zangarmarsh-test.*/
 /zangarmarsh-load-test.*/
-/list-changed-files-test.*/
 /prompt-test.*/
 /quest-log-test.*/
 /hearthstone-mock.*/
@@ -44,7 +43,6 @@ temp_*
 # Backup files
 *.bak
 *.backup
-.agent-rules-backup/
 
 # Python virtual environments
 .venv/

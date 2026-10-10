@@ -393,7 +393,7 @@ teardown_file() {
 	[[ "$status" -eq 0 ]]
 	[[ ! -d "$test_dir/venv" ]]
 	[[ ! -d "$test_dir/.venv" ]]
-	[[ ! -d "$test_dir/env" ]]
+	[[ -d "$test_dir/env" ]]
 	[[ ! -d "$test_dir/__pycache__" ]]
 	[[ ! -f "$test_dir/test.pyc" ]]
 	[[ ! -f "$test_dir/test.pyo" ]]
@@ -438,10 +438,10 @@ teardown_file() {
 	[[ "$status" -eq 0 ]]
 	[[ ! -d "$test_dir/node_modules" ]]
 	[[ ! -d "$test_dir/.npm" ]]
-	[[ ! -d "$test_dir/.yarn" ]]
-	[[ ! -f "$test_dir/package-lock.json" ]]
-	[[ ! -f "$test_dir/yarn.lock" ]]
-	[[ ! -f "$test_dir/.yarnrc.yml" ]]
+	[[ -d "$test_dir/.yarn" ]]
+	[[ -f "$test_dir/package-lock.json" ]]
+	[[ -f "$test_dir/yarn.lock" ]]
+	[[ -f "$test_dir/.yarnrc.yml" ]]
 	[[ ! -f "$test_dir/npm-debug.log" ]]
 	[[ ! -f "$test_dir/yarn-error.log" ]]
 }
@@ -541,6 +541,34 @@ teardown_file() {
 	run run_trilliax "$TEST_DIR/nested"
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "validate_targets:: No targets specified"
+}
+
+@test "execute_clean:: skips a sibling that shares the target prefix" {
+	local test_dir="$TEST_CLEANUP_DIR"
+	local sibling="${test_dir}-other"
+	mkdir -p "${sibling}"
+	echo keep >"${sibling}/keep.txt"
+	TRILLIAX_SIBLING="${sibling}"
+	export TRILLIAX_SIBLING
+
+	find() {
+		printf '%s\0' "${TRILLIAX_SIBLING}/keep.txt"
+		return 0
+	}
+
+	DRY_RUN=false run execute_clean "clean_fs" "$test_dir" -type f
+	[[ "$status" -eq 0 ]]
+	[[ -f "${sibling}/keep.txt" ]]
+}
+
+@test "execute_clean:: rejects a non-integer MAX_DEPTH" {
+	local test_dir="$TEST_CLEANUP_DIR"
+	MAX_DEPTH="nope"
+	export MAX_DEPTH
+
+	run execute_clean "clean_fs" "$test_dir" -type d -empty
+	[[ "$status" -eq 1 ]]
+	echo "$output" | grep -q "MAX_DEPTH must be an integer"
 }
 
 @test "execute_clean:: honors MAX_DEPTH" {

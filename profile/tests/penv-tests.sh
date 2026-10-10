@@ -115,6 +115,23 @@ teardown_file() {
 	echo "$output" | grep -q "Use 'penv --help'"
 }
 
+@test "penv:: rejects an interpreter path" {
+	run penv 'python3.1/../../../tmp/pwn'
+	[[ "$status" -eq 1 ]]
+	echo "$output" | grep -q "Unknown option"
+}
+
+@test "penv:: refuses to source a symlink activate script" {
+	mkdir -p .venv/bin
+	echo 'echo pwned' >"${TEST_DIR}/evil-activate"
+	ln -s "${TEST_DIR}/evil-activate" .venv/bin/activate
+
+	run penv
+	[[ "$status" -eq 1 ]]
+	echo "$output" | grep -q "refusing to source"
+	[[ ! -f ".venv/bin/python" ]]
+}
+
 @test "penv:: fail with invalid Python version" {
 	run penv python9.99
 	[[ "$status" -ne 0 ]]
@@ -217,13 +234,12 @@ teardown_file() {
 	echo "$output" | grep -q "Failed to create virtual environment"
 }
 
-@test "penv:: handle failed virtual environment activation" {
-
+@test "penv:: recreates when the activate script is missing" {
 	mkdir -p .venv/bin
 
 	run penv
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Virtual environment exists, activating"
+	echo "$output" | grep -q "Removing existing virtual environment"
 	echo "$output" | grep -q "Creating virtual environment"
 }
 

@@ -63,7 +63,7 @@ main() {
 
 	_auras_load_lib || return 1
 
-	while [[ $# -gt 0 ]]; do
+	while (($# > 0)); do
 		case "$1" in
 		-h | --help)
 			usage
@@ -75,7 +75,7 @@ main() {
 				return 1
 			fi
 
-			if [[ $# -lt 2 ]]; then
+			if (($# < 2)); then
 				if [[ "$1" == "-b" || "$1" == "--buff" ]]; then
 					echo "main:: --buff requires NAME" >&2
 				else
@@ -94,7 +94,7 @@ main() {
 			shift 2
 			;;
 		-a | --appimage)
-			if [[ $# -lt 2 ]]; then
+			if (($# < 2)); then
 				echo "main:: --appimage requires PATH" >&2
 				return 1
 			fi
@@ -123,6 +123,10 @@ main() {
 	debuff)
 		debuff_main "${app_stem}" "${appimage_path}"
 		return $?
+		;;
+	*)
+		echo "main:: unknown mode '${mode}'" >&2
+		return 1
 		;;
 	esac
 }

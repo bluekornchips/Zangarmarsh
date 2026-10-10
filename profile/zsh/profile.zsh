@@ -72,9 +72,11 @@ export SAVEHIST
 [[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "profile.zsh:: Set HISTFILE to: ${HISTFILE}" >&2
 
 if [[ ! -f "${HISTFILE}" ]]; then
-	touch "${HISTFILE}" 2>/dev/null || {
-		[[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "profile.zsh:: Cannot create history file ${HISTFILE}" >&2
-	}
+	if ! touch "${HISTFILE}"; then
+		echo "profile.zsh:: Cannot create history file ${HISTFILE}" >&2
+	elif ! chmod 600 "${HISTFILE}"; then
+		echo "profile.zsh:: Cannot set history file mode ${HISTFILE}" >&2
+	fi
 fi
 
 setopt \
@@ -89,7 +91,7 @@ setopt \
 if [[ -z "${_comp_setup}" ]]; then
 	autoload -Uz compinit
 
-	# Use cached completion dump if it's fresh, less than 24 hours old
+	# Use cached completion dump when it is newer than ~/.zshrc
 	comp_dump="${HOME}/.zcompdump"
 	if [[ -f "${comp_dump}" && "${comp_dump}" -nt "${HOME}/.zshrc" ]]; then
 		compinit -C

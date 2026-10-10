@@ -105,7 +105,7 @@ teardown_file() {
 	run bash "$SCRIPT" --debuff demoapp --appimage /tmp/x.AppImage
 	[[ "$status" -eq 1 ]]
 
-	grep -q "main:: --appimage is only valid with --buff" <<<"$output"
+	grep -q "debuff_main:: --appimage is only valid with --buff" <<<"$output"
 }
 
 @test "main:: debuff mode removes managed desktop entry and bin symlink" {

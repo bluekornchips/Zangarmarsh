@@ -14,8 +14,8 @@ install the local quest-log plugin, and overwrite host Cursor user settings from
 
 ## Operations order
 
-1. `build_deck` — ensure `jq` is on `PATH`; this step does not install packages
-2. `trilliax --all "$ZANGARMARSH_ROOT"` — **only when `--force`** — cleanup the
+1. `ensure_jq` checks that `jq` is on `PATH`. This step does not install packages
+2. `trilliax --all "$ZANGARMARSH_ROOT"` runs only with `--force` and cleans the
    verified Zangarmarsh root before the sync
 3. `questlog` — install the quest-log plugin under
    `~/.cursor/plugins/local/quest-log` and overwrite host Cursor user settings
@@ -27,6 +27,7 @@ install the local quest-log plugin, and overwrite host Cursor user settings from
 hearthstone
 hearthstone --yes
 hearthstone --yes --force
+hearthstone --health-check
 hearthstone --help
 ```
 
@@ -34,6 +35,7 @@ hearthstone --help
 
 - `-y`, `--yes` — skip Hearthstone confirmation
 - `-f`, `--force` — run `trilliax --all` against the Zangarmarsh root before questlog
+- `--health-check` — validate `jq` and the trilliax and questlog script paths
 - `-h`, `--help` — print usage
 
 ## Confirmation

@@ -5,9 +5,6 @@
 
 _HEARTHSTONE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 
-# Default values
-DEFAULT_FORCE=false
-
 # Load shared repo helpers and export ZANGARMARSH_ROOT when needed
 #
 # Side Effects:
@@ -18,9 +15,7 @@ DEFAULT_FORCE=false
 # - 0 on success
 # - 1 when bootstrap fails
 _hearthstone_bootstrap() {
-	if [[ -n "${ZANGARMARSH_ROOT:-}" && -f "${ZANGARMARSH_ROOT}/zangarmarsh.sh" ]]; then
-		return 0
-	fi
+	[[ -n "${ZANGARMARSH_ROOT:-}" && -f "${ZANGARMARSH_ROOT}/zangarmarsh.sh" ]] && return 0
 
 	source "${_HEARTHSTONE_DIR}/../lib/repo.sh" || return 1
 	ensure_zangarmarsh_repo "${_HEARTHSTONE_DIR}" || return 1
@@ -42,6 +37,8 @@ OPTIONS:
 	--health-check      Validate local dependencies and script paths
 
 EOF
+
+	return 0
 }
 
 # Check required external commands and scripts
@@ -70,7 +67,7 @@ health_check() {
 		errors=$((errors + 1))
 	fi
 
-	if [[ "${errors}" -eq 0 ]]; then
+	if ((errors == 0)); then
 		echo "health_check:: passed"
 		return 0
 	fi
@@ -80,36 +77,52 @@ health_check() {
 	return 1
 }
 
-# Prompt user to confirm proceeding with destructive operations
+# Prompt user to confirm the operations this run will perform
+#
+# Inputs:
+# - $1 force, true when trilliax cleanup will run
 #
 # Outputs:
-# - Warning message and confirmation prompt to stdout
-# - Cancellation message to stdout if user declines
+# - Planned operations and confirmation prompt to stdout
+# - Cancellation message to stderr if user declines
 #
 # Returns:
-# - 0 if user confirms with y/yes/Y
+# - 0 if user confirms with y or yes
 # - 1 if user declines or provides invalid input
 confirm_proceed() {
-	local build_deck_msg="build_deck: Ensure jq is available on PATH"
-	local questlog_msg="questlog: Install the local quest-log plugin, overwrite Cursor user settings"
-	local trilliax_msg="trilliax --all: Clean generated files and directories"
+	local force="${1:-false}"
+	local operations=()
+	operations+=("ensure_jq: Ensure jq is available on PATH")
+	operations+=("questlog: Install the local quest-log plugin and overwrite Cursor user settings")
+	if [[ "${force}" == true ]]; then
+		operations+=("trilliax --all: Clean generated files and directories")
+	fi
 
-	cat <<EOF
-This script performs destructive operations. You will be prompted
-to confirm before proceeding unless the -y flag is provided.
+	if [[ "${force}" == true ]]; then
+		cat <<EOF
+This script performs destructive operations, including trilliax cleanup.
+You will be prompted to confirm before proceeding unless the -y flag is provided.
 
 OPERATIONS:
 EOF
+	else
+		cat <<EOF
+This script checks jq, installs the quest-log plugin, and overwrites Cursor user settings.
+You will be prompted to confirm before proceeding unless the -y flag is provided.
 
-	local msg
-	for msg in "$build_deck_msg" "$questlog_msg" "$trilliax_msg"; do
-		echo "${msg}"
+OPERATIONS:
+EOF
+	fi
+
+	local operation
+	for operation in "${operations[@]}"; do
+		echo "${operation}"
 	done
 
 	local response
 	read -r -p "Do you want to proceed? [y/N] " response
 	if [[ "${response}" != [yY][eE][sS] && "${response}" != [yY] ]]; then
-		echo "confirm_proceed:: Operation cancelled by user"
+		echo "confirm_proceed:: Operation cancelled by user" >&2
 		return 1
 	fi
 
@@ -167,25 +180,10 @@ ensure_jq() {
 	return 1
 }
 
-# Build the deck by ensuring required dependencies are installed
-#
-# Outputs:
-# - Status messages to stdout
-# - Error messages to stderr if installation fails
-#
-# Returns:
-# - 0 if all dependencies are successfully installed
-# - 1 if jq is missing
-build_deck() {
-	ensure_jq || {
-		echo "build_deck:: Failed to ensure jq" >&2
-		return 1
-	}
-
-	return 0
-}
-
 # Execute the hearthstone operations in sequence
+#
+# Inputs:
+# - $1 force, true when trilliax cleanup should run
 #
 # Outputs:
 # - Progress messages to stdout
@@ -195,18 +193,20 @@ build_deck() {
 # - 0 if all operations complete successfully
 # - 1 if any operation fails
 execute_operations() {
+	local force="${1:-false}"
+
 	if [[ -z "${TRILLIAX_SCRIPT:-}" ]] || [[ -z "${QUESTLOG_SCRIPT:-}" ]]; then
 		echo "execute_operations:: Required script variables are not set" >&2
 		return 1
 	fi
 
-	echo "execute_operations:: Running: build_deck"
-	build_deck || {
-		echo "execute_operations:: Failed to execute: build_deck" >&2
+	echo "execute_operations:: Running: ensure_jq"
+	ensure_jq || {
+		echo "execute_operations:: Failed to execute: ensure_jq" >&2
 		return 1
 	}
 
-	if [[ "${FORCE:-}" = "true" ]]; then
+	if [[ "${force}" == true ]]; then
 		echo "execute_operations:: Running: trilliax --all ${ZANGARMARSH_ROOT}"
 		"${TRILLIAX_SCRIPT}" --all "${ZANGARMARSH_ROOT}" || {
 			echo "execute_operations:: Failed to execute: trilliax --all" >&2
@@ -225,19 +225,19 @@ execute_operations() {
 
 run_hearthstone() {
 	local do_health_check=false
-	FORCE="${FORCE:-${DEFAULT_FORCE}}"
+	local force=false
 	SKIP_CONFIRMATION=false
 
 	_hearthstone_bootstrap || return 1
 
-	while [[ $# -gt 0 ]]; do
+	while (($# > 0)); do
 		case "$1" in
 		-y | --yes)
 			SKIP_CONFIRMATION=true
 			shift
 			;;
 		-f | --force)
-			FORCE=true
+			force=true
 			shift
 			;;
 		-h | --help)
@@ -256,11 +256,9 @@ run_hearthstone() {
 		esac
 	done
 
-	SCRIPT_DIR="${ZANGARMARSH_ROOT}/tools/hearthstone"
 	TRILLIAX_SCRIPT="${TRILLIAX_SCRIPT:-${ZANGARMARSH_ROOT}/tools/trilliax/trilliax.sh}"
 	QUESTLOG_SCRIPT="${QUESTLOG_SCRIPT:-${ZANGARMARSH_ROOT}/tools/quest-log/quest-log.sh}"
 
-	export FORCE
 	export SKIP_CONFIRMATION
 	export TRILLIAX_SCRIPT
 	export QUESTLOG_SCRIPT
@@ -273,7 +271,7 @@ run_hearthstone() {
 	verify_git_repository || return 1
 
 	if [[ "${SKIP_CONFIRMATION}" != "true" ]]; then
-		confirm_proceed || return 1
+		confirm_proceed "${force}" || return 1
 	fi
 
 	cat <<EOF
@@ -283,7 +281,7 @@ Running Hearthstone
 
 EOF
 
-	if ! execute_operations; then
+	if ! execute_operations "${force}"; then
 		echo "run_hearthstone:: Hearthstone operations failed" >&2
 		return 1
 	fi

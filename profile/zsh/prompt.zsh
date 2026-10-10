@@ -38,6 +38,8 @@ git_branch() {
 		branch=$(git branch --show-current 2>/dev/null || git rev-parse --short HEAD 2>/dev/null)
 		[[ -n "${branch}" ]] && echo " (${branch})"
 	fi
+
+	return 0
 }
 
 # Display current kubectl context when available
@@ -54,9 +56,9 @@ shorten() {
 	local input_string="$1"
 	local str_length="$2"
 	local min_length=1
-	[[ "${str_length}" -lt "${min_length}" ]] && str_length="${min_length}"
+	((str_length < min_length)) && str_length="${min_length}"
 
-	if [[ ${#input_string} -gt "${str_length}" ]]; then
+	if ((${#input_string} > str_length)); then
 		echo "${input_string:0:${str_length}}"
 	else
 		echo "${input_string}"
@@ -158,6 +160,8 @@ build_prompt() {
 	_prompt_pwd_cache="${current_pwd}"
 
 	echo -e "${prompt}"
+
+	return 0
 }
 
 # Set the prompt
