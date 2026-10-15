@@ -1,18 +1,12 @@
 ---
-description: Lua standards from the LuaRocks style guide for modules, locals, errors, LDoc, tables, luacheck, and tests.
+description: Lua standards for modules, locals, errors, LDoc, tables, luacheck, and WoW add-on files.
 globs:
   - '**/*.lua'
   - '**/*.rockspec'
 alwaysApply: false
 ---
 
-RULE APPLIED: Start each response with an acknowledgement icon to confirm this rule is being followed: 🌙
-
-Keywords that trigger usage of this rule: lua,luajit,luarocks,rockspec,luacheck,busted
-
 # Lua Standards
-
-Keywords when this doc applies: lua, luajit, luarocks, rockspec, luacheck, busted
 
 ## Purpose
 
@@ -20,13 +14,13 @@ Keep Lua code small, local by default, easy to scan, and aligned with sensible L
 
 ## WoW Lua style choices
 
-These rules apply to Lua files loaded by a WoW add-on TOC and to Lua tests that exercise those files. They are style choices for WoW Lua, not strict rules for every Lua ecosystem.
+These rules apply to Lua files loaded by a WoW add-on TOC. They are style choices for WoW Lua, not strict rules for every Lua ecosystem.
 
 - Use `local _, ns = ...` at the top of each TOC chunk. Shared public APIs live on `ns`.
 - Public functions on `ns` use `PascalCase`. Keep that convention for shared APIs so calls are easy to spot beside local helpers.
 - TOC-loaded files may register frames, events, and slash commands at load time. That is normal for WoW add-ons.
 - Addon-specific saved variables, `SLASH_*`, and `SlashCmdList` entries belong in `.luacheckrc` when used.
-- Use `2 spaces` for indentation in WoW add-on Lua files and Lua tests. Do not use tabs or mixed tab and space indent.
+- Use 2 spaces for indentation in WoW add-on Lua files. Do not use tabs or mixed tab and space indent.
 
 ## Standards, general Lua
 
@@ -37,7 +31,7 @@ These rules apply to Lua files loaded by a WoW add-on TOC and to Lua tests that 
 - Validate early and return early. For expected failures, return `nil` plus an error string and optional code. For API misuse, use `error()` or `assert()`.
 - Use LDoc comments for public functions and modules when names and signatures are not enough.
 - Require modules into local variables named after the last module path component.
-- Test-only library modules that ship only through `require` should `return` a table and avoid globals and side effects beyond loading dependencies. TOC-loaded add-on files are exempt, see WoW section above.
+- Library modules that ship only through `require` should `return` a table and avoid globals and side effects beyond loading dependencies. TOC-loaded add-on files are exempt, see WoW section above.
 - Prefer tables populated all at once, use trailing commas in multiline tables, and use plain key syntax when the key is a valid identifier.
 - Use double quotes for strings. Use single quotes only when the string contains double quotes.
 - Run `luacheck` when the repo uses it. Add a `.luacheckrc` for intentional exceptions.
@@ -66,7 +60,7 @@ These rules apply to Lua files loaded by a WoW add-on TOC and to Lua tests that 
 - APIs that depend on callers knowing the difference between `nil` and `false`.
 - Single-line blocks except `then return`, `then break`, and one-line callback returns.
 - Relying on `__gc` to close files, sockets, handles, or other non-memory resources.
-- Side effects when requiring a `pure` test or library module, including configuration changes or global writes. TOC-loaded add-on files are exempt.
+- Side effects when requiring a library module, including configuration changes or global writes. TOC-loaded add-on files are exempt.
 
 ## Example
 

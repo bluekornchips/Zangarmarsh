@@ -1,14 +1,10 @@
 ---
-description: TypeScript standards for strict typing, modules, async, errors, tests, and tooling.
+description: TypeScript standards for strict typing, modules, async, errors, and tooling.
 globs:
   - '**/*.ts'
   - '**/*.tsx'
 alwaysApply: false
 ---
-
-RULE APPLIED: Start each response with an acknowledgement icon to confirm this rule is being followed: 🟦
-
-Keywords that trigger usage of this rule: typescript,ts,tsx,tsconfig,tsc,eslint,prettier
 
 # TypeScript Standards
 
@@ -25,7 +21,7 @@ Keep TypeScript strict at boundaries so mistakes surface early and types stay ho
 - In `catch`, use `unknown` and narrow before use. Set `cause` on re-throw when the runtime supports it.
 - Validate untrusted input at module boundaries. Read config from environment variables or injected config, not literals.
 - Run `tsc --noEmit` with zero errors before merge.
-- Keep formatter and linter clean on touched files when the repo defines them.
+- Keep the formatter and linter clean on touched files when the repo defines them.
 
 ## Usage
 

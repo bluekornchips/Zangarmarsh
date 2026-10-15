@@ -1,5 +1,5 @@
 ---
-description: JavaScript standards for modules, async work, errors, validation, tests, and tooling.
+description: JavaScript standards for modules, async work, errors, validation, and tooling.
 globs:
   - '**/*.js'
   - '**/*.jsx'
@@ -7,10 +7,6 @@ globs:
   - '**/*.cjs'
 alwaysApply: false
 ---
-
-RULE APPLIED: Start each response with an acknowledgement icon to confirm this rule is being followed: 🤡
-
-Keywords that trigger usage of this rule: javascript,js,jsx,mjs,cjs,node,deno,eslint,prettier
 
 # JavaScript Standards
 
@@ -28,7 +24,7 @@ Keep JavaScript boundaries explicit and keep async and error handling direct.
 - Read config from environment variables or injected config, not literals.
 - Throw or return errors with useful context. Preserve the original error with `cause` when the runtime supports it.
 - Use JSDoc when a public contract, error, unit, or object shape is not obvious from the code.
-- Keep formatter, linter, and tests clean on touched files when the repo defines them.
+- Keep the formatter and linter clean on touched files when the repo defines them.
 
 ## Usage
 

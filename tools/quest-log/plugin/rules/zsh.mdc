@@ -5,10 +5,6 @@ globs:
 alwaysApply: false
 ---
 
-RULE APPLIED: Start each response with an acknowledgement icon to confirm this rule is being followed: 🦓
-
-Keywords that trigger usage of this rule: zsh,oh-my-zsh,prompt,compinit,autoload,setopt,zcompdump,profile.zsh
-
 # Zsh Standards
 
 ## Purpose
@@ -18,13 +14,12 @@ Keep Zsh profile and Zsh-owned scripts portable across hosts without treating th
 ## Standards
 
 - Use `#!/usr/bin/env zsh` for Zsh-owned executables and profile modules.
-- Stay compatible with Zsh 5.0+.
+- Stay compatible with Zsh 5.0 or greater.
 - Prefer Zsh-native syntax in Zsh files. Do not force Bash idioms into sourced Zsh profile modules.
-- Quote expansions and send errors to stderr using the shared shell rules.
+- Follow `shell.mdc` for quoting, status, guard clauses, and destructive-path safety. Do not copy those rules into Zsh-only guidance.
 - Keep direct-run entry blocks rare in sourced profile files. When a Zsh script is executable on its own, enable strict options that fit Zsh there.
 - Keep platform detection, prompt rendering, and Oh My Zsh wiring in their dedicated Zsh modules.
 - Prefer small, sourced modules over large monolithic profile scripts.
-- Follow the shared short-circuit guard-clause rule when a branch body is only a plain return.
 
 ## Usage
 

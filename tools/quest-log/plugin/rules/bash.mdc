@@ -6,10 +6,6 @@ globs:
 alwaysApply: false
 ---
 
-RULE APPLIED: Start each response with an acknowledgement icon to confirm this rule is being followed: 🔨
-
-Keywords that trigger usage of this rule: bash,bats,local,shebang,BASH_SOURCE,array,mktemp,source guard
-
 # Bash Standards
 
 ## Purpose
