@@ -298,7 +298,7 @@ quest_log_test_setup() {
 		[[ -f "${tracked_plugin}/rules/${rule}.mdc" ]]
 	done
 	local skill
-	for skill in blue-author blue-review blue-bash-review blue-lua-review blue-typescript-review blue-python-project-setup; do
+	for skill in blue-author blue-pr blue-review blue-bash-review blue-lua-review blue-typescript-review blue-python-project-setup; do
 		[[ -f "${tracked_plugin}/skills/${skill}/SKILL.md" ]]
 	done
 	[[ ! -e "${tracked_plugin}/MCP.md" ]]
