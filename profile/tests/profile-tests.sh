@@ -21,7 +21,22 @@ setup_file() {
 	return 0
 }
 
-# Setup test environment for zsh profile testing
+# Prepare an isolated zsh home for profile tests.
+#
+# Reads environment:
+# - BATS_TEST_TMPDIR
+# - TMPDIR
+# - ZANGARMARSH_ROOT
+#
+# Side Effects:
+# - Creates a temp directory and changes into it
+# - Exports TEST_DIR, USER, HOSTNAME, HOME, ZDOTDIR, PWD, ZSH, ZANGARMARSH_ROOT, and ZANGARMARSH_VERBOSE
+# - Writes .zshrc and .zcompdump
+# - Creates a mock Oh My Zsh tree under ${ZSH}
+#
+# Returns:
+# - 0 when the temp home is ready
+# - 1 when cd into the temp dir fails
 setup() {
 	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
 

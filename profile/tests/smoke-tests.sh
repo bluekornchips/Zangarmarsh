@@ -53,6 +53,13 @@ teardown_file() {
 
 # Build one completion dump for the warm timings below.
 #
+# Reads environment:
+# - HOME
+#
+# Side Effects:
+# - Writes ${HOME}/.zcompdump through compinit
+# - Writes failure messages to stderr
+#
 # Returns:
 # - 0 when ${HOME}/.zcompdump exists and is non-empty
 # - 1 when compinit fails or writes no dump
@@ -69,6 +76,22 @@ seed_zcompdump() {
 	return 0
 }
 
+# Time one interactive zsh startup.
+#
+# Reads environment:
+# - HOME
+#
+# Outputs:
+# - Load time in milliseconds on stdout
+#
+# Side Effects:
+# - Updates the mtime of ${HOME}/.zcompdump so it stays newer than .zshrc
+# - Starts an interactive zsh
+# - Writes failure messages to stderr
+#
+# Returns:
+# - 0 when the timing is printed
+# - 1 when the completion dump is missing, touch fails, or zsh exits nonzero
 measure_warm_zsh_load_ms() {
 	if [[ ! -s "${HOME}/.zcompdump" ]]; then
 		echo "measure_warm_zsh_load_ms:: completion dump is missing" >&2
