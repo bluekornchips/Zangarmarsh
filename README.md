@@ -64,7 +64,7 @@ questlog --dry-run
 
 ## Notes on destructive tools
 
-- Trilliax and Hearthstone `--force` can delete generated trees and caches
+- Trilliax can delete generated trees and caches
 
 ## Configuration
 
@@ -115,12 +115,11 @@ These apply when `profile/zsh/prompt.zsh` runs:
 
 After sourcing, functions map to scripts under `tools/` and work in interactive and non-interactive shells. Each script can also run standalone and resolve `ZANGARMARSH_ROOT` from its location.
 
-| Command       | Tool        | Role                                                      |
-| ------------- | ----------- | --------------------------------------------------------- |
-| `questlog`    | Quest Log   | Install plugin; overwrite host Cursor user settings       |
-| `trilliax`    | Trilliax    | Cleanup for caches and artifacts                          |
-| `hearthstone` | Hearthstone | Ensure jq, run questlog; optional Trilliax with `--force` |
-| `auras`       | Auras       | AppImage `.desktop` launchers and `~/.local/bin` commands |
+| Command    | Tool      | Role                                                      |
+| ---------- | --------- | --------------------------------------------------------- |
+| `questlog` | Quest Log | Install plugin; overwrite host Cursor user settings       |
+| `trilliax` | Trilliax  | Cleanup for caches and artifacts                          |
+| `auras`    | Auras     | AppImage `.desktop` launchers and `~/.local/bin` commands |
 
 Per-tool docs: [tools/README.md](tools/README.md).
 

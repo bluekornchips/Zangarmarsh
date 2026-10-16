@@ -108,8 +108,7 @@ Canonical host Cursor settings live in `tools/vscode/settings.json`. Each
 There is no project `.vscode/` sync. `tools/vscode/extensions.json` is a
 recommended extensions list only.
 
-Edit `tools/vscode/settings.json`, then run `questlog` or `hearthstone` to
-apply.
+Edit `tools/vscode/settings.json`, then run `questlog` to apply.
 
 ## Testing
 

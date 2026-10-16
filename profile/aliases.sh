@@ -64,10 +64,6 @@ trilliax() {
 	_zangarmarsh_tool tools/trilliax/trilliax.sh "$@"
 }
 
-hearthstone() {
-	_zangarmarsh_tool tools/hearthstone/hearthstone.sh "$@"
-}
-
 auras() {
 	_zangarmarsh_tool tools/auras/auras.sh "$@"
 }
