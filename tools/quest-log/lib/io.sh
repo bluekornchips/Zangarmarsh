@@ -21,10 +21,15 @@ show_diff() {
 	}
 
 	chmod 0600 "${temp_file}"
-	printf '%s\n' "${new_content}" >"${temp_file}"
+	printf '%s' "${new_content}" >"${temp_file}"
 
 	if [[ -f "${file_path}" ]]; then
-		if ! diff -u --color=always "${file_path}" "${temp_file}"; then
+		local diff_args=(-u)
+		if diff -u --color=always /dev/null /dev/null >/dev/null 2>&1; then
+			diff_args+=(--color=always)
+		fi
+
+		if ! diff "${diff_args[@]}" "${file_path}" "${temp_file}"; then
 			echo "show_diff:: Differences found between ${file_path} and ${temp_file}"
 		fi
 	fi
@@ -90,7 +95,11 @@ write_if_changed() {
 	local error_label="${4:-write_if_changed}"
 
 	local existing_content
-	existing_content=$(read_file_or_empty "${file_path}")
+	existing_content="$(
+		read_file_or_empty "${file_path}"
+		printf x
+	)"
+	existing_content="${existing_content%x}"
 
 	local display_path
 	display_path=$(realpath "${file_path}" 2>/dev/null || echo "${file_path}")
@@ -104,7 +113,7 @@ write_if_changed() {
 	fi
 
 	show_diff "${file_path}" "${new_content}"
-	printf '%s\n' "${new_content}" >"${file_path}"
+	printf '%s' "${new_content}" >"${file_path}"
 	if [[ ! -f "${file_path}" ]]; then
 		echo "${error_label}:: Failed to write file: ${display_path}" >&2
 		STATS_ERRORS=$((STATS_ERRORS + 1))

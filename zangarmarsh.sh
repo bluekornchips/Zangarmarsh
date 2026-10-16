@@ -82,7 +82,10 @@ fi
 
 SHELL_NAME=""
 if [[ -z "${ZSH_VERSION:-}" && -z "${BASH_VERSION:-}" ]]; then
-	SHELL_NAME=$(ps -p "$$" -o comm= 2>/dev/null | tail -1)
+	SHELL_NAME="$(ps -p "$$" -o comm= 2>/dev/null | tail -n 1 || true)"
+	if [[ -z "${SHELL_NAME}" ]]; then
+		SHELL_NAME="$(ps -p "$$" -o comm 2>/dev/null | tail -n 1 || true)"
+	fi
 fi
 if [[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]]; then
 	echo "Shell detection: ZSH_VERSION='${ZSH_VERSION:-}'" >&2

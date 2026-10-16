@@ -37,6 +37,7 @@ teardown_file() {
 }
 
 plugin_lib_test_setup() {
+	source "${GIT_ROOT}/tests/fixtures.sh"
 	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
 	local return_dir="${PWD}"
 
@@ -59,11 +60,7 @@ plugin_lib_test_setup() {
 	export ZANGARMARSH_ROOT
 
 	cd "${ZANGARMARSH_ROOT}" || return 1
-	set +e
-	trap - EXIT ERR
-	source "${QUEST_LOG_ROOT}/lib/plugin.sh"
-	trap - EXIT ERR
-	set +e
+	source_for_test "${QUEST_LOG_ROOT}/lib/plugin.sh" || return 1
 
 	cd "${TEST_TEMP_DIR}" || {
 		cd "${return_dir}" || true
@@ -289,6 +286,7 @@ plugin_lib_test_setup() {
 	}
 
 	run uninstall_quest_plugin
+	unset -f rm
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "failed to remove"
 	[[ -d "${QUEST_LOG_PLUGIN_DIR}" ]]

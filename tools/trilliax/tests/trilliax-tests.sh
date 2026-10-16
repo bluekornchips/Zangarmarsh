@@ -22,13 +22,10 @@ setup_file() {
 }
 
 setup() {
-	set +e
-	trap - EXIT ERR
-	source "$SCRIPT"
-	trap - EXIT ERR
-	set +e
+	source "${GIT_ROOT}/tests/fixtures.sh"
+	source_for_test "$SCRIPT" || return 1
 
-	TEST_DIR="$(mktemp -d -t trilliax-test.XXXXXX)"
+	TEST_DIR="$(mktemp -d "${TMPDIR:-/tmp}/trilliax-test.XXXXXX")"
 	export TEST_DIR
 	TEST_CLEANUP_DIR="${TEST_DIR}/cleanup_test"
 	export TEST_CLEANUP_DIR
@@ -425,6 +422,7 @@ teardown_file() {
 	}
 
 	DRY_RUN=false run execute_clean "clean_fs" "$test_dir" -type f
+	unset -f find
 	[[ "$status" -eq 0 ]]
 	[[ -f "${sibling}/keep.txt" ]]
 }
@@ -465,6 +463,7 @@ teardown_file() {
 	}
 
 	DRY_RUN=false run execute_clean "clean_fs" "$test_dir" -depth -type d -empty
+	unset -f rm
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "Failed to remove"
 }

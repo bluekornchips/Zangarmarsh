@@ -76,6 +76,37 @@ seed_zcompdump() {
 	return 0
 }
 
+# Milliseconds since the epoch, on GNU and BSD date
+#
+# Outputs:
+# - Integer milliseconds on stdout
+#
+# Returns:
+# - 0 when a timestamp is printed
+# - 1 when no clock command succeeds
+now_ms() {
+	local raw
+	raw="$(date +%s%N 2>/dev/null || true)"
+	if [[ "${raw}" =~ ^[0-9]+$ ]]; then
+		echo $((raw / 1000000))
+		return 0
+	fi
+
+	if command -v python3 >/dev/null 2>&1; then
+		python3 -c 'import time; print(int(time.time() * 1000))'
+		return 0
+	fi
+
+	raw="$(date +%s 2>/dev/null || true)"
+	if [[ "${raw}" =~ ^[0-9]+$ ]]; then
+		echo $((raw * 1000))
+		return 0
+	fi
+
+	echo "now_ms:: no usable clock" >&2
+	return 1
+}
+
 # Time one interactive zsh startup.
 #
 # Reads environment:
@@ -101,10 +132,10 @@ measure_warm_zsh_load_ms() {
 	# .zshrc was just rewritten. A newer dump keeps startup on compinit -C.
 	touch "${HOME}/.zcompdump" || return 1
 
-	local start_ns
-	local end_ns
+	local start_ms
+	local end_ms
 	local load_ms
-	start_ns="$(date +%s%N)"
+	start_ms="$(now_ms)" || return 1
 
 	# Do not use bats run here; this helper is called from command substitution.
 	if ! zsh -i -c 'exit' >/dev/null 2>&1; then
@@ -112,8 +143,8 @@ measure_warm_zsh_load_ms() {
 		return 1
 	fi
 
-	end_ns="$(date +%s%N)"
-	load_ms=$(((end_ns - start_ns) / 1000000))
+	end_ms="$(now_ms)" || return 1
+	load_ms=$((end_ms - start_ms))
 	echo "${load_ms}"
 
 	return 0

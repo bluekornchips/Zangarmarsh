@@ -92,7 +92,7 @@ build_prompt() {
 
 	# Return cached prompt if still valid
 	if [[ "${cache_expired}" == "false" && "${pwd_changed}" == "false" && -n "${_prompt_cache}" ]]; then
-		echo -e "${_prompt_cache}"
+		print -r -- "${_prompt_cache}"
 		return 0
 	fi
 
@@ -159,7 +159,7 @@ build_prompt() {
 	_prompt_cache_time="${current_time}"
 	_prompt_pwd_cache="${current_pwd}"
 
-	echo -e "${prompt}"
+	print -r -- "${prompt}"
 
 	return 0
 }

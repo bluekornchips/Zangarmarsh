@@ -70,6 +70,31 @@ zangarmarsh_bats_setup_file() {
 	return 0
 }
 
+# Source a library during setup without leaving Bats traps disabled
+#
+# Inputs:
+# - $1, path to source
+#
+# Side Effects:
+# - Sources the file with errexit and the EXIT/ERR traps suspended
+# - Restores those traps and errexit afterwards
+#
+# Returns:
+# - The sourced file's status
+source_for_test() {
+	local saved_traps
+	saved_traps="$(trap -p EXIT ERR)"
+	set +e
+	trap - EXIT ERR
+	# shellcheck disable=SC1090
+	source "$1"
+	local source_status=$?
+	eval "${saved_traps}"
+	set -e
+
+	return "${source_status}"
+}
+
 # Tests must set GIT_ROOT before sourcing this file.
 if [[ "${_ZANGARMARSH_SHARED_FIXTURES_LOADED:-}" != "1" ]]; then
 	load_shared_fixtures || return 1

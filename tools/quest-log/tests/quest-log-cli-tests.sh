@@ -37,6 +37,7 @@ teardown_file() {
 }
 
 quest_log_test_setup() {
+	source "${GIT_ROOT}/tests/fixtures.sh"
 	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
 	local return_dir="${PWD}"
 
@@ -57,15 +58,11 @@ quest_log_test_setup() {
 	export ZANGARMARSH_ROOT
 
 	cd "${ZANGARMARSH_ROOT}" || return 1
-	set +e
-	trap - EXIT ERR
-	source "$SCRIPT"
+	source_for_test "$SCRIPT" || return 1
 	SCRIPT_DIR="${QUEST_LOG_ROOT}"
 	export SCRIPT_DIR
 	export QUEST_LOG_ROOT
-	source "${ZANGARMARSH_ROOT}/tools/quest-log/lib/apply.sh"
-	trap - EXIT ERR
-	set +e
+	source_for_test "${ZANGARMARSH_ROOT}/tools/quest-log/lib/apply.sh" || return 1
 
 	cd "${TEST_TEMP_DIR}" || {
 		cd "${return_dir}" || true
@@ -130,19 +127,21 @@ quest_log_test_setup() {
 ########################################################
 
 @test 'run_quest_log:: overwrites Cursor user settings from template' {
-	mkdir -p "${HOME}/.config/Cursor/User"
+	local settings_file
+	settings_file="$(cursor_user_settings_path)"
+	mkdir -p "$(dirname "${settings_file}")"
 	printf '%s\n' '{
     "window.autoDetectColorScheme": true,
     "workbench.preferredDarkColorTheme": "Visual Studio Dark",
     "git.suggestSmartCommit": false
-}' >"${HOME}/.config/Cursor/User/settings.json"
+}' >"${settings_file}"
 
 	run run_quest_log
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "sync_cursor_user_settings:: writing"
-	jq -e '.["workbench.colorTheme"] == "Default Dark+"' "${HOME}/.config/Cursor/User/settings.json"
-	jq -e '.["editor.formatOnSave"] == true' "${HOME}/.config/Cursor/User/settings.json"
-	jq -e 'has("git.suggestSmartCommit") | not' "${HOME}/.config/Cursor/User/settings.json"
+	jq -e '.["workbench.colorTheme"] == "Default Dark+"' "${settings_file}"
+	jq -e '.["editor.formatOnSave"] == true' "${settings_file}"
+	jq -e 'has("git.suggestSmartCommit") | not' "${settings_file}"
 }
 
 @test 'run_quest_log:: writes macOS Application Support settings path' {
@@ -160,6 +159,7 @@ quest_log_test_setup() {
 	[[ -f "${HOME}/Library/Application Support/Cursor/User/settings.json" ]]
 	jq -e '.["editor.formatOnSave"] == true' "${HOME}/Library/Application Support/Cursor/User/settings.json"
 	[[ ! -e "${HOME}/.config/Cursor/User/settings.json" ]]
+	unset -f uname
 }
 
 @test 'run_quest_log:: fails when plugin source is missing' {
@@ -196,7 +196,7 @@ quest_log_test_setup() {
 	echo "$output" | grep -q "would replace"
 	echo "$output" | grep -q "would overwrite"
 	[[ ! -e "${QUEST_LOG_PLUGIN_DIR}" ]]
-	[[ ! -e "${HOME}/.config/Cursor/User/settings.json" ]]
+	[[ ! -e "$(cursor_user_settings_path)" ]]
 }
 
 @test 'run_quest_log:: accepts the short dry-run flag' {
@@ -212,9 +212,11 @@ quest_log_test_setup() {
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc" ]]
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/skills/blue-review/SKILL.md" ]]
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/.cursor-plugin/plugin.json" ]]
-	[[ -f "${HOME}/.config/Cursor/User/settings.json" ]]
-	jq -e '.["editor.formatOnSave"] == true' "${HOME}/.config/Cursor/User/settings.json"
-	jq -e --slurpfile t "${ZANGARMARSH_VSCODE_DIR}/settings.json" '. == $t[0]' "${HOME}/.config/Cursor/User/settings.json"
+	local settings_file
+	settings_file="$(cursor_user_settings_path)"
+	[[ -f "${settings_file}" ]]
+	jq -e '.["editor.formatOnSave"] == true' "${settings_file}"
+	jq -e --slurpfile t "${ZANGARMARSH_VSCODE_DIR}/settings.json" '. == $t[0]' "${settings_file}"
 }
 
 @test 'run_quest_log:: displays summary at end of execution' {
@@ -267,7 +269,7 @@ quest_log_test_setup() {
 	run apply_quest_log --plugin-only
 	[[ "$status" -eq 0 ]]
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/.cursor-plugin/plugin.json" ]]
-	[[ ! -e "${HOME}/.config/Cursor/User/settings.json" ]]
+	[[ ! -e "$(cursor_user_settings_path)" ]]
 }
 
 @test 'apply_quest_log:: restores plugin when settings sync fails' {
@@ -283,7 +285,7 @@ quest_log_test_setup() {
 	[[ "$status" -eq 1 ]]
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc" ]]
 	grep -q "previous-plugin" "${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc"
-	[[ ! -e "${HOME}/.config/Cursor/User/settings.json" ]]
+	[[ ! -e "$(cursor_user_settings_path)" ]]
 }
 
 ########################################################

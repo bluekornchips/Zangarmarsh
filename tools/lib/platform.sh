@@ -65,7 +65,7 @@ platform_os_from_id() {
 	fi
 
 	case "${platform_id}" in
-	darwin*)
+	darwin* | macos*)
 		echo "macos"
 		return 0
 		;;

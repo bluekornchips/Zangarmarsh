@@ -175,7 +175,7 @@ execute_clean() {
 	local errors=0
 	local item
 	while IFS= read -r -d '' item || [[ -n "${item}" ]]; do
-		if [[ -z "${item}" ]]; then
+		if [[ -z "${item}" || "${item}" == "${target_dir_abs}" ]]; then
 			continue
 		fi
 
@@ -217,7 +217,18 @@ clean_fs() {
 
 	echo "clean_fs:: Cleaning empty directories."
 
-	execute_clean "clean_fs" "${target_dir}" -depth -type d -empty || return 1
+	# A parent is not empty until its children are gone, so walk once per level.
+	if [[ "${DRY_RUN:-false}" == "true" ]]; then
+		execute_clean "clean_fs" "${target_dir}" -depth -type d -empty || return 1
+		return 0
+	fi
+
+	local pass=0
+	local max_passes="${MAX_DEPTH:-${DEFAULT_MAX_DEPTH}}"
+	while ((pass < max_passes)); do
+		execute_clean "clean_fs" "${target_dir}" -depth -type d -empty || return 1
+		pass=$((pass + 1))
+	done
 
 	return 0
 }
@@ -348,37 +359,31 @@ run_trilliax() {
 			return 0
 			;;
 		*)
-			if [[ -d "${1}" ]]; then
-				target_dir="${1}"
-				shift
-			else
+			if [[ "${1}" == -* ]]; then
 				echo "run_trilliax:: Unknown option '${1}'" >&2
 				echo "run_trilliax:: Use '$(basename "$0") --help' for usage information" >&2
 				return 1
 			fi
+			target_dir="${1}"
+			shift
 			;;
 		esac
 	done
+
+	if [[ -z "${target_dir}" || ! -d "${target_dir}" ]]; then
+		echo "run_trilliax:: Directory '${target_dir}' does not exist" >&2
+		return 1
+	fi
 
 	validate_targets "${targets_string}" "${all_flag}" || return 1
 
 	DRY_RUN="${DRY_RUN:-false}"
 	export DRY_RUN
 
-	if [[ -z "${target_dir}" ]]; then
-		echo "run_trilliax:: target_dir is required" >&2
-		return 1
-	fi
-
 	echo "run_trilliax:: Apologies for the mess master, I shall tidy up immediately."
 
 	MAX_DEPTH="${MAX_DEPTH:-${DEFAULT_MAX_DEPTH}}"
 	export MAX_DEPTH
-
-	if [[ ! -d "${target_dir}" ]]; then
-		echo "run_trilliax:: Directory '${target_dir}' does not exist" >&2
-		return 1
-	fi
 
 	pushd "${target_dir}" >/dev/null
 	target_dir="$(pwd)"

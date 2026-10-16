@@ -91,12 +91,13 @@ setopt \
 if [[ -z "${_comp_setup}" ]]; then
 	autoload -Uz compinit
 
-	# Use cached completion dump when it is newer than ~/.zshrc
-	comp_dump="${HOME}/.zcompdump"
-	if [[ -f "${comp_dump}" && "${comp_dump}" -nt "${HOME}/.zshrc" ]]; then
-		compinit -C
+	# Use cached completion dump when it is newer than ~/.zshrc.
+	# -u skips the macOS compaudit prompt on Homebrew's group-writable fpath.
+	comp_dump="${ZDOTDIR:-${HOME}}/.zcompdump"
+	if [[ -f "${comp_dump}" && "${comp_dump}" -nt "${ZDOTDIR:-${HOME}}/.zshrc" ]]; then
+		compinit -u -C -d "${comp_dump}"
 	else
-		compinit
+		compinit -u -d "${comp_dump}"
 	fi
 
 	_comp_setup=1
