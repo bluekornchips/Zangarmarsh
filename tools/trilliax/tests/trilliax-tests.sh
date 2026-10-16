@@ -5,17 +5,10 @@
 #
 
 setup_file() {
-	if ! GIT_ROOT="$(git rev-parse --show-toplevel)"; then
-		echo "setup_file:: Failed to get git root" >&2
-		return 1
-	fi
-	source "${GIT_ROOT}/tests/fixtures.sh"
+	GIT_ROOT="$(git rev-parse --show-toplevel)" || return 1
+	source "${GIT_ROOT}/tests/fixtures.sh" || return 1
 
 	SCRIPT="${ZANGARMARSH_ROOT}/tools/trilliax/trilliax.sh"
-	if [[ ! -f "${SCRIPT}" ]]; then
-		echo "setup_file:: Script not found: ${SCRIPT}" >&2
-		return 1
-	fi
 	export SCRIPT
 
 	return 0
@@ -26,6 +19,7 @@ setup() {
 	source_for_test "$SCRIPT" || return 1
 
 	TEST_DIR="$(mktemp -d "${TMPDIR:-/tmp}/trilliax-test.XXXXXX")"
+	TEST_DIR="$(cd "${TEST_DIR}" && pwd -P)"
 	export TEST_DIR
 	TEST_CLEANUP_DIR="${TEST_DIR}/cleanup_test"
 	export TEST_CLEANUP_DIR
@@ -37,10 +31,6 @@ setup() {
 teardown() {
 	[[ -d "$TEST_DIR" ]] && rm -rf "$TEST_DIR"
 
-	return 0
-}
-
-teardown_file() {
 	return 0
 }
 
@@ -89,17 +79,16 @@ teardown_file() {
 
 @test "clean_fs:: respects max depth limit" {
 	local test_dir="$TEST_CLEANUP_DIR"
-	# Create empty directories at different depths
-	mkdir -p "$test_dir/level1"
-	mkdir -p "$test_dir/level1/level2"
 	mkdir -p "$test_dir/level1/level2/level3"
+	mkdir -p "$test_dir/shallow"
 
-	DRY_RUN=true run clean_fs "$test_dir"
+	MAX_DEPTH=2
+	export MAX_DEPTH
+
+	run clean_fs "$test_dir"
 	[[ "$status" -eq 0 ]]
-	# Should show level1 and level2 but not level3 (beyond max depth)
-	echo "$output" | grep -q "Would remove: $test_dir/level1"
-	echo "$output" | grep -q "Would remove: $test_dir/level1/level2"
-	echo "$output" | grep -q "Would remove: $test_dir/level1/level2/level3" && false || true
+	[[ ! -d "$test_dir/shallow" ]]
+	[[ -d "$test_dir/level1/level2/level3" ]]
 }
 
 @test "run_trilliax:: cleans empty directories with fs target" {

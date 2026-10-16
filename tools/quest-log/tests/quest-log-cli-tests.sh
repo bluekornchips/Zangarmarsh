@@ -4,11 +4,8 @@
 #
 
 setup_file() {
-	if ! GIT_ROOT="$(git rev-parse --show-toplevel)"; then
-		echo "setup_file:: Failed to get git root" >&2
-		return 1
-	fi
-	source "${GIT_ROOT}/tests/fixtures.sh"
+	GIT_ROOT="$(git rev-parse --show-toplevel)" || return 1
+	source "${GIT_ROOT}/tests/fixtures.sh" || return 1
 	QUEST_LOG_ROOT="${ZANGARMARSH_ROOT}/tools/quest-log"
 	SCRIPT="${QUEST_LOG_ROOT}/quest-log.sh"
 	ZANGARMARSH_VSCODE_DIR="${ZANGARMARSH_ROOT}/tools/vscode"
@@ -29,10 +26,6 @@ setup() {
 teardown() {
 	quest_log_test_teardown
 
-	return 0
-}
-
-teardown_file() {
 	return 0
 }
 

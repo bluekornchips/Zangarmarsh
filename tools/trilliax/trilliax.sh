@@ -217,18 +217,13 @@ clean_fs() {
 
 	echo "clean_fs:: Cleaning empty directories."
 
-	# A parent is not empty until its children are gone, so walk once per level.
 	if [[ "${DRY_RUN:-false}" == "true" ]]; then
 		execute_clean "clean_fs" "${target_dir}" -depth -type d -empty || return 1
 		return 0
 	fi
 
-	local pass=0
-	local max_passes="${MAX_DEPTH:-${DEFAULT_MAX_DEPTH}}"
-	while ((pass < max_passes)); do
-		execute_clean "clean_fs" "${target_dir}" -depth -type d -empty || return 1
-		pass=$((pass + 1))
-	done
+	local max_depth="${MAX_DEPTH:-${DEFAULT_MAX_DEPTH}}"
+	find "${target_dir}" -mindepth 1 -maxdepth "${max_depth}" -depth -type d -empty -exec rmdir {} \; || return 1
 
 	return 0
 }

@@ -4,11 +4,8 @@
 #
 
 setup_file() {
-	if ! GIT_ROOT="$(git rev-parse --show-toplevel)"; then
-		echo "setup_file:: Failed to get git root" >&2
-		return 1
-	fi
-	source "${GIT_ROOT}/tests/fixtures.sh"
+	GIT_ROOT="$(git rev-parse --show-toplevel)" || return 1
+	source "${GIT_ROOT}/tests/fixtures.sh" || return 1
 	SCRIPT="${ZANGARMARSH_ROOT}/tools/lib/repo.sh"
 	export SCRIPT
 

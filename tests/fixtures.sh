@@ -95,7 +95,6 @@ source_for_test() {
 	return "${source_status}"
 }
 
-# Tests must set GIT_ROOT before sourcing this file.
 if [[ "${_ZANGARMARSH_SHARED_FIXTURES_LOADED:-}" != "1" ]]; then
-	load_shared_fixtures || return 1
+	zangarmarsh_bats_setup_file || return 1
 fi

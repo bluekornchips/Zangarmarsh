@@ -4,17 +4,10 @@
 #
 
 setup_file() {
-	if ! GIT_ROOT="$(git rev-parse --show-toplevel)"; then
-		echo "setup_file:: Failed to get git root" >&2
-		return 1
-	fi
-	source "${GIT_ROOT}/tests/fixtures.sh"
+	GIT_ROOT="$(git rev-parse --show-toplevel)" || return 1
+	source "${GIT_ROOT}/tests/fixtures.sh" || return 1
 
 	SCRIPT="${ZANGARMARSH_ROOT}/tools/auras/auras.sh"
-	[[ -f "${SCRIPT}" ]] || {
-		echo "setup_file:: Script not found: ${SCRIPT}" >&2
-		return 1
-	}
 	export SCRIPT
 
 	return 0
@@ -31,10 +24,6 @@ setup() {
 teardown() {
 	auras_home_teardown
 
-	return 0
-}
-
-teardown_file() {
 	return 0
 }
 

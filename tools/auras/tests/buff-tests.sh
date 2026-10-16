@@ -4,17 +4,10 @@
 #
 
 setup_file() {
-	if ! GIT_ROOT="$(git rev-parse --show-toplevel)"; then
-		echo "setup_file:: Failed to get git root" >&2
-		return 1
-	fi
-	source "${GIT_ROOT}/tests/fixtures.sh"
+	GIT_ROOT="$(git rev-parse --show-toplevel)" || return 1
+	source "${GIT_ROOT}/tests/fixtures.sh" || return 1
 
 	SCRIPT="${ZANGARMARSH_ROOT}/tools/auras/auras.sh"
-	[[ -f "${SCRIPT}" ]] || {
-		echo "setup_file:: Script not found: ${SCRIPT}" >&2
-		return 1
-	}
 	export SCRIPT
 
 	return 0
@@ -34,27 +27,13 @@ teardown() {
 	return 0
 }
 
-teardown_file() {
-	return 0
-}
-
 setup_appimage_fixture() {
 	local stem="${1:-demoapp}"
-	local relative="${2:-false}"
 
 	APPIMAGE_APPDIR="${AURAS_TEST_HOME}/apps"
 	make_appimage "${APPIMAGE_APPDIR}" "${stem}.AppImage"
 	APPIMAGE_PATH="${APPIMAGE_APPDIR}/${stem}.AppImage"
-
-	if [[ "${relative}" == "true" ]]; then
-		APPIMAGE_ARG="apps/${stem}.AppImage"
-		APPIMAGE_EXPECTED="${APPIMAGE_PATH}"
-	else
-		APPIMAGE_ARG="${APPIMAGE_PATH}"
-		APPIMAGE_EXPECTED="${APPIMAGE_PATH}"
-	fi
-
-	export APPIMAGE_APPDIR APPIMAGE_PATH APPIMAGE_ARG APPIMAGE_EXPECTED
+	export APPIMAGE_APPDIR APPIMAGE_PATH
 }
 
 ########################################################
@@ -182,23 +161,23 @@ setup_appimage_fixture() {
 @test "buff_launcher:: writes desktop entry and bin symlink" {
 	setup_appimage_fixture "demoapp"
 
-	run buff_launcher "demoapp" "${APPIMAGE_EXPECTED}"
+	run buff_launcher "demoapp" "${APPIMAGE_PATH}"
 	[[ "$status" -eq 0 ]]
 
-	grep -q "Exec=\"${APPIMAGE_EXPECTED}\" %u" "${HOME}/.local/share/applications/demoapp.desktop"
-	[[ "$(resolve_symlink_path "${HOME}/.local/bin/demoapp")" == "${APPIMAGE_EXPECTED}" ]]
+	grep -q "Exec=\"${APPIMAGE_PATH}\" %u" "${HOME}/.local/share/applications/demoapp.desktop"
+	[[ "$(resolve_symlink_path "${HOME}/.local/bin/demoapp")" == "${APPIMAGE_PATH}" ]]
 }
 
-@test "buff_launcher:: writes from relative AppImage path" {
-	setup_appimage_fixture "demoapp" true
+@test "buff_main:: resolves a relative AppImage path" {
+	setup_appimage_fixture "demoapp"
 
 	cd "${AURAS_TEST_HOME}"
 
-	run buff_launcher "demoapp" "${APPIMAGE_EXPECTED}"
+	run buff_main "demoapp" "apps/demoapp.AppImage"
 	[[ "$status" -eq 0 ]]
 
-	grep -q "Exec=\"${APPIMAGE_EXPECTED}\" %u" "${HOME}/.local/share/applications/demoapp.desktop"
-	[[ "$(resolve_symlink_path "${HOME}/.local/bin/demoapp")" == "${APPIMAGE_EXPECTED}" ]]
+	grep -q "Exec=\"${APPIMAGE_PATH}\" %u" "${HOME}/.local/share/applications/demoapp.desktop"
+	[[ "$(resolve_symlink_path "${HOME}/.local/bin/demoapp")" == "${APPIMAGE_PATH}" ]]
 }
 
 @test "buff_launcher:: rolls back desktop when bin link fails" {
@@ -206,7 +185,7 @@ setup_appimage_fixture() {
 	mkdir -p "${HOME}/.local/bin"
 	chmod 555 "${HOME}/.local/bin"
 
-	run buff_launcher "demoapp" "${APPIMAGE_EXPECTED}"
+	run buff_launcher "demoapp" "${APPIMAGE_PATH}"
 	chmod 755 "${HOME}/.local/bin"
 	[[ "$status" -eq 1 ]]
 

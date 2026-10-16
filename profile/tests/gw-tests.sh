@@ -4,17 +4,10 @@
 # Uses isolated temp git repos only. Never run gw shortcut tests from the real checkout cwd.
 
 setup_file() {
-	if ! GIT_ROOT="$(git rev-parse --show-toplevel)"; then
-		echo "setup_file:: Failed to get git root" >&2
-		return 1
-	fi
-	source "${GIT_ROOT}/tests/fixtures.sh"
+	GIT_ROOT="$(git rev-parse --show-toplevel)" || return 1
+	source "${GIT_ROOT}/tests/fixtures.sh" || return 1
 
 	SCRIPT="${ZANGARMARSH_ROOT}/profile/functions.sh"
-	if [[ ! -f "${SCRIPT}" ]]; then
-		echo "Script not found: ${SCRIPT}" >&2
-		return 1
-	fi
 	export SCRIPT
 
 	return 0
@@ -50,10 +43,6 @@ teardown() {
 		rm -rf "${TEST_DIR}"
 	fi
 
-	return 0
-}
-
-teardown_file() {
 	return 0
 }
 

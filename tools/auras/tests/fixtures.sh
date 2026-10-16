@@ -14,6 +14,7 @@ auras_home_setup() {
 	local bats_tmp="${BATS_TMPDIR:-/tmp}"
 
 	AURAS_TEST_HOME="$(mktemp -d "${bats_tmp}/auras_test_home.XXXXXX")"
+	AURAS_TEST_HOME="$(cd "${AURAS_TEST_HOME}" && pwd -P)"
 	HOME="${AURAS_TEST_HOME}"
 	export HOME
 	export AURAS_TEST_HOME

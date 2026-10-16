@@ -4,46 +4,23 @@
 # Tests the main zangarmarsh script functionality and shell compatibility
 
 setup_file() {
-	if ! GIT_ROOT="$(git rev-parse --show-toplevel)"; then
-		echo "setup_file:: Failed to get git root" >&2
-		return 1
-	fi
-	source "${GIT_ROOT}/tests/fixtures.sh"
+	GIT_ROOT="$(git rev-parse --show-toplevel)" || return 1
+	source "${GIT_ROOT}/tests/fixtures.sh" || return 1
 
 	SCRIPT="${ZANGARMARSH_ROOT}/zangarmarsh.sh"
-	if [[ ! -f "${SCRIPT}" ]]; then
-		echo "Script not found: ${SCRIPT}" >&2
-		return 1
-	fi
 	export SCRIPT
 
 	return 0
 }
 
-# Setup test environment with mock git repository
 setup() {
 	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
 
 	source "${GIT_ROOT}/tests/fixtures.sh"
 
 	TEST_DIR="$(mktemp -d "${base}/zangarmarsh-test.XXXXXX")"
-	cd "${TEST_DIR}" || return 1
-
-	# Create a mock git repository for testing using fixtures
-	create_mock_git_repo "${TEST_DIR}"
-	ZANGARMARSH_VERBOSE=true
-
-	# Copy the profile and tools directories to the test directory
-	cp -r "${ZANGARMARSH_ROOT}/profile" "${TEST_DIR}"
-	cp -r "${ZANGARMARSH_ROOT}/tools" "${TEST_DIR}"
-	cp "${ZANGARMARSH_ROOT}/zangarmarsh.sh" "${TEST_DIR}"
-
-	# Isolate product root under the temp tree for this test.
-	ZANGARMARSH_ROOT="${TEST_DIR}"
-
+	TEST_DIR="$(cd "${TEST_DIR}" && pwd)"
 	export TEST_DIR
-	export ZANGARMARSH_ROOT
-	export ZANGARMARSH_VERBOSE
 
 	return 0
 }
@@ -52,10 +29,6 @@ setup() {
 teardown() {
 	rm -rf "$TEST_DIR"
 
-	return 0
-}
-
-teardown_file() {
 	return 0
 }
 
@@ -71,7 +44,13 @@ teardown_file() {
 }
 
 @test "zangarmarsh:: set ZANGARMARSH_ROOT to script directory" {
-	source "$TEST_DIR/zangarmarsh.sh"
+	local origin
+	origin="$(cd "$(dirname "${SCRIPT}")" && pwd)"
+	ln -s "${origin}/profile" "${TEST_DIR}/profile"
+	ln -s "${origin}/tools" "${TEST_DIR}/tools"
+	cp "${SCRIPT}" "${TEST_DIR}/zangarmarsh.sh"
+
+	source "${TEST_DIR}/zangarmarsh.sh"
 	[[ "$ZANGARMARSH_ROOT" == "$TEST_DIR" ]]
 }
 
