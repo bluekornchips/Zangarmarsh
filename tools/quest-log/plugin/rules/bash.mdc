@@ -52,7 +52,11 @@ Keep executable Bash scripts compatible with Bash 3.2+ and consistent with this 
 
 ```bash
 #!/usr/bin/env bash
+#
+# Validate local dependencies and an optional API token.
+#
 
+# Defaults
 REQUIRED_COMMANDS=("jq" "curl")
 
 usage() {
