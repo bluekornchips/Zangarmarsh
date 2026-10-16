@@ -10,6 +10,7 @@ Create `pr.md` for reviewers and `issue.md` for the issue tracker. These are
 current delivery artifacts, not historical records.
 
 Use simple words. Write clearly and directly. Keep each document concise.
+Shorter delivery docs are required, not optional.
 Do not invent issue links, requirements, test results, risks, or behavior.
 
 ## Source of truth

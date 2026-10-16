@@ -41,7 +41,7 @@ Pragmatic review criteria for bash/shell script repositories. Focus on security,
 
 - [ ] _Shebang_: Executables use `#!/usr/bin/env bash`
 - [ ] _Function size_: Functions ideally < 80 lines, max ~150 lines
-- [ ] _Function documentation_: Functions have header comments (purpose, inputs, side effects)
+- [ ] _Function headers_: Every function has a header comment that states the purpose and the signature. Include Inputs, Outputs, Side Effects, and Returns for each section that applies.
 - [ ] _Local variables_: Functions use `local` for all variables. Each name is declared once at first use, not hoisted as a top block and not redeclared in other branches. Command substitutions use separate declare then assign. ShellCheck: SC2155.
 - [ ] _Final return spacing_: Blank line only before the last `return` that ends a function body; no blank before early returns; skip blank in `main`
 - [ ] _Sourcing support_: Scripts support both execution and sourcing (`BASH_SOURCE[0]` check)
@@ -84,8 +84,7 @@ Pragmatic review criteria for bash/shell script repositories. Focus on security,
 - [ ] _README accuracy_: README matches actual implementation
 - [ ] _Usage examples_: README includes minimal working examples
 - [ ] _Prerequisites_: Dependencies clearly documented
-- [ ] _Function headers_: Functions have header comments (except obvious/short ones)
-- [ ] _Minimal comments_: Comments explain "why", not "what"
+- [ ] _Minimal comments_: Inline comments explain why, not what. Do not narrate each line.
 
 ---
 

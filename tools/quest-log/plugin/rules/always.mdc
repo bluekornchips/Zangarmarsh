@@ -20,6 +20,27 @@ Set baseline response and change standards for every request.
 - Fix mistakes you spot in your own answer before sending.
 - Prefer ASCII in prose. Quoted user text or file paths may use other characters.
 
+## Less code
+
+Less code is a requirement. Fewer lines means fewer defects.
+
+- Write the smallest change that does the requested job.
+- Do not add helpers, options, wrappers, flags, or branches the current request does not need.
+- Do not leave code in place for a later caller. Delete unused code.
+- Match the file that is already there. A new abstraction is allowed only when it removes real duplication.
+- A shorter direct version beats a longer clever one.
+
+## Comments and docs
+
+Comments and docs sound like a person. Inline comments stay rare. Function header comments are required.
+
+- Every function has a header comment. The header states the purpose and the signature. Include inputs, outputs, side effects, and returns for each section that applies.
+- An inline comment is allowed only when the next reader would misuse the code without it. That means a hidden constraint, a workaround, a unit, or a surprising invariant.
+- Say that in one or two plain sentences, using the words already in the code. Do not narrate what the line does.
+- Do not add file banners, section dividers, or changelog comments unless the current request asks for that format.
+- Do not use stock wording such as robust, leverage, seamless, comprehensive, utilize, or "this function".
+- Other docs state the fact a reader needs.
+
 ## Usage
 
 ### Allowed

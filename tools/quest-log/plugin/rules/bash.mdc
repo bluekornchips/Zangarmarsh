@@ -23,8 +23,7 @@ Keep executable Bash scripts compatible with Bash 3.2+ and consistent with this 
 - When the RHS is a command substitution, declare and assign on separate lines so the command status is not masked. ShellCheck: SC2155.
 - When more than one branch assigns the same name, declare once before the branch, then assign in each branch.
 - Split assign and `export` onto separate lines when export intent should stand out.
-- Add function comments for invoked scripts unless the function is obvious and short.
-- For complex helpers, include Inputs, Outputs, Side Effects, and Returns when they clarify behavior.
+- Every function has a header comment in the form shown in the example. State the purpose, then Inputs, Outputs, Side Effects, and Returns for each section that applies.
 - Leave a blank line before the final `return` in a function, except in `main`.
 - Support execution and sourcing with a `BASH_SOURCE[0]` source guard when the script exposes helper functions.
 - Use Bats for non-trivial shell. Use `@test "name:: description" {` for direct function tests.
@@ -45,7 +44,6 @@ Keep executable Bash scripts compatible with Bash 3.2+ and consistent with this 
 - Hoisting all `local` declarations to the top of a function away from first use.
 - Declaring the same `local` name more than once in a function.
 - `local name=$(cmd)`, `local name="$(cmd)"`, `export name=$(cmd)`, or `export name="$(cmd)"`.
-- Required function comments in test scripts when names and setup are already clear.
 - Applying Bash-only constructs to Zsh profile files.
 
 ## Example
@@ -54,11 +52,7 @@ Keep executable Bash scripts compatible with Bash 3.2+ and consistent with this 
 
 ```bash
 #!/usr/bin/env bash
-#
-# Validate local dependencies and an optional API token.
-#
 
-# Defaults
 REQUIRED_COMMANDS=("jq" "curl")
 
 usage() {

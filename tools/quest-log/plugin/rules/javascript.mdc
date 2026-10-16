@@ -23,7 +23,7 @@ Keep JavaScript boundaries explicit and keep async and error handling direct.
 - Validate untrusted input at module boundaries.
 - Read config from environment variables or injected config, not literals.
 - Throw or return errors with useful context. Preserve the original error with `cause` when the runtime supports it.
-- Use JSDoc when a public contract, error, unit, or object shape is not obvious from the code.
+- Every function has a JSDoc header in the form shown in the example. State the purpose, params, return, and thrown errors.
 - Keep the formatter and linter clean on touched files when the repo defines them.
 
 ## Usage

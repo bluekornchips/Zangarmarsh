@@ -27,7 +27,7 @@ Keep Python types honest, failures specific, and resources scoped. These standar
 - Catch specific exception types. Re-raise or wrap when callers need a useful error.
 - Use `logging` with `logger = logging.getLogger(__name__)` instead of `print` for runtime messages.
 - Use context managers for files, sockets, locks, and other scoped resources.
-- Type hints on public functions and at module boundaries. Add docstrings when names and types are not enough.
+- Every public function has a docstring header in the form shown in the example. State the purpose, arguments, return, and raised errors.
 - Read secrets and environment-specific values from environment variables or injected config, not literals in source.
 
 ## Usage
@@ -58,6 +58,17 @@ logger = logging.getLogger(__name__)
 
 
 def read_port(value: str) -> int:
+    """Parse a string into a valid TCP port.
+
+    Args:
+        value: Port text to parse.
+
+    Returns:
+        The port number.
+
+    Raises:
+        ValueError: When the value is missing, not an integer, or out of range.
+    """
     if value == "":
         raise ValueError("read_port: value is required")
 

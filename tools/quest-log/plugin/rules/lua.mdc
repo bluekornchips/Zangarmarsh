@@ -29,7 +29,7 @@ These rules apply to Lua files loaded by a WoW add-on TOC. They are style choice
 - Always declare variables with `local`. Keep each variable in the smallest useful scope.
 - Prefer `local function name(...)` for named local functions. For `ns` APIs, use `function ns.Name(...)` when that matches existing public names.
 - Validate early and return early. For expected failures, return `nil` plus an error string and optional code. For API misuse, use `error()` or `assert()`.
-- Use LDoc comments for public functions and modules when names and signatures are not enough.
+- Every public function has an LDoc header in the form shown in the example. State the purpose, params, and returns.
 - Require modules into local variables named after the last module path component.
 - Library modules that ship only through `require` should `return` a table and avoid globals and side effects beyond loading dependencies. TOC-loaded add-on files are exempt, see WoW section above.
 - Prefer tables populated all at once, use trailing commas in multiline tables, and use plain key syntax when the key is a valid identifier.

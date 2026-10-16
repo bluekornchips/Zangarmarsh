@@ -31,7 +31,7 @@ Keep TypeScript strict at boundaries so mistakes surface early and types stay ho
 - `readonly` on fields that must not change after construction.
 - Discriminated unions instead of large optional bags for mutually exclusive states.
 - `satisfies` and `as const` when they tighten inference without widening.
-- JSDoc or TSDoc on exports when contracts, errors, or units are not obvious.
+- Every function has a JSDoc or TSDoc header in the form shown in the example. State the purpose, params, return, and thrown errors.
 - `Promise.all` for independent concurrent work with rejection handling on work you start.
 
 ### Denied
@@ -58,7 +58,10 @@ class PortError extends Error {
 }
 
 /**
- * Parses a string into a valid TCP port number.
+ * Parse a string into a valid TCP port.
+ *
+ * @param value Port text to parse.
+ * @returns The port number.
  * @throws {PortError} When the value is missing, not an integer, or out of range.
  */
 export function parsePort(value: string): number {

@@ -87,7 +87,7 @@ Pragmatic review criteria for Lua repositories, including WoW add-on Lua files l
 
 ## Documentation
 
-- [ ] _LDoc for public APIs_: Public namespace APIs, modules, and functions document purpose, params, returns, and errors.
+- [ ] _LDoc for public APIs_: Every public function has an LDoc header that states the purpose, params, and returns.
 - [ ] _Comments explain why_: Inline comments are rare and explain rationale or non-obvious behavior.
 - [ ] _TODO and FIXME meaning_: `TODO` marks missing future work; `FIXME` marks known problems in current code.
 - [ ] _README accuracy_: Setup, usage, and Lua version notes match the repository.
