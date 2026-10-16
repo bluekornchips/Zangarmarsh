@@ -1,5 +1,5 @@
 ---
-name: blue-bash-review
+name: blue-review-bash
 description: Bash Repository Review Criteria
 disable-model-invocation: true
 ---

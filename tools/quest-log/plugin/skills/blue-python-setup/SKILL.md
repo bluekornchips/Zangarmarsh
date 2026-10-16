@@ -1,5 +1,5 @@
 ---
-name: blue-python-project-setup
+name: blue-python-setup
 description: Python Project Setup
 disable-model-invocation: true
 ---

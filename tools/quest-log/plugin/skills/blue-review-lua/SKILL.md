@@ -1,5 +1,5 @@
 ---
-name: blue-lua-review
+name: blue-review-lua
 description: Lua Repository Review Criteria
 disable-model-invocation: true
 ---

@@ -1,6 +1,6 @@
 ---
-name: blue-pr
-description: Write extremely short, courteous pull request comments that apply the blue-review maintainability bar. Use when the user asks for a PR review, pull request comments, or invokes blue-pr.
+name: blue-review-comments
+description: Write extremely short, courteous pull request comments that apply the blue-review maintainability bar. Use when the user asks for a PR review, pull request comments, or invokes blue-review-comments.
 disable-model-invocation: true
 ---
 

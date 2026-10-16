@@ -1,5 +1,5 @@
 ---
-name: blue-typescript-review
+name: blue-review-typescript
 description: JavaScript and TypeScript Repository Review Criteria
 disable-model-invocation: true
 ---
