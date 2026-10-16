@@ -51,10 +51,32 @@ teardown_file() {
 	return 0
 }
 
+# Build one completion dump for the warm timings below.
+#
+# Returns:
+# - 0 when ${HOME}/.zcompdump exists and is non-empty
+# - 1 when compinit fails or writes no dump
+seed_zcompdump() {
+	zsh -c 'autoload -Uz compinit; compinit -u' >/dev/null 2>&1 || {
+		echo "seed_zcompdump:: compinit failed" >&2
+		return 1
+	}
+	if [[ ! -s "${HOME}/.zcompdump" ]]; then
+		echo "seed_zcompdump:: dump was not written" >&2
+		return 1
+	fi
+
+	return 0
+}
+
 measure_warm_zsh_load_ms() {
-	rm -f "${HOME}/.zcompdump"
-	# Warm-up; ignore exit status so an empty stub omz tree does not abort timing.
-	zsh -i -c 'exit' >/dev/null 2>&1 || true
+	if [[ ! -s "${HOME}/.zcompdump" ]]; then
+		echo "measure_warm_zsh_load_ms:: completion dump is missing" >&2
+		return 1
+	fi
+
+	# .zshrc was just rewritten. A newer dump keeps startup on compinit -C.
+	touch "${HOME}/.zcompdump" || return 1
 
 	local start_ns
 	local end_ns
@@ -75,6 +97,8 @@ measure_warm_zsh_load_ms() {
 }
 
 @test "smoke:: zsh session startup times" {
+	seed_zcompdump || return 1
+
 	mkdir -p "${ZSH}/plugins/zsh-autosuggestions"
 	touch "${ZSH}/oh-my-zsh.sh"
 	touch "${ZSH}/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh"

@@ -30,8 +30,18 @@ setup_file() {
 @test "tool_functions:: questlog --help works after a non-interactive zsh source" {
 	command -v zsh >/dev/null 2>&1 || skip "zsh not available"
 
-	run zsh -c "source '${SCRIPT}' && questlog --help"
-	[[ "$status" -eq 0 ]]
+	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
+	local home
+	home="$(mktemp -d "${base}/tool-functions-zsh.XXXXXX")" || return 1
+	# Keep this off the developer HOME so profile.zsh can use compinit -C.
+	printf '\n' >"${home}/.zshrc"
+	touch "${home}/.zcompdump"
+
+	run env HOME="${home}" ZDOTDIR="${home}" ZSH="${home}/.oh-my-zsh" \
+		zsh -c "source '${SCRIPT}' && questlog --help"
+	local cmd_status="$status"
+	rm -rf "${home}"
+	[[ "${cmd_status}" -eq 0 ]]
 	echo "$output" | grep -q "Install the quest-log Cursor plugin"
 }
 

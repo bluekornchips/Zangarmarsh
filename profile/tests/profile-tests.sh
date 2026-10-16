@@ -35,10 +35,15 @@ setup() {
 	export HOSTNAME
 	HOME="${TEST_DIR}"
 	export HOME
+	ZDOTDIR="${TEST_DIR}"
+	export ZDOTDIR
 	PWD="${TEST_DIR}"
 	export PWD
 	ZSH="${TEST_DIR}/.oh-my-zsh"
 	export ZSH
+	# compinit rebuilds when .zshrc is missing or newer than the dump.
+	printf '\n' >"${ZDOTDIR}/.zshrc"
+	touch "${ZDOTDIR}/.zcompdump"
 	export ZANGARMARSH_ROOT
 	ZANGARMARSH_VERBOSE=true
 	export ZANGARMARSH_VERBOSE
