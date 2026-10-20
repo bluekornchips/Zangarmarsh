@@ -1,6 +1,6 @@
 ---
 name: blue-review
-description: Run an extremely strict maintainability review for less code, required function headers, abstraction quality, giant files, and spaghetti growth. Use for blue-review, a thermo-nuclear code quality review, thermonuclear review, deep code quality audit, or especially harsh maintainability review.
+description: Run an extremely strict maintainability review for less code, ambition of the change, required function headers, abstraction quality, giant files, and spaghetti growth. Use for blue-review, a thermo-nuclear code quality review, thermonuclear review, deep code quality audit, or especially harsh maintainability review.
 disable-model-invocation: true
 ---
 
@@ -13,6 +13,12 @@ Less code is a requirement. Fewer lines means fewer defects. A shorter direct ch
 ## Baseline
 
 Audit the current diff. Rethink the structure so the same behavior needs fewer concepts, branches, and layers. When a clearer design deletes complexity, require that design. Measure twice, cut once.
+
+Apply Altitude, Depth, and Range to the change itself. A tidy fix of the wrong problem still fails.
+
+- Altitude: outcome over task label. Flag work that answers the ticket wording and leaves the durable failure mode or verification gap untouched.
+- Depth: flag digests over raw inputs, soft targets, and self-judged success. Prefer source, logs, schemas, fixtures, and an outside check the project already has.
+- Range: replace nouns with verbs. Flag a change that stays in one layer when the project's real coupling needed adjacent methods. Do not ask for roleplay.
 
 ## Standards
 
@@ -56,6 +62,9 @@ Audit the current diff. Rethink the structure so the same behavior needs fewer c
 
 For each meaningful change, ask:
 
+- What outcome should stay true after this lands, beyond the task label?
+- What would a careful professional use here that this diff skipped?
+- Which adjacent layer or method does the project already couple that this change ignores?
 - Can this be reframed so fewer concepts, branches, or layers remain?
 - Did the diff add a helper, flag, or branch the change does not need?
 - Did a cohesive module become more coupled or harder to scan?
@@ -63,9 +72,13 @@ For each meaningful change, ask:
 - Did a file cross 1000 lines?
 - Does every required function header state the purpose and the signature?
 - Does an inline comment narrate the line?
+- What outside check would prove the result, other than the author?
 
 ## Flag these
 
+- A fix of the task label that leaves the durable outcome or verification gap unaddressed.
+- Digested inputs, soft targets, or self-judged success where raw materials and an outside check exist.
+- A single-layer change that ignores coupling the project already has.
 - A complicated implementation where a simpler framing deletes a whole category of complexity.
 - A refactor that moves code around and leaves the same concepts in the reader's head.
 - A file crossing 1000 lines because of this PR.
@@ -109,12 +122,13 @@ Say it plainly:
 
 Order findings like this:
 
-1. Structural regressions and missed simplifications
-2. Extra branches and spaghetti
-3. Wrong layer, wrapper, or type-boundary problems
-4. File size
-5. Missing function headers and bad comments
-6. Legibility
+1. Wrong problem, shallow method, or missed adjacent coupling
+2. Structural regressions and missed simplifications
+3. Extra branches and spaghetti
+4. Wrong layer, wrapper, or type-boundary problems
+5. File size
+6. Missing function headers and bad comments
+7. Legibility
 
 Prefer a few high-conviction comments. Skip cosmetic nits when a structural defect is present.
 
@@ -124,6 +138,7 @@ Approval requires correct behavior and a clean structure.
 
 Block when any of these are true and the author cannot justify them:
 
+- The change solves the task label and leaves the durable outcome or verification gap open
 - A simpler structure would delete the incidental complexity
 - A file goes from below 1000 lines to above 1000 lines
 - The diff adds ad-hoc branching that tangles an existing flow

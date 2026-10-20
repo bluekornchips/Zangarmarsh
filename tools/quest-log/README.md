@@ -77,15 +77,15 @@ The plugin follows this repository's GPL-3.0-only license.
 
 ## Skills
 
-| Skill                       | Role                                        |
-| --------------------------- | ------------------------------------------- |
-| `blue-author`               | Current PR and issue delivery documents     |
-| `blue-review-comments`      | Short, courteous pull request comments      |
-| `blue-review`               | Strict maintainability review               |
-| `blue-review-bash`          | Bash repository review checklist            |
-| `blue-review-lua`           | Lua review checklist                        |
-| `blue-python-setup`         | Python project bootstrap notes for the user |
-| `blue-review-typescript`    | TypeScript review checklist                 |
+| Skill                    | Role                                        |
+| ------------------------ | ------------------------------------------- |
+| `blue-author`            | Current PR and issue delivery documents     |
+| `blue-review-comments`   | Short, courteous pull request comments      |
+| `blue-review`            | Strict maintainability and ambition review  |
+| `blue-review-bash`       | Bash repository review checklist            |
+| `blue-review-lua`        | Lua review checklist                        |
+| `blue-python-setup`      | Python project bootstrap notes for the user |
+| `blue-review-typescript` | TypeScript review checklist                 |
 
 To add or change a rule or skill, edit the files under `plugin/` directly and
 run `questlog` to install the update.
