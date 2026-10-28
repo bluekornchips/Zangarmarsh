@@ -80,6 +80,7 @@ The plugin follows this repository's GPL-3.0-only license.
 | Skill                    | Role                                        |
 | ------------------------ | ------------------------------------------- |
 | `blue-author`            | Current PR and issue delivery documents     |
+| `blue-penmanship`        | Comment and doc claims vs current code      |
 | `blue-review-comments`   | Short, courteous pull request comments      |
 | `blue-review`            | Strict maintainability and ambition review  |
 | `blue-review-bash`       | Bash repository review checklist            |
