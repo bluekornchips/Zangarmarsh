@@ -42,10 +42,15 @@ Keep Zsh profile and Zsh-owned scripts portable across hosts without treating th
 # Configure a small sourced Zsh history module.
 #
 
-HISTFILE="${HISTFILE:-${HOME}/.zsh_history}"
-HISTSIZE="${HISTSIZE:-100000}"
-SAVEHIST="${SAVEHIST:-100000}"
-export HISTFILE HISTSIZE SAVEHIST
+# Shared defaults live in profile/config.sh.
+source "${ZANGARMARSH_ROOT}/profile/config.sh" || return 1
+
+unset HISTFILE HISTSIZE SAVEHIST HISTORY_IGNORE
+HISTFILE="${ZANGARMARSH_ZSH_HISTFILE}"
+HISTSIZE="${ZANGARMARSH_HISTSIZE}"
+SAVEHIST="${ZANGARMARSH_HISTSIZE}"
+HISTORY_IGNORE="(${ZANGARMARSH_HIST_IGNORE//:/|})"
+export HISTFILE HISTSIZE SAVEHIST HISTORY_IGNORE
 
 # Create the history file when missing
 #

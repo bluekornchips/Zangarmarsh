@@ -2,17 +2,29 @@
 #
 # Bash-specific configuration and history setup
 
+if [[ -z "${ZANGARMARSH_ROOT:-}" ]]; then
+	echo "profile.sh:: ZANGARMARSH_ROOT is required" >&2
+	return 1
+fi
+
+if ! source "${ZANGARMARSH_ROOT}/profile/config.sh"; then
+	echo "profile.sh:: Failed to source config.sh" >&2
+	return 1
+fi
+
 # Bash history configuration
 [[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "Loading bash history configuration" >&2
-HISTFILE="${HISTFILE:-${HOME}/.bash_history}"
+# Force the bash history path. An inherited HISTFILE from zsh would point at
+# ~/.zsh_history and pull extended_history lines into bash.
+HISTFILE="${ZANGARMARSH_BASH_HISTFILE}"
 export HISTFILE
-HISTSIZE=100000
+HISTSIZE="${ZANGARMARSH_HISTSIZE}"
 export HISTSIZE
-HISTFILESIZE=100000
+HISTFILESIZE="${ZANGARMARSH_HISTSIZE}"
 export HISTFILESIZE
-HISTCONTROL=ignoredups:erasedups
+HISTCONTROL="${ZANGARMARSH_HISTCONTROL}"
 export HISTCONTROL
-HISTIGNORE='ls:ll:cd:pwd:clear:history:set *'
+HISTIGNORE="${ZANGARMARSH_HIST_IGNORE}"
 export HISTIGNORE
 
 shopt -s histappend

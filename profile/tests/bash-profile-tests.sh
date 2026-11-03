@@ -13,8 +13,45 @@ setup_file() {
 }
 
 @test "bash_profile:: sets history variables" {
-	run bash -c "source '${SCRIPT}' && printf 'SIZE=%s\nFILESIZE=%s\n' \"\$HISTSIZE\" \"\$HISTFILESIZE\""
+	run bash -c "
+		ZANGARMARSH_ROOT='${ZANGARMARSH_ROOT}'
+		export ZANGARMARSH_ROOT
+		source '${SCRIPT}' && printf 'SIZE=%s\nFILESIZE=%s\n' \"\$HISTSIZE\" \"\$HISTFILESIZE\"
+	"
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "^SIZE=100000$"
 	echo "$output" | grep -q "^FILESIZE=100000$"
+}
+
+@test "bash_profile:: forces HISTFILE over an inherited zsh path" {
+	run bash -c "
+		HOME='${HOME}'
+		export HOME
+		ZANGARMARSH_ROOT='${ZANGARMARSH_ROOT}'
+		export ZANGARMARSH_ROOT
+		HISTFILE=\"\${HOME}/.zsh_history\"
+		export HISTFILE
+		source '${SCRIPT}' || exit 1
+		printf 'HISTFILE=%s\n' \"\$HISTFILE\"
+		printf 'HISTIGNORE=%s\n' \"\$HISTIGNORE\"
+	"
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "^HISTFILE=${HOME}/.bash_history$"
+	echo "$output" | grep -q 'set \*'
+}
+
+@test "bash_profile:: HISTIGNORE comes from shared config.sh" {
+	local shared
+	shared="$(bash -c "source '${ZANGARMARSH_ROOT}/profile/config.sh' && printf '%s' \"\$ZANGARMARSH_HIST_IGNORE\"")"
+
+	run bash -c "
+		ZANGARMARSH_ROOT='${ZANGARMARSH_ROOT}'
+		export ZANGARMARSH_ROOT
+		source '${SCRIPT}' || exit 1
+		printf 'HISTIGNORE=%s\n' \"\$HISTIGNORE\"
+		printf 'HISTFILE=%s\n' \"\$HISTFILE\"
+	"
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -Fq "HISTIGNORE=${shared}"
+	echo "$output" | grep -q "^HISTFILE=${HOME}/.bash_history$"
 }

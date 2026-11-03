@@ -68,6 +68,23 @@ teardown() {
 	echo "${output}" | grep -q "^PROMPT_FN=0$"
 }
 
+@test "profile:: forces HISTFILE over an inherited bash path and sets HISTORY_IGNORE" {
+	local shared
+	shared="$(bash -c "source '${ZANGARMARSH_ROOT}/profile/config.sh' && printf '%s' \"\$ZANGARMARSH_HIST_IGNORE\"")"
+	shared="(${shared//:/|})"
+
+	run env HOME="${HOME}" ZDOTDIR="${ZDOTDIR}" ZSH="${ZSH}" ZANGARMARSH_ROOT="${ZANGARMARSH_ROOT}" \
+		HISTFILE="${HOME}/.bash_history" \
+		zsh -c "
+		source '${SCRIPT}' || exit 1
+		printf 'HISTFILE=%s\n' \"\$HISTFILE\"
+		printf 'HISTORY_IGNORE=%s\n' \"\$HISTORY_IGNORE\"
+	"
+	[[ "${status}" -eq 0 ]]
+	echo "${output}" | grep -q "^HISTFILE=${HOME}/.zsh_history$"
+	echo "${output}" | grep -Fq "HISTORY_IGNORE=${shared}"
+}
+
 @test "integration:: profile loads git plugin, autosuggestions, and prompt interactively" {
 	run env HOME="${HOME}" ZDOTDIR="${ZDOTDIR}" ZSH="${ZSH}" ZANGARMARSH_ROOT="${ZANGARMARSH_ROOT}" \
 		zsh -i -c "
@@ -79,7 +96,7 @@ teardown() {
 	"
 	[[ "${status}" -eq 0 ]]
 	echo "${output}" | grep -q "^COMP=1$"
-	echo "${output}" | grep -q "fg=#00ffff,bg=#2d2f40,bold"
+	echo "${output}" | grep -q "fg=8"
 	echo "${output}" | grep -q "^GA=.*git add"
 	echo "${output}" | grep -q "^PROMPT_FN=1$"
 }

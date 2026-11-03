@@ -64,12 +64,15 @@ source /path/to/zangarmarsh/zangarmarsh.sh
 
 Zangarmarsh loads configuration from:
 
-- `profile/`: Shared aliases and functions for Bash and Zsh
-- `profile/bash/`: Bash-only history and options
+- `profile/`: Shared env defaults, aliases, and functions for Bash and Zsh
+- `profile/config.sh`: Shared profile defaults for history, NVM, and prompt
+- `profile/bash/`: Bash-only history wiring and options
 - `profile/zsh/`: Zsh-only git plugin and autosuggestions load, platform PATH, prompt, completion
 - `tools/`: Optional CLI utilities documented in the per-tool READMEs under `tools/`
 
 ### Environment Variables
+
+Defaults live in `profile/config.sh`. Set a variable before sourcing `zangarmarsh.sh` to override.
 
 #### Core
 
@@ -77,6 +80,11 @@ Zangarmarsh loads configuration from:
 - `ZANGARMARSH_VERBOSE=true`: Print loader and platform debug lines to stderr
 - `ZANGARMARSH_LAZY_LOADING=true`: Lazy-load NVM on first `nvm` call when NVM is enabled, default `true`
 - `ZANGARMARSH_ENABLE_NVM=true`: Register NVM loader, default `true`
+- `ZANGARMARSH_HISTSIZE=100000`: History size for bash and zsh
+- `ZANGARMARSH_HIST_IGNORE`: Colon-separated ignore patterns, shared by bash `HISTIGNORE` and zsh `HISTORY_IGNORE`
+- `ZANGARMARSH_BASH_HISTFILE`: Bash history file path, always `${HOME}/.bash_history`
+- `ZANGARMARSH_ZSH_HISTFILE`: Zsh history file path, always `${HOME}/.zsh_history`
+- `ZANGARMARSH_HISTCONTROL`: Bash `HISTCONTROL`, default `ignoredups:erasedups`
 
 #### Prompt, Zsh only
 

@@ -29,14 +29,22 @@ for file in "${ZSH_COMMON_FILES[@]}"; do
 	}
 done
 
+if ! source "${ZANGARMARSH_ROOT}/profile/config.sh"; then
+	echo "profile.zsh:: Failed to source config.sh" >&2
+	return 1
+fi
+
 # Configure zsh history for interactive and non-interactive shells.
-unset HISTFILE HISTSIZE HISTFILESIZE HISTCONTROL HISTIGNORE
-HISTFILE="${HOME}/.zsh_history"
+# Force the zsh history path after unset so an inherited bash HISTFILE cannot stick.
+unset HISTFILE HISTSIZE HISTFILESIZE HISTCONTROL HISTIGNORE HISTORY_IGNORE
+HISTFILE="${ZANGARMARSH_ZSH_HISTFILE}"
 export HISTFILE
-HISTSIZE=100000
+HISTSIZE="${ZANGARMARSH_HISTSIZE}"
 export HISTSIZE
-SAVEHIST=100000
+SAVEHIST="${ZANGARMARSH_HISTSIZE}"
 export SAVEHIST
+HISTORY_IGNORE="(${ZANGARMARSH_HIST_IGNORE//:/|})"
+export HISTORY_IGNORE
 
 [[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "profile.zsh:: Loading zsh history configuration" >&2
 [[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "profile.zsh:: Set HISTFILE to: ${HISTFILE}" >&2
@@ -113,10 +121,6 @@ else
 		echo "profile.zsh:: Failed to source ${autosuggestions}" >&2
 		return 1
 	}
-
-	if [[ -z "${ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE}" ]]; then
-		ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#00ffff,bg=#2d2f40,bold"
-	fi
 fi
 
 prompt_file="${ZANGARMARSH_ROOT}/profile/zsh/prompt.zsh"
