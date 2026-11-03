@@ -82,7 +82,7 @@ read_file_or_empty() {
 # Inputs:
 # - $1, file_path, destination path
 # - $2, new_content, full new file body
-# - $3, stats_mode, "rule" to update STATS counters, "none" to skip
+# - $3, stats_mode, "rule" to update create/update/unchanged STATS, "none" to skip those; STATS_ERRORS still increments on write failure
 # - $4, error_label, prefix for write failure messages
 #
 # Returns:
@@ -109,6 +109,7 @@ write_if_changed() {
 		if [[ "${stats_mode}" == "rule" ]]; then
 			STATS_UNCHANGED=$((STATS_UNCHANGED + 1))
 		fi
+
 		return 0
 	fi
 

@@ -71,8 +71,7 @@ desktop_entry_exec_path() {
 		return 1
 	fi
 
-	local exec_path
-	exec_path="${exec_line#Exec=}"
+	local exec_path="${exec_line#Exec=}"
 	exec_path="${exec_path#\"}"
 	exec_path="${exec_path%\"}"
 	exec_path="${exec_path%% %u}"

@@ -23,9 +23,9 @@ After you `source zangarmarsh.sh`, both shells load shared files under `profile/
 
 - `aliases.sh` and `functions.sh`: tool commands as functions, `penv`, `nvm` lazy load when enabled, `gw`, and related helpers
 
-Both shells load `tools/lib/platform.sh` so `PLATFORM` and `PLATFORM_OS` are set. Zsh also loads `profile/zsh/profile.zsh`, which pulls in Oh My Zsh, Zsh-only PATH and display aliases, and `profile/zsh/prompt.zsh` for the customizable prompt with Git branch and kubectl context.
+Both shells load `tools/lib/platform.sh` so `PLATFORM` and `PLATFORM_OS` are set. Zsh also loads `profile/zsh/profile.zsh`, which sets PATH and display aliases, and in interactive shells sources the Oh My Zsh git plugin files, zsh-autosuggestions, and `profile/zsh/prompt.zsh` for the customizable prompt with Git branch and kubectl context.
 
-Bash loads `profile/bash/profile.sh` for history and readline options only. It does not load the Zsh prompt.
+Bash loads `profile/bash/profile.sh` for history and readline options only. It does not load the Zsh prompt. A second `source` of the same checkout is a no-op.
 
 ## Install
 
@@ -35,9 +35,10 @@ cd Zangarmarsh
 make install
 ```
 
-`make install` appends a source line to `~/.zshrc` and `~/.bashrc` and installs
-the tracked quest-log plugin. Pass `--zsh` or `--bash` to target only one shell
-rc file.
+`make install` writes one canonical source line into `~/.zshrc` and `~/.bashrc`,
+collapses duplicate or alternate source forms for this checkout, removes the
+official eager NVM block from `~/.bashrc`, and installs the tracked quest-log
+plugin. Pass `--zsh` or `--bash` to `profile/install.sh` to target only one shell rc file.
 
 Dry-run first with:
 
@@ -53,14 +54,7 @@ source /path/to/zangarmarsh/zangarmarsh.sh
 
 ## Install the quest-log plugin
 
-The quest-log Cursor plugin lives under `tools/quest-log/plugin/` as tracked files and is the canonical agent configuration for this repository. Each `questlog` run installs that tree into `~/.cursor/plugins/local/quest-log` and overwrites host Cursor user settings from `tools/vscode/settings.json`. It does not write project `.vscode/` files.
-
-```bash
-source zangarmarsh.sh
-questlog
-
-questlog --dry-run
-```
+`make install` installs the tracked quest-log plugin. For `questlog` usage, settings paths, and plugin layout, see [tools/quest-log/README.md](tools/quest-log/README.md).
 
 ## Notes on destructive tools
 
@@ -72,8 +66,8 @@ Zangarmarsh loads configuration from:
 
 - `profile/`: Shared aliases and functions for Bash and Zsh
 - `profile/bash/`: Bash-only history and options
-- `profile/zsh/`: Zsh-only Oh My Zsh, platform PATH, prompt, completion
-- `tools/`: Optional CLI utilities documented in [tools/README.md](tools/README.md)
+- `profile/zsh/`: Zsh-only git plugin and autosuggestions load, platform PATH, prompt, completion
+- `tools/`: Optional CLI utilities documented in the per-tool READMEs under `tools/`
 
 ### Environment Variables
 
@@ -107,7 +101,7 @@ These apply when `profile/zsh/prompt.zsh` runs:
 | Shared PLATFORM / PLATFORM_OS | Yes  | Yes |
 | Python venv helpers           | Yes  | Yes |
 | Node.js via NVM               | Yes  | Yes |
-| Oh My Zsh integration         | No   | Yes |
+| Oh My Zsh git plugin aliases  | No   | Yes |
 | Case-insensitive readline     | Yes  | No  |
 | Programmable completion       | No   | Yes |
 
@@ -121,14 +115,14 @@ After sourcing, functions map to scripts under `tools/` and work in interactive 
 | `trilliax` | Trilliax  | Cleanup for caches and artifacts                          |
 | `auras`    | Auras     | AppImage `.desktop` launchers and `~/.local/bin` commands |
 
-Per-tool docs: [tools/README.md](tools/README.md).
+Per-tool docs: [quest-log](tools/quest-log/README.md), [trilliax](tools/trilliax/README.md), [auras](tools/auras/README.md).
 
 ## Requirements
 
 - Bash 3.2+ or Zsh 5.0+
 - Git for helpers that inspect the repository
 - Standard Unix tools such as grep, sed, and awk
-- Optional: Oh My Zsh and zsh-autosuggestions for the full Zsh stack described in [profile/zsh/profile.zsh](profile/zsh/profile.zsh)
+- Optional: Oh My Zsh plugin files under `~/.oh-my-zsh` (`lib/git.zsh`, `plugins/git`, `plugins/zsh-autosuggestions`) for the full interactive Zsh stack described in [profile/zsh/profile.zsh](profile/zsh/profile.zsh)
 
 ## License
 

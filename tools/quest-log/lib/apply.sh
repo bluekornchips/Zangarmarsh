@@ -110,6 +110,7 @@ _quest_log_backup_plugin() {
 			echo "apply_quest_log:: Failed to back up existing plugin" >&2
 			return 1
 		fi
+
 		had_plugin=true
 	fi
 
@@ -137,10 +138,12 @@ _quest_log_backup_settings() {
 			echo "apply_quest_log:: Failed to back up existing Cursor settings" >&2
 			return 1
 		fi
+
 		chmod 0600 "${backup_root}/settings.json" || {
 			echo "apply_quest_log:: Failed to harden Cursor settings backup permissions" >&2
 			return 1
 		}
+
 		had_settings=true
 	fi
 
@@ -158,7 +161,7 @@ _quest_log_backup_settings() {
 #
 # Side Effects:
 # - Installs the plugin and/or overwrites Cursor user settings
-# - On both mode, restores a successful plugin install when settings sync fails
+# - On both mode, undoes a successful plugin install by restoring the previous plugin when settings sync fails
 # - Sets PLUGIN_ACTION to installed, dry-run, or skipped
 #
 # Returns:
@@ -169,8 +172,6 @@ apply_quest_log() {
 	local backup_root=""
 	local had_plugin=false
 	local had_settings=false
-	local plugin_dir
-	local settings_file
 	local restore_status=0
 
 	while (($# > 0)); do
@@ -218,7 +219,9 @@ apply_quest_log() {
 		fi
 	fi
 
+	local plugin_dir
 	plugin_dir="$(quest_log_plugin_dir)" || return 1
+	local settings_file
 	settings_file="$(cursor_user_settings_path)" || return 1
 
 	if [[ "${mode}" != "settings" ]]; then
@@ -234,6 +237,7 @@ apply_quest_log() {
 			install_quest_plugin "${PLUGIN_SOURCE_DIR}" || return 1
 			PLUGIN_ACTION="dry-run"
 		fi
+
 		if [[ "${mode}" != "plugin" ]]; then
 			sync_cursor_user_settings || return 1
 		fi
@@ -244,7 +248,6 @@ apply_quest_log() {
 	if [[ "${mode}" == "plugin" ]]; then
 		install_quest_plugin "${PLUGIN_SOURCE_DIR}" || return 1
 		PLUGIN_ACTION="installed"
-
 		return 0
 	fi
 
@@ -252,11 +255,13 @@ apply_quest_log() {
 		echo "apply_quest_log:: Failed to create apply backup directory" >&2
 		return 1
 	}
+
 	trap 'rm -rf -- "$backup_root"' RETURN
 
 	if [[ "${mode}" == "both" ]]; then
 		_quest_log_backup_plugin "${backup_root}" "${plugin_dir}" || return 1
 	fi
+
 	_quest_log_backup_settings "${backup_root}" "${settings_file}" || return 1
 
 	if [[ "${mode}" == "both" ]]; then
@@ -269,9 +274,9 @@ apply_quest_log() {
 		if [[ "${mode}" == "both" ]]; then
 			_restore_quest_log_plugin "${backup_root}" "${plugin_dir}" "${had_plugin}" || restore_status=1
 		fi
+
 		_restore_quest_log_settings "${backup_root}" "${settings_file}" "${had_settings}" || restore_status=1
 		((restore_status == 0)) || return 1
-
 		return 1
 	fi
 

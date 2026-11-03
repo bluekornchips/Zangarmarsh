@@ -15,11 +15,9 @@ export HISTCONTROL
 HISTIGNORE='ls:ll:cd:pwd:clear:history:set *'
 export HISTIGNORE
 
-# Set bash options efficiently
 shopt -s histappend
 shopt -s checkwinsize
 
-# Ensure proper line wrapping and backspace handling
 bind 'set horizontal-scroll-mode off' 2>/dev/null || true
 bind 'set completion-ignore-case on' 2>/dev/null || true
 

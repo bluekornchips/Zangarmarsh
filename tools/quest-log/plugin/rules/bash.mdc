@@ -1,5 +1,5 @@
 ---
-description: Bash 3.2 standards for locals, source guards, strict mode, arrays, and Bats.
+description: Bash 3.2 standards. Declare each local at its assignment, not in a block at the top of a function.
 globs:
   - '**/*.sh'
   - '**/*.bash'
@@ -19,12 +19,15 @@ Keep executable Bash scripts compatible with Bash 3.2+ and consistent with this 
 - In the direct-run entry block only, enable strict mode when it fits, for example `set -euo pipefail` or `set -eo pipefail`. Set `umask 077` when the script handles sensitive files.
 - Prefer `[[ ... ]]` for string and file tests. Use `(( ... ))` for integers.
 - Use array literals for lists, for example `flags=(--foo --bar='baz')`, and expand with `"${name[@]}"`.
-- Declare each `local` name once, at first use. Prefer `local name=value` for literals.
-- When the RHS is a command substitution, declare and assign on separate lines so the command status is not masked. ShellCheck: SC2155.
-- When more than one branch assigns the same name, declare once before the branch, then assign in each branch.
-- Split assign and `export` onto separate lines when export intent should stand out.
+- Declare each `local` on the line that first gives it a value. A literal, default, or array is `local name=value` or `local name=(...)` on that line.
+- A bare `local name` is allowed only as the next line's preface, with no blank line between them, and only for one of these:
+  - the next line assigns a command substitution, so the command status is not masked. ShellCheck: SC2155
+  - the next line is the `for` or `while` that uses that name
+  - the next line is the `if` or `case` whose branches first assign that name
+- Leave a name undeclared until that statement. Do not gather `local` lines at the top of a function and assign them later.
+- Split assign and `export` onto separate lines when export intent should stand out. Export stays next to that assignment.
 - Every function has a header comment in the form shown in the example. State the purpose, then Inputs, Outputs, Side Effects, and Returns for each section that applies.
-- Leave a blank line before the final `return` in a function, except in `main`.
+- End every function, including `main`, with one empty line and then `return <code>`. Early returns do not get that line. Block spacing is owned by `shell.mdc`.
 - Support execution and sourcing with a `BASH_SOURCE[0]` source guard when the script exposes helper functions.
 - Use Bats for non-trivial shell. Use `@test "name:: description" {` for direct function tests.
 - Use `setup_file` and `setup` as the project already does.
@@ -41,12 +44,60 @@ Keep executable Bash scripts compatible with Bash 3.2+ and consistent with this 
 ### Denied
 
 - `declare -a` for simple array assignment. Use `name=(a b)` and `"${name[@]}"`.
-- Hoisting all `local` declarations to the top of a function away from first use.
+- A block of `local` declarations at the top of a function, or any bare `local name` that is not the line immediately above one of the three cases in Standards.
+- A later literal or array assignment after a bare `local name`. Write `local name=value` or `local name=(...)` instead.
 - Declaring the same `local` name more than once in a function.
 - `local name=$(cmd)`, `local name="$(cmd)"`, `export name=$(cmd)`, or `export name="$(cmd)"`.
 - Applying Bash-only constructs to Zsh profile files.
 
 ## Example
+
+### Locals
+
+Required. Each name appears at the statement that first sets it.
+
+```bash
+write_report() {
+  local dest="${1}"
+  export dest
+  local dry_run="${2}"
+  local retries=3
+  local args=(--fail --silent)
+
+  local report_path
+  report_path="$(mktemp)"
+
+  local status
+  if [[ "${dry_run}" == "1" ]]; then
+    status="skipped"
+  else
+    status="written"
+  fi
+
+  local line
+  while IFS= read -r line; do
+    printf '%s\n' "${line}" >>"${report_path}"
+  done <"${dest}"
+
+  return 0
+}
+```
+
+Rejected. Locals gathered at the top, then assigned later.
+
+```bash
+write_report() {
+  local dest
+  local retries
+  local report_path
+  local status
+  local line
+
+  dest="${1}"
+  retries=3
+  report_path="$(mktemp)"
+}
+```
 
 ### Script
 
@@ -164,6 +215,7 @@ main() {
   done
 
   usage
+
   return 0
 }
 

@@ -1,52 +1,22 @@
 #!/usr/bin/env zsh
 #
-# Zsh profile configuration with Oh My Zsh integration.
+# Zsh profile configuration. Sources the Oh My Zsh git plugin and
+# zsh-autosuggestions without loading the Oh My Zsh framework.
 
 ZSH="${ZSH:-${HOME}/.oh-my-zsh}"
 export ZSH
-ZSH_THEME="robbyrussell"
-
-plugins=(git zsh-autosuggestions)
-
-# Check and load Oh My Zsh
-if [[ ! -f "${ZSH}/oh-my-zsh.sh" ]]; then
-	cat <<EOF >&2
-Oh My Zsh is not installed.
-To install Oh My Zsh, run:
-	sh -c "\$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
-Or visit: https://ohmyz.sh/#install
-EOF
-else
-
-	source "${ZSH}/oh-my-zsh.sh"
-fi
-
-# Check zsh-autosuggestions plugin
-if [[ ! -d "${ZSH}/plugins/zsh-autosuggestions" ]]; then
-	cat <<EOF >&2
-zsh-autosuggestions plugin is not installed.
-To install zsh-autosuggestions, run:
-	git clone https://github.com/zsh-users/zsh-autosuggestions \$ZSH/plugins/zsh-autosuggestions
-Or visit: https://github.com/zsh-users/zsh-autosuggestions
-EOF
-fi
-
-# Oh My Zsh loads zsh-autosuggestions from plugins=(); set highlight style only
-if [[ -z "${ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE}" ]] && [[ -f "${ZSH}/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh" ]]; then
-	ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#00ffff,bg=#2d2f40,bold"
-fi
 
 if [[ -z "${ZANGARMARSH_ROOT:-}" ]]; then
 	echo "profile.zsh:: ZANGARMARSH_ROOT is required" >&2
 	return 1
 fi
 
-ZSH_FILES=(
+# Shared PATH and display aliases for every zsh session that sources this file.
+ZSH_COMMON_FILES=(
 	"platform.zsh"
-	"prompt.zsh"
 )
 
-for file in "${ZSH_FILES[@]}"; do
+for file in "${ZSH_COMMON_FILES[@]}"; do
 	file_path="${ZANGARMARSH_ROOT}/profile/zsh/${file}"
 	if [[ ! -f "${file_path}" ]]; then
 		echo "profile.zsh:: Required file not found: ${file_path}" >&2
@@ -59,7 +29,7 @@ for file in "${ZSH_FILES[@]}"; do
 	}
 done
 
-# Configure zsh history
+# Configure zsh history for interactive and non-interactive shells.
 unset HISTFILE HISTSIZE HISTFILESIZE HISTCONTROL HISTIGNORE
 HISTFILE="${HOME}/.zsh_history"
 export HISTFILE
@@ -87,11 +57,17 @@ setopt \
 	share_history \
 	extended_history
 
-# Configure zsh completion
-if [[ -z "${_comp_setup}" ]]; then
+# Plugins, completion, and the prompt are interactive-only.
+if [[ ! -o interactive ]]; then
+	return 0
+fi
+
+# Completion must load before the git plugin so its compdef calls work.
+# Do not touch _comp_setup; compinit owns that string and every completer evals it.
+if [[ -z "${_zangarmarsh_compinit:-}" ]]; then
 	autoload -Uz compinit
 
-	# Use cached completion dump when it is newer than ~/.zshrc.
+	# Use cached completion dump when it is newer than ${ZDOTDIR:-$HOME}/.zshrc.
 	# -u skips the macOS compaudit prompt on Homebrew's group-writable fpath.
 	comp_dump="${ZDOTDIR:-${HOME}}/.zcompdump"
 	if [[ -f "${comp_dump}" && "${comp_dump}" -nt "${ZDOTDIR:-${HOME}}/.zshrc" ]]; then
@@ -100,7 +76,58 @@ if [[ -z "${_comp_setup}" ]]; then
 		compinit -u -d "${comp_dump}"
 	fi
 
-	_comp_setup=1
+	_zangarmarsh_compinit=1
 fi
+
+git_lib="${ZSH}/lib/git.zsh"
+git_plugin="${ZSH}/plugins/git/git.plugin.zsh"
+if [[ ! -f "${git_lib}" || ! -f "${git_plugin}" ]]; then
+	cat <<EOF >&2
+Oh My Zsh git plugin files are not installed under ${ZSH}.
+Install Oh My Zsh so lib/git.zsh and plugins/git/git.plugin.zsh are present:
+	sh -c "\$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+Or visit: https://ohmyz.sh/#install
+EOF
+else
+	source "${git_lib}" || {
+		echo "profile.zsh:: Failed to source ${git_lib}" >&2
+		return 1
+	}
+
+	source "${git_plugin}" || {
+		echo "profile.zsh:: Failed to source ${git_plugin}" >&2
+		return 1
+	}
+fi
+
+autosuggestions="${ZSH}/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh"
+if [[ ! -f "${autosuggestions}" ]]; then
+	cat <<EOF >&2
+zsh-autosuggestions plugin is not installed.
+To install zsh-autosuggestions, run:
+	git clone https://github.com/zsh-users/zsh-autosuggestions \$ZSH/plugins/zsh-autosuggestions
+Or visit: https://github.com/zsh-users/zsh-autosuggestions
+EOF
+else
+	source "${autosuggestions}" || {
+		echo "profile.zsh:: Failed to source ${autosuggestions}" >&2
+		return 1
+	}
+
+	if [[ -z "${ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE}" ]]; then
+		ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#00ffff,bg=#2d2f40,bold"
+	fi
+fi
+
+prompt_file="${ZANGARMARSH_ROOT}/profile/zsh/prompt.zsh"
+if [[ ! -f "${prompt_file}" ]]; then
+	echo "profile.zsh:: Required file not found: ${prompt_file}" >&2
+	return 1
+fi
+
+source "${prompt_file}" || {
+	echo "profile.zsh:: Failed to source ${prompt_file}" >&2
+	return 1
+}
 
 setopt PROMPT_SUBST 2>/dev/null || true

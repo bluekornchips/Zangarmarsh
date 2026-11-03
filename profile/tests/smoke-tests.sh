@@ -29,12 +29,32 @@ setup() {
 	ZANGARMARSH_VERBOSE=false
 	export ZANGARMARSH_VERBOSE
 	unset ZANGARMARSH_ROOT
+	unset ZANGARMARSH_LOADED_ROOT
 
 	return 0
 }
 
 teardown() {
 	[[ -n "${TEST_DIR}" && -d "${TEST_DIR}" ]] && rm -rf "${TEST_DIR}"
+
+	return 0
+}
+
+# Seed a minimal Oh My Zsh plugin tree for Zangarmarsh interactive load.
+#
+# Reads environment:
+# - ZSH
+#
+# Side Effects:
+# - Creates lib/git.zsh, the git plugin, and zsh-autosuggestions under ZSH
+#
+# Returns:
+# - 0 always
+seed_omz_plugins() {
+	mkdir -p "${ZSH}/lib" "${ZSH}/plugins/git" "${ZSH}/plugins/zsh-autosuggestions"
+	printf 'git_current_branch() { echo main; }\n' >"${ZSH}/lib/git.zsh"
+	printf 'alias ga="git add"\n' >"${ZSH}/plugins/git/git.plugin.zsh"
+	printf '# autosuggestions stub\n' >"${ZSH}/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh"
 
 	return 0
 }
@@ -56,6 +76,7 @@ seed_zcompdump() {
 		echo "seed_zcompdump:: compinit failed" >&2
 		return 1
 	}
+
 	if [[ ! -s "${HOME}/.zcompdump" ]]; then
 		echo "seed_zcompdump:: dump was not written" >&2
 		return 1
@@ -92,6 +113,7 @@ now_ms() {
 	fi
 
 	echo "now_ms:: no usable clock" >&2
+
 	return 1
 }
 
@@ -121,8 +143,6 @@ measure_warm_zsh_load_ms() {
 	touch "${HOME}/.zcompdump" || return 1
 
 	local start_ms
-	local end_ms
-	local load_ms
 	start_ms="$(now_ms)" || return 1
 
 	# Do not use bats run here; this helper is called from command substitution.
@@ -131,19 +151,18 @@ measure_warm_zsh_load_ms() {
 		return 1
 	fi
 
+	local end_ms
 	end_ms="$(now_ms)" || return 1
-	load_ms=$((end_ms - start_ms))
+	local load_ms=$((end_ms - start_ms))
 	echo "${load_ms}"
 
 	return 0
 }
 
-@test "smoke:: zsh session startup times" {
+@test "integration:: zsh session startup times" {
 	seed_zcompdump || return 1
+	seed_omz_plugins || return 1
 
-	mkdir -p "${ZSH}/plugins/zsh-autosuggestions"
-	touch "${ZSH}/oh-my-zsh.sh"
-	touch "${ZSH}/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh"
 	printf 'source "%s"\n' "${ZANGARMARSH_SCRIPT}" >"${HOME}/.zshrc"
 	local zm_ms
 	zm_ms="$(measure_warm_zsh_load_ms)" || return 1
@@ -162,22 +181,24 @@ else
 	compinit -u
 fi
 EOF
+	# Framework comparison needs oh-my-zsh.sh present; keep stubs only when timing plugins path.
+	touch "${ZSH}/oh-my-zsh.sh"
 	local omz_ms
 	omz_ms="$(measure_warm_zsh_load_ms)" || return 1
 
-	mkdir -p "${ZSH}"
+	rm -rf "${ZSH}/lib" "${ZSH}/plugins/git"
 	printf 'source "%s"\n' "${ZANGARMARSH_SCRIPT}" >"${HOME}/.zshrc"
-	local zm_no_omz_ms
-	zm_no_omz_ms="$(measure_warm_zsh_load_ms)" || return 1
+	local zm_no_plugins_ms
+	zm_no_plugins_ms="$(measure_warm_zsh_load_ms)" || return 1
 
 	printf '\n' >"${HOME}/.zshrc"
 	local bare_ms
 	bare_ms="$(measure_warm_zsh_load_ms)" || return 1
 
 	cat <<EOF >&3
-zangarmarsh with omz: ${zm_ms}ms
-omz only: ${omz_ms}ms
-zangarmarsh without omz: ${zm_no_omz_ms}ms
+zangarmarsh with plugins: ${zm_ms}ms
+omz framework stub: ${omz_ms}ms
+zangarmarsh without plugins: ${zm_no_plugins_ms}ms
 bare zsh: ${bare_ms}ms
 EOF
 }

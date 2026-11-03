@@ -181,7 +181,7 @@ teardown() {
 	echo "$output" | grep -q "Would remove:"
 }
 
-@test "main:: accepts --all with --targets (all overrides targets)" {
+@test "main:: accepts --all with --targets" {
 	run "$SCRIPT" --all --targets cursor "$TEST_CLEANUP_DIR"
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "clean_cursor:: Cleaning .cursor directories."
@@ -407,6 +407,7 @@ teardown() {
 
 	find() {
 		printf '%s\0' "${TRILLIAX_SIBLING}/keep.txt"
+
 		return 0
 	}
 
@@ -448,6 +449,7 @@ teardown() {
 
 	rm() {
 		echo "rm mocked failure" >&2
+
 		return 1
 	}
 

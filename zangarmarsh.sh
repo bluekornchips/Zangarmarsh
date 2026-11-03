@@ -33,6 +33,10 @@ LOADER_DIR="$(cd "$(dirname "${SCRIPT_PATH}")" && pwd)"
 ZANGARMARSH_ROOT="${LOADER_DIR}"
 export ZANGARMARSH_ROOT
 
+if [[ "${ZANGARMARSH_LOADED_ROOT:-}" == "${ZANGARMARSH_ROOT}" ]]; then
+	return 0
+fi
+
 source "${ZANGARMARSH_ROOT}/tools/lib/platform.sh"
 if ! apply_platform_env; then
 	echo "zangarmarsh:: Failed to detect platform" >&2
@@ -58,16 +62,14 @@ COMMON_FILES=(
 # - 1 when a required file is missing or sourcing fails
 load_common_components() {
 	local file
-	local file_path
 	for file in "${COMMON_FILES[@]}"; do
-		file_path="${ZANGARMARSH_ROOT}/profile/${file}"
-		if [[ ! -f "${file_path}" ]]; then
-			echo "load_common_components:: Required file not found: ${file_path}" >&2
+		if [[ ! -f "${ZANGARMARSH_ROOT}/profile/${file}" ]]; then
+			echo "load_common_components:: Required file not found: ${ZANGARMARSH_ROOT}/profile/${file}" >&2
 			return 1
 		fi
 
-		if ! source "${file_path}"; then
-			echo "load_common_components:: Failed to source ${file_path}" >&2
+		if ! source "${ZANGARMARSH_ROOT}/profile/${file}"; then
+			echo "load_common_components:: Failed to source ${ZANGARMARSH_ROOT}/profile/${file}" >&2
 			return 1
 		fi
 	done
@@ -87,18 +89,22 @@ if [[ -z "${ZSH_VERSION:-}" && -z "${BASH_VERSION:-}" ]]; then
 		SHELL_NAME="$(ps -p "$$" -o comm 2>/dev/null | tail -n 1 || true)"
 	fi
 fi
+
 if [[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]]; then
 	echo "Shell detection: ZSH_VERSION='${ZSH_VERSION:-}'" >&2
 	echo "BASH_VERSION='${BASH_VERSION:-}', SHELL_NAME='${SHELL_NAME}'" >&2
 fi
+
 if [[ -n "${ZSH_VERSION:-}" ]] || [[ "${SHELL_NAME}" == *zsh* ]]; then
 	[[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "Sourcing profile/zsh/profile.zsh" >&2
 
-	source "${ZANGARMARSH_ROOT}/profile/zsh/profile.zsh"
+	source "${ZANGARMARSH_ROOT}/profile/zsh/profile.zsh" || return 1
 elif [[ -n "${BASH_VERSION:-}" ]] || [[ "${SHELL_NAME}" == *bash* ]]; then
 	[[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "Loading bash components" >&2
-	source "${ZANGARMARSH_ROOT}/profile/bash/profile.sh"
+	source "${ZANGARMARSH_ROOT}/profile/bash/profile.sh" || return 1
 else
 	echo "zangarmarsh:: Unsupported shell: ${SHELL_NAME:-${SHELL:-unknown}}" >&2
 	return 1
 fi
+
+ZANGARMARSH_LOADED_ROOT="${ZANGARMARSH_ROOT}"

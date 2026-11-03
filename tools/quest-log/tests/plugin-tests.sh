@@ -275,6 +275,7 @@ plugin_lib_test_setup() {
 
 	rm() {
 		# Leave the install tree in place to force the post-remove check.
+
 		return 0
 	}
 

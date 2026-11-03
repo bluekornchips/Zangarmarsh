@@ -16,7 +16,7 @@ Keep Zsh profile and Zsh-owned scripts portable across hosts without treating th
 - Use `#!/usr/bin/env zsh` for Zsh-owned executables and profile modules.
 - Stay compatible with Zsh 5.0 or greater.
 - Prefer Zsh-native syntax in Zsh files. Do not force Bash idioms into sourced Zsh profile modules.
-- Follow `shell.mdc` for quoting, status, guard clauses, and destructive-path safety. Do not copy those rules into Zsh-only guidance.
+- Follow `shell.mdc` for quoting, status, guard clauses, function-ending returns, block spacing, and destructive-path safety. Do not copy those rules into Zsh-only guidance.
 - Keep direct-run entry blocks rare in sourced profile files. When a Zsh script is executable on its own, enable strict options that fit Zsh there.
 - Keep platform detection, prompt rendering, and Oh My Zsh wiring in their dedicated Zsh modules.
 - Prefer small, sourced modules over large monolithic profile scripts.
@@ -26,7 +26,7 @@ Keep Zsh profile and Zsh-owned scripts portable across hosts without treating th
 ### Allowed
 
 - Sourced profile layout under `profile/zsh/`.
-- Shared shell rules from `shell.mdc` for quoting, status, guard clauses, and destructive-path safety.
+- Shared shell rules from `shell.mdc` for quoting, status, guard clauses, function-ending returns, block spacing, and destructive-path safety.
 
 ### Denied
 

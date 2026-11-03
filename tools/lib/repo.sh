@@ -43,6 +43,7 @@ absolute_dir_of() {
 	fi
 
 	echo "absolute_dir_of:: path not found: ${path}" >&2
+
 	return 1
 }
 

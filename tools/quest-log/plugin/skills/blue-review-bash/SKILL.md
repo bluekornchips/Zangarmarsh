@@ -42,8 +42,9 @@ Pragmatic review criteria for bash/shell script repositories. Focus on security,
 - [ ] _Shebang_: Executables use `#!/usr/bin/env bash`
 - [ ] _Function size_: Functions ideally < 80 lines, max ~150 lines
 - [ ] _Function headers_: Every function has a header comment that states the purpose and the signature. Include Inputs, Outputs, Side Effects, and Returns for each section that applies.
-- [ ] _Local variables_: Functions use `local` for all variables. Each name is declared once at first use, not hoisted as a top block and not redeclared in other branches. Command substitutions use separate declare then assign. ShellCheck: SC2155.
-- [ ] _Final return spacing_: Blank line only before the last `return` that ends a function body; no blank before early returns; skip blank in `main`
+- [ ] _Local variables_: Every function variable is `local`, declared once on the line that first assigns it. Literals and arrays are `local name=value` or `local name=(...)`. A bare `local name` is only the line immediately above a command substitution, a `for` or `while` that uses that name, or an `if` or `case` whose branches first assign it. A `local` block at the top of a function is a failure. Command substitutions are not assigned inside `local` or `export`. ShellCheck: SC2155.
+- [ ] _Final return spacing_: Every function, including `main`, ends with one empty line and then `return <code>`. An early `return` stays on the next line after its echo or command, including inside `if`, `case`, and `command || { }`. When that ending `return` already follows a multi-line block, one empty line is enough.
+- [ ] _Block spacing_: After a multi-line block (`}`, `fi`, `done`, `esac`), one empty line precedes the next statement in that scope. The closer of an enclosing block stays on the next line. Stacked `command || { }` blocks with no empty line between them are a failure. A whitespace-only line does not count.
 - [ ] _Sourcing support_: Scripts support both execution and sourcing (`BASH_SOURCE[0]` check)
 - [ ] _Organized sections_: Scripts maintain consistent section ordering: usage functions first, then validation/config initialization, helper utilities, core business logic, main entry point, and finally the source handler
 

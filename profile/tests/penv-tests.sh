@@ -52,8 +52,10 @@ EOF
 			ln -sf python "${env_dir}/bin/python3"
 			return 0
 		fi
+
 		command python3 "$@"
 	}
+
 	export -f python3
 }
 
@@ -128,13 +130,13 @@ teardown() {
 	echo "$output" | grep -q "Available Python versions:"
 }
 
-@test "penv:: use default python3 when no version specified" {
+@test "integration:: penv uses default python3 when no version specified" {
 	run penv
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Using Python: python3"
 }
 
-@test "penv:: create virtual environment with default Python" {
+@test "integration:: penv creates virtual environment with default Python" {
 	run penv
 	[[ "$status" -eq 0 ]]
 	[[ -d ".venv" ]]
@@ -142,7 +144,7 @@ teardown() {
 	echo "$output" | grep -q "Virtual environment setup complete"
 }
 
-@test "penv:: clean up cache files during creation" {
+@test "integration:: penv cleans up cache files during creation" {
 	mkdir -p __pycache__ .mypy_cache .pytest_cache
 	touch test.pyc
 
@@ -150,7 +152,7 @@ teardown() {
 	[[ "$status" -eq 0 ]]
 }
 
-@test "penv:: activate existing virtual environment" {
+@test "penv:: activates existing virtual environment" {
 	mkdir -p .venv/bin
 	touch .venv/bin/activate
 
@@ -160,7 +162,7 @@ teardown() {
 	echo "$output" | grep -q "Activated existing environment"
 }
 
-@test "penv:: -d should force recreate" {
+@test "integration:: penv -d force recreates" {
 	mkdir -p .venv
 	touch .venv/test_file
 
@@ -170,7 +172,7 @@ teardown() {
 	[[ ! -f ".venv/test_file" ]]
 }
 
-@test "penv:: --delete should force recreate" {
+@test "integration:: penv --delete force recreates" {
 	mkdir -p .venv
 	touch .venv/test_file
 
@@ -180,7 +182,7 @@ teardown() {
 	[[ ! -f ".venv/test_file" ]]
 }
 
-@test "penv:: install dependencies from pyproject.toml" {
+@test "integration:: penv installs dependencies from pyproject.toml" {
 	create_mock_dependency_file "pyproject"
 	uv() { return 0; }
 	export -f uv
@@ -190,7 +192,7 @@ teardown() {
 	echo "$output" | grep -q "Found pyproject.toml. Installing with uv"
 }
 
-@test "penv:: uses locked uv sync when uv.lock exists" {
+@test "integration:: penv uses locked uv sync when uv.lock exists" {
 	create_mock_dependency_file "pyproject"
 	touch uv.lock
 	uv() { return 0; }
@@ -201,19 +203,19 @@ teardown() {
 	echo "$output" | grep -q "Found pyproject.toml. Installing with uv"
 }
 
-@test "penv:: handle missing dependency files gracefully" {
+@test "integration:: penv handles missing dependency files gracefully" {
 	run penv
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "No pyproject.toml found"
 }
 
-@test "penv:: show Python version in output" {
+@test "integration:: penv shows Python version in output" {
 	run penv
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Python version:"
 }
 
-@test "penv:: handle failed virtual environment creation" {
+@test "penv:: handles failed virtual environment creation" {
 	# Mock python3 to fail
 	python3() { return 1; }
 	export -f python3
@@ -223,7 +225,7 @@ teardown() {
 	echo "$output" | grep -q "Failed to create virtual environment"
 }
 
-@test "penv:: recreates when the activate script is missing" {
+@test "integration:: penv recreates when the activate script is missing" {
 	mkdir -p .venv/bin
 
 	run penv
@@ -232,7 +234,7 @@ teardown() {
 	echo "$output" | grep -q "Creating virtual environment"
 }
 
-@test "penv:: preserve existing environment when no force flag" {
+@test "penv:: preserves existing environment when no force flag" {
 	# Create actual test directory and files
 	mkdir -p .venv/bin
 	touch .venv/bin/activate
@@ -243,7 +245,7 @@ teardown() {
 	[[ -f ".venv/original_file" ]]
 }
 
-@test "penv:: handle multiple flags correctly" {
+@test "integration:: penv handles multiple flags correctly" {
 	mkdir -p .venv
 	touch .venv/test_file
 
@@ -252,7 +254,7 @@ teardown() {
 	echo "$output" | grep -q "Removing existing virtual environment"
 }
 
-@test "penv:: handle platform-specific behavior" {
+@test "penv:: handles platform-specific behavior" {
 	PLATFORM="macos"
 	export PLATFORM
 	PLATFORM_OS="macos"

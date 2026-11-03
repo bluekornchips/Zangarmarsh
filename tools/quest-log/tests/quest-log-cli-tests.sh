@@ -119,7 +119,7 @@ quest_log_test_setup() {
 # sync_cursor_user_settings / run_quest_log
 ########################################################
 
-@test 'run_quest_log:: overwrites Cursor user settings from template' {
+@test 'integration:: run_quest_log overwrites Cursor user settings from template' {
 	local settings_file
 	settings_file="$(cursor_user_settings_path)"
 	mkdir -p "$(dirname "${settings_file}")"
@@ -137,14 +137,16 @@ quest_log_test_setup() {
 	jq -e 'has("git.suggestSmartCommit") | not' "${settings_file}"
 }
 
-@test 'run_quest_log:: writes macOS Application Support settings path' {
+@test 'integration:: run_quest_log writes macOS Application Support settings path' {
 	uname() {
 		[[ "$1" == "-s" ]] && {
 			echo "Darwin"
 			return 0
 		}
+
 		command uname "$@"
 	}
+
 	export -f uname
 
 	run run_quest_log
@@ -199,7 +201,7 @@ quest_log_test_setup() {
 	[[ ! -e "${QUEST_LOG_PLUGIN_DIR}" ]]
 }
 
-@test 'run_quest_log:: installs plugin and overwrites host Cursor settings' {
+@test 'integration:: run_quest_log installs plugin and overwrites host Cursor settings' {
 	run run_quest_log
 	[[ "$status" -eq 0 ]]
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc" ]]
@@ -212,7 +214,7 @@ quest_log_test_setup() {
 	jq -e --slurpfile t "${ZANGARMARSH_VSCODE_DIR}/settings.json" '. == $t[0]' "${settings_file}"
 }
 
-@test 'run_quest_log:: displays summary at end of execution' {
+@test 'integration:: run_quest_log displays summary at end of execution' {
 	run run_quest_log
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "quest-log summary"
@@ -220,7 +222,7 @@ quest_log_test_setup() {
 	echo "$output" | grep -Eq 'cursor: no files synced|cursor total:'
 }
 
-@test 'run_quest_log:: reports no changes on a second identical run' {
+@test 'integration:: run_quest_log reports no changes on a second identical run' {
 	run run_quest_log
 	[[ "$status" -eq 0 ]]
 
@@ -247,6 +249,7 @@ quest_log_test_setup() {
 	mkdir -p "${tricky}"
 
 	sync_cursor_user_settings() {
+
 		return 0
 	}
 
@@ -265,12 +268,13 @@ quest_log_test_setup() {
 	[[ ! -e "$(cursor_user_settings_path)" ]]
 }
 
-@test 'apply_quest_log:: restores plugin when settings sync fails' {
+@test 'integration:: apply_quest_log restores plugin when settings sync fails' {
 	mkdir -p "${QUEST_LOG_PLUGIN_DIR}/rules"
 	echo "previous-plugin" >"${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc"
 
 	sync_cursor_user_settings() {
 		echo "sync_cursor_user_settings:: forced failure" >&2
+
 		return 1
 	}
 
@@ -292,14 +296,16 @@ quest_log_test_setup() {
 	for rule in always never shell bash zsh python lua javascript typescript; do
 		[[ -f "${tracked_plugin}/rules/${rule}.mdc" ]]
 	done
+
 	local skill
 	for skill in blue-author blue-penmanship blue-review-comments blue-review blue-review-bash blue-review-lua blue-review-typescript blue-python-setup; do
 		[[ -f "${tracked_plugin}/skills/${skill}/SKILL.md" ]]
 	done
+
 	[[ ! -e "${tracked_plugin}/MCP.md" ]]
 }
 
-@test 'tracked plugin:: install replaces a live tree with the declared assets' {
+@test 'integration:: tracked plugin install replaces a live tree with the declared assets' {
 	local tracked_plugin="${ZANGARMARSH_ROOT}/tools/quest-log/plugin"
 
 	mkdir -p "${QUEST_LOG_PLUGIN_DIR}/skills/blue-retired" "${QUEST_LOG_PLUGIN_DIR}/rules"

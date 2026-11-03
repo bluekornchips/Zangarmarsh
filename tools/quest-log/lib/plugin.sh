@@ -10,6 +10,7 @@ if [[ -z "${ZANGARMARSH_ROOT:-}" ]]; then
 	printf 'plugin.sh:: ZANGARMARSH_ROOT is required\n' >&2
 	return 1
 fi
+
 source "${ZANGARMARSH_ROOT}/tools/quest-log/lib/io.sh"
 
 # Resolve the local Cursor plugin install directory
@@ -56,7 +57,7 @@ _plugin_resolve_under_home() {
 	local base="${HOME}"
 
 	if [[ "${path}" != "${HOME}" && "${path}" != "${HOME}/"* ]]; then
-		echo "validate_plugin_install_dir:: install path must be below ${HOME}/.cursor/plugins/local" >&2
+		echo "validate_plugin_install_dir:: install path must be below ${HOME}" >&2
 		return 1
 	fi
 
@@ -69,10 +70,10 @@ _plugin_resolve_under_home() {
 
 	local rest="${path#"${HOME}"}"
 	rest="${rest#/}"
-	local component
 	local cursor="${base}"
 	local remaining="${rest}"
 
+	local component
 	while [[ -n "${remaining}" ]]; do
 		component="${remaining%%/*}"
 		if [[ "${remaining}" == */* ]]; then
@@ -96,8 +97,8 @@ _plugin_resolve_under_home() {
 			if [[ -n "${remaining}" ]]; then
 				cursor="${cursor}/${remaining}"
 			fi
-			printf '%s\n' "${cursor}"
 
+			printf '%s\n' "${cursor}"
 			return 0
 		fi
 	done
@@ -145,8 +146,8 @@ validate_plugin_install_dir() {
 	esac
 
 	local resolved_install
-	local resolved_root
 	resolved_install="$(_plugin_resolve_under_home "${install_dir}")" || return 1
+	local resolved_root
 	resolved_root="$(_plugin_resolve_under_home "${allowed_root}")" || return 1
 
 	case "${resolved_install}" in
@@ -218,6 +219,7 @@ install_quest_plugin() {
 		echo "install_quest_plugin:: Failed to create backup directory" >&2
 		return 1
 	}
+
 	rmdir "${backup_dir}" || {
 		rm -rf "${staging_dir}"
 		echo "install_quest_plugin:: Failed to prepare backup directory" >&2
@@ -238,6 +240,7 @@ install_quest_plugin() {
 				echo "install_quest_plugin:: Failed to restore previous installation" >&2
 			fi
 		fi
+
 		rm -rf "${staging_dir}"
 		echo "install_quest_plugin:: Failed to activate staged installation" >&2
 		return 1

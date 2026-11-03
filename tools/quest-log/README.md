@@ -7,46 +7,29 @@ Install the tracked plugin tree in this directory under
 `tools/vscode/settings.json`. There is no generation step: `plugin/` is the
 plugin. Quest-log does not write project `.vscode/` files.
 
-`make install` installs the plugin and appends a source line to `~/.zshrc` and
-`~/.bashrc`. `questlog` installs the plugin and overwrites Cursor user settings.
-Both paths share `apply_quest_log`.
-
-## Prerequisites
-
-- Bash 3.2 or greater
-
-## Install
-
-```bash
-# Source the main script
-source /path/to/zangarmarsh/zangarmarsh.sh
-
-# Quest-log is available as a function in interactive and non-interactive shells
-questlog
-
-# Standalone, no prior source required
-./tools/quest-log/quest-log.sh --help
-```
+`make install` also installs the plugin. `questlog` installs the plugin and
+overwrites Cursor user settings. Both paths share `apply_quest_log`.
 
 ## Features
 
 - Replaces `~/.cursor/plugins/local/quest-log` with a fresh copy of
   `tools/quest-log/plugin/` on every run, so stale files never survive
 - Overwrites host Cursor `User/settings.json` from `tools/vscode/settings.json`
-- In full apply mode, restores a successful plugin install when settings sync fails
-  afterward. Plugin install itself stays self-atomic.
+- In full apply mode, undoes a successful plugin install by restoring the previous
+  plugin when settings sync fails afterward. Plugin install itself stays self-atomic.
 
 ## Usage
 
 ```bash
-# Install plugin and overwrite host Cursor user settings
+# Source the main script, or run the standalone entry
+source /path/to/zangarmarsh/zangarmarsh.sh
 questlog
+
+# Standalone, no prior source required
+./tools/quest-log/quest-log.sh --help
 
 # Show planned writes
 questlog --dry-run
-
-# Show help
-questlog --help
 ```
 
 ## Plugin source layout
@@ -123,12 +106,3 @@ bats tools/quest-log/tests/plugin-tests.sh
 
 You can also run `bash -n tools/quest-log/quest-log.sh` for a quick syntax check
 without Bats.
-
-## Verification Steps
-
-- [ ] `~/.cursor/plugins/local/quest-log/rules/always.mdc` exists after `questlog`
-- [ ] `~/.cursor/plugins/local/quest-log/skills/blue-review/SKILL.md` exists after `questlog`
-- [ ] Running `questlog` again reports "No changes" for Cursor user settings
-- [ ] Cursor user settings match `tools/vscode/settings.json` after `questlog`
-- [ ] No project `.vscode/` files are created by `questlog`
-- [ ] `questlog --dry-run` makes no file changes

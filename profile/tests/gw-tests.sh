@@ -40,6 +40,7 @@ teardown() {
 				git -C "${git_root}" worktree remove --force "${wt_path}" 2>/dev/null || true
 			done < <(git -C "${git_root}" worktree list --porcelain 2>/dev/null | awk '/^worktree / { print $2 }')
 		fi
+
 		rm -rf "${TEST_DIR}"
 	fi
 
@@ -52,7 +53,7 @@ teardown() {
 	echo "$output" | grep -q "gw:: not in a git repository"
 }
 
-@test "gw:: passes add through from repository root" {
+@test "integration:: gw passes add through from repository root" {
 	local repo_dir="${TEST_DIR}/repo"
 	local worktree_dir="${TEST_DIR}/add-root"
 
@@ -65,7 +66,7 @@ teardown() {
 	[[ -d "${worktree_dir}" ]]
 }
 
-@test "gw:: passes add through from subdirectory" {
+@test "integration:: gw passes add through from subdirectory" {
 	local repo_dir="${TEST_DIR}/repo"
 	local worktree_dir="${TEST_DIR}/add-subdir"
 
@@ -79,7 +80,7 @@ teardown() {
 	[[ -d "${worktree_dir}" ]]
 }
 
-@test "gw:: passes remove through to git worktree" {
+@test "integration:: gw passes remove through to git worktree" {
 	local repo_dir="${TEST_DIR}/repo"
 	local worktree_dir="${TEST_DIR}/remove-me"
 
@@ -93,7 +94,7 @@ teardown() {
 	[[ ! -d "${worktree_dir}" ]]
 }
 
-@test "gw:: creates worktree from current branch when base is omitted" {
+@test "integration:: gw creates worktree from current branch when base is omitted" {
 	local repo_dir="${TEST_DIR}/repo"
 	local worktree_dir="${repo_dir}/../feature-one"
 
@@ -110,7 +111,7 @@ teardown() {
 	[[ "$(git -C "${worktree_dir}" merge-base feature-one "${current_branch}")" == "$(git -C "${repo_dir}" rev-parse "${current_branch}")" ]]
 }
 
-@test "gw:: creates worktree from explicit base branch" {
+@test "integration:: gw creates worktree from explicit base branch" {
 	local repo_dir="${TEST_DIR}/repo"
 	local worktree_dir="${repo_dir}/../feature-two"
 

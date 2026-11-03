@@ -66,14 +66,9 @@ The `.desktop` file is for application menus and desktop environments. The bin s
 
 ## Behavior
 
-- `--buff` requires `NAME` and `--appimage PATH`.
-- `--debuff` requires `NAME` only. `--appimage` is rejected with debuff.
-- `-b` and `--buff` set the application name. `-d` and `--debuff` remove a managed install.
-- `-a` and `--appimage` set the AppImage path. Flags may appear in any order with buff.
 - Relative AppImage directories are resolved before writing `Exec=` and the bin symlink.
 - The AppImage must exist, be readable, and be executable.
-- Existing unmarked `.desktop` files and unmanaged bin paths are not overwritten.
-- `--debuff` removes only `.desktop` files with current Auras markers and matching bin symlinks.
+- Existing unmarked `.desktop` files are not overwritten. Unmanaged bin paths are refused unless the matching desktop is Auras-managed.
 - App and desktop names must be a single path segment, with no slashes.
 - Auras does not manage `Icon=` entries.
 

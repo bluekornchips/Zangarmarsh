@@ -96,6 +96,7 @@ apply_platform_env() {
 	if [[ -z "${PLATFORM:-}" ]]; then
 		PLATFORM="$(_detect_platform)" || return 1
 	fi
+
 	export PLATFORM
 
 	PLATFORM_OS="$(platform_os_from_id "${PLATFORM}")" || return 1

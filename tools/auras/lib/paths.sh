@@ -233,8 +233,7 @@ resolve_symlink_path() {
 
 	local depth=0
 	local max_depth=32
-	local link_target
-	local link_dir
+	local link_target link_dir
 	while [[ -L "${path}" ]] && ((depth < max_depth)); do
 		link_target="$(readlink "${path}")" || {
 			echo "${ctx}:: failed to read symlink: ${path}" >&2
@@ -246,6 +245,7 @@ resolve_symlink_path() {
 				echo "${ctx}:: failed to resolve symlink directory: ${path}" >&2
 				return 1
 			}
+
 			link_target="${link_dir}/${link_target}"
 		fi
 
@@ -259,8 +259,8 @@ resolve_symlink_path() {
 	fi
 
 	local parent
-	local base
 	parent="$(dirname "${path}")"
+	local base
 	base="$(basename "${path}")"
 
 	if [[ ! -d "${parent}" ]]; then
@@ -278,6 +278,7 @@ resolve_symlink_path() {
 		echo "${ctx}:: failed to canonicalize directory: ${parent}" >&2
 		return 1
 	}
+
 	echo "${parent_abs}/${base}"
 
 	return 0

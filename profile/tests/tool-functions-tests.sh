@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 #
-# Tool functions after sourcing zangarmarsh.sh
+# Unit and integration tests for tool functions after sourcing zangarmarsh.sh
 #
 
 setup_file() {
@@ -12,38 +12,35 @@ setup_file() {
 	return 0
 }
 
-@test "tool_functions:: questlog is a function after a non-interactive bash source" {
+@test "tool_functions:: questlog is a function after bash source" {
 	run bash -c "source '${SCRIPT}' && type questlog"
-	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "questlog is a function"
+	[[ "${status}" -eq 0 ]]
+	echo "${output}" | grep -q "questlog is a function"
 }
 
-@test "tool_functions:: questlog --help works after a non-interactive bash source" {
+@test "tool_functions:: bash source exports PLATFORM_OS" {
+	run bash -c "source '${SCRIPT}' && printf '%s\n' \"\${PLATFORM_OS}\""
+	[[ "${status}" -eq 0 ]]
+	[[ "${output}" == "macos" || "${output}" == "linux" ]]
+}
+
+@test "tool_functions:: questlog --help works after bash and zsh source" {
 	run bash -c "source '${SCRIPT}' && questlog --help"
-	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Install the quest-log Cursor plugin"
-}
+	[[ "${status}" -eq 0 ]]
+	echo "${output}" | grep -q "Install the quest-log Cursor plugin"
 
-@test "tool_functions:: questlog --help works after a non-interactive zsh source" {
 	command -v zsh >/dev/null 2>&1 || skip "zsh not available"
 
 	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
 	local home
 	home="$(mktemp -d "${base}/tool-functions-zsh.XXXXXX")" || return 1
-	# Keep this off the developer HOME so profile.zsh can use compinit -C.
 	printf '\n' >"${home}/.zshrc"
 	touch "${home}/.zcompdump"
 
 	run env HOME="${home}" ZDOTDIR="${home}" ZSH="${home}/.oh-my-zsh" \
 		zsh -c "source '${SCRIPT}' && questlog --help"
-	local cmd_status="$status"
+	local cmd_status="${status}"
 	rm -rf "${home}"
 	[[ "${cmd_status}" -eq 0 ]]
-	echo "$output" | grep -q "Install the quest-log Cursor plugin"
-}
-
-@test "tool_functions:: bash source exports PLATFORM_OS" {
-	run bash -c "source '${SCRIPT}' && printf '%s\n' \"\${PLATFORM_OS}\""
-	[[ "$status" -eq 0 ]]
-	[[ "$output" == "macos" || "$output" == "linux" ]]
+	echo "${output}" | grep -q "Install the quest-log Cursor plugin"
 }

@@ -106,6 +106,24 @@ teardown() {
 	[[ "${status}" -eq 0 ]]
 }
 
+@test "has_source_line:: matches a double-quoted absolute path" {
+	printf 'source "%s/zangarmarsh.sh"\n' "${ZANGARMARSH_ROOT}" >"${RC_FILE}"
+
+	run has_source_line
+	[[ "${status}" -eq 0 ]]
+}
+
+@test "has_source_line:: matches a \$HOME form" {
+	mkdir -p "${HOME}/zm"
+	touch "${HOME}/zm/zangarmarsh.sh"
+	ZANGARMARSH_ROOT="${HOME}/zm"
+	export ZANGARMARSH_ROOT
+	printf 'source "$HOME/zm/zangarmarsh.sh"\n' >"${RC_FILE}"
+
+	run has_source_line
+	[[ "${status}" -eq 0 ]]
+}
+
 @test "has_source_line:: ignores a stale source line from another root" {
 	printf 'source "/other/root/zangarmarsh.sh"\n' >"${RC_FILE}"
 
@@ -147,12 +165,49 @@ teardown() {
 	[[ "$(grep -Fcx "$(source_line_text)" "${RC_FILE}")" -eq 1 ]]
 }
 
+@test "install_zangarmarsh:: collapses duplicate and alternate source forms" {
+	mkdir -p "${HOME}/zm"
+	touch "${HOME}/zm/zangarmarsh.sh"
+	ZANGARMARSH_ROOT="${HOME}/zm"
+	export ZANGARMARSH_ROOT
+
+	printf 'alias ll="ls -l"\n' >"${RC_FILE}"
+	printf 'source "%s/zangarmarsh.sh"\n' "${ZANGARMARSH_ROOT}" >>"${RC_FILE}"
+	printf 'source "$HOME/zm/zangarmarsh.sh"\n' >>"${RC_FILE}"
+	printf 'source "/other/root/zangarmarsh.sh"\n' >>"${RC_FILE}"
+
+	run install_zangarmarsh
+	[[ "${status}" -eq 0 ]]
+	[[ "$(grep -Fc "zangarmarsh.sh" "${RC_FILE}")" -eq 2 ]]
+	[[ "$(grep -Fcx "$(source_line_text)" "${RC_FILE}")" -eq 1 ]]
+	grep -Fqx 'source "/other/root/zangarmarsh.sh"' "${RC_FILE}"
+	grep -Fqx 'alias ll="ls -l"' "${RC_FILE}"
+}
+
+@test "install_zangarmarsh:: removes the official eager NVM block from bashrc" {
+	RC_FILE="${HOME}/.bashrc"
+	export RC_FILE
+	cat >"${RC_FILE}" <<EOF
+alias ll="ls -l"
+export NVM_DIR="\$HOME/.nvm"
+[ -s "\$NVM_DIR/nvm.sh" ] && \\. "\$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "\$NVM_DIR/bash_completion" ] && \\. "\$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+EOF
+
+	run install_zangarmarsh
+	[[ "${status}" -eq 0 ]]
+	grep -Fqx 'alias ll="ls -l"' "${RC_FILE}"
+	grep -Fqx "$(source_line_text)" "${RC_FILE}"
+	! grep -Fq 'NVM_DIR' "${RC_FILE}"
+	! grep -Fq 'nvm.sh' "${RC_FILE}"
+}
+
 @test "install_zangarmarsh:: dry-run reports the change without writing" {
 	DRY_RUN=true
 
 	run install_zangarmarsh
 	[[ "${status}" -eq 0 ]]
-	grep -q "Would append" <<<"${output}"
+	grep -q "Would install into" <<<"${output}"
 	[[ ! -e "${RC_FILE}" ]]
 }
 
@@ -193,6 +248,20 @@ teardown() {
 
 	grep -Fqx 'alias ll="ls -l"' "${RC_FILE}"
 	! grep -Fqx "$(source_line_text)" "${RC_FILE}"
+}
+
+@test "uninstall_zangarmarsh:: removes every matching source form for this root" {
+	printf 'alias ll="ls -l"\n' >"${RC_FILE}"
+	printf 'source "%s/zangarmarsh.sh"\n' "${ZANGARMARSH_ROOT}" >>"${RC_FILE}"
+	write_source_line >>"${RC_FILE}"
+	printf 'source "/other/root/zangarmarsh.sh"\n' >>"${RC_FILE}"
+
+	run uninstall_zangarmarsh
+	[[ "${status}" -eq 0 ]]
+
+	grep -Fqx 'alias ll="ls -l"' "${RC_FILE}"
+	grep -Fqx 'source "/other/root/zangarmarsh.sh"' "${RC_FILE}"
+	! grep -Fq "${ZANGARMARSH_ROOT}/zangarmarsh.sh" "${RC_FILE}"
 }
 
 @test "uninstall_zangarmarsh:: preserves a symlinked RC_FILE" {
@@ -277,7 +346,7 @@ teardown() {
 ########################################################
 # main, end to end via the CLI
 ########################################################
-@test "main:: install then uninstall via the CLI leaves no trace" {
+@test "integration:: install then uninstall via the CLI leaves no trace" {
 	run "${SCRIPT}"
 	[[ "${status}" -eq 0 ]]
 	[[ -f "${TEST_HOME}/.zshrc" ]]
@@ -296,7 +365,7 @@ teardown() {
 	[[ ! -e "${TEST_HOME}/.cursor/plugins/local/quest-log" ]]
 }
 
-@test "main:: --zsh installs only into ~/.zshrc" {
+@test "integration:: --zsh installs only into ~/.zshrc" {
 	run "${SCRIPT}" --zsh
 	[[ "${status}" -eq 0 ]]
 	local expected
@@ -305,7 +374,7 @@ teardown() {
 	[[ ! -e "${TEST_HOME}/.bashrc" ]]
 }
 
-@test "main:: --bash installs only into ~/.bashrc" {
+@test "integration:: --bash installs only into ~/.bashrc" {
 	run "${SCRIPT}" --bash
 	[[ "${status}" -eq 0 ]]
 	local expected
@@ -314,7 +383,7 @@ teardown() {
 	[[ ! -e "${TEST_HOME}/.zshrc" ]]
 }
 
-@test "main:: --dry-run makes no changes" {
+@test "integration:: --dry-run makes no changes" {
 	run "${SCRIPT}" --dry-run
 	[[ "${status}" -eq 0 ]]
 	[[ ! -e "${TEST_HOME}/.zshrc" ]]
@@ -322,7 +391,7 @@ teardown() {
 	[[ ! -e "${TEST_HOME}/.cursor/plugins/local/quest-log" ]]
 }
 
-@test "main:: --dry-run --uninstall makes no changes" {
+@test "integration:: --dry-run --uninstall makes no changes" {
 	"${SCRIPT}" >/dev/null
 
 	run "${SCRIPT}" --dry-run --uninstall
@@ -332,7 +401,7 @@ teardown() {
 	[[ -e "${TEST_HOME}/.cursor/plugins/local/quest-log" ]]
 }
 
-@test "main:: rolls back the plugin when rc install fails" {
+@test "integration:: rolls back the plugin when rc install fails" {
 	mkdir -p "${HOME}/.zshrc"
 
 	run main --zsh
@@ -343,6 +412,7 @@ teardown() {
 @test "main:: returns nonzero when plugin install fails" {
 	install_quest_plugin() {
 		printf 'install_quest_plugin:: forced failure\n' >&2
+
 		return 1
 	}
 
@@ -353,11 +423,12 @@ teardown() {
 	[[ ! -e "${HOME}/.bashrc" ]]
 }
 
-@test "main:: returns nonzero when uninstall_cursor_plugin fails" {
+@test "integration:: returns nonzero when uninstall_cursor_plugin fails" {
 	"${SCRIPT}" >/dev/null
 
 	uninstall_quest_plugin() {
 		printf 'uninstall_quest_plugin:: forced failure\n' >&2
+
 		return 1
 	}
 

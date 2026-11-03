@@ -16,10 +16,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y bats shellcheck jq zsh
-
-      - name: Zsh syntax
-        run: zsh -n profile/zsh/*.zsh
+          sudo apt-get install -y bats shellcheck shfmt jq zsh
 
       - name: Repository checks
         run: make ci

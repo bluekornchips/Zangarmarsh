@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 
-# Load NVM environment when first called (lazy load).
+# Load NVM from ${HOME}/.nvm.
 #
 # Inputs:
-# - None (uses NVM_DIR from environment)
+# - None
 #
 # Side Effects:
-# - Exports NVM_DIR, sources nvm.sh and optional bash_completion
+# - Sets and exports NVM_DIR to ${HOME}/.nvm, sources nvm.sh and optional bash_completion
 #
 # Returns:
 # - 0 on success
@@ -33,17 +33,17 @@ _nvm_load() {
 	fi
 }
 
-# Install Python dependencies from project files
+# Install Python dependencies from pyproject.toml
 #
 # Inputs:
 # - None (reads from current directory)
 #
 # Side Effects:
-# - Requires uv when dependency files are present
-# - Sets dependency_installed flag
+# - Requires uv when pyproject.toml is present
+# - Runs uv sync when pyproject.toml is present
 #
 # Returns:
-# - 0 if dependencies installed or no dependency files found
+# - 0 if dependencies installed or no pyproject.toml found
 # - 1 if installation fails
 _penv_install_dependencies() {
 	local dependency_installed=false
@@ -94,15 +94,13 @@ _penv_clean_caches() {
 		return 1
 	fi
 
-	local cache_dirs
-	cache_dirs=(
+	local cache_dirs=(
 		"__pycache__"
 		".mypy_cache"
 		".pytest_cache"
 	)
 
-	local cache_files
-	cache_files=("*.pyc")
+	local cache_files=("*.pyc")
 	local cache_dir
 	for cache_dir in "${cache_dirs[@]}"; do
 		find "${current_dir}" -type d -name "${cache_dir}" -prune -exec rm -rf {} + 2>/dev/null || true
@@ -180,7 +178,7 @@ _penv_macos_hint() {
 # add or remove, creates a sibling worktree with a branch of the same name.
 #
 # Inputs:
-# - $1: optional new branch and folder name, or add or remove
+# - $1: required new branch and folder name, or add or remove
 # - $2: optional base branch for shortcut creation
 # - $@: arguments passed to git worktree when using add or remove
 #
@@ -252,7 +250,7 @@ gw() {
 #
 # Side Effects:
 # - Creates/activates .venv in the current directory
-# - Removes existing .venv if -d is passed
+# - Removes existing .venv when -d is passed or activate is missing or unusable
 # - Cleans __pycache__, .mypy_cache, .pytest_cache, and .pyc files
 # - Installs dependencies from pyproject.toml with uv when creating or recreating .venv
 # - Activates an existing .venv without installing when -d is absent
@@ -288,6 +286,7 @@ EOF
 				echo "penv:: Use 'penv --help' for usage information" >&2
 				return 1
 			fi
+
 			python_version="${1}"
 			shift
 			;;
@@ -302,8 +301,8 @@ EOF
 	if ! command -v "${python_version}" >/dev/null 2>&1; then
 		echo "penv:: ${python_version} not found" >&2
 		echo "penv:: Available Python versions:" >&2
-		local python_candidate
 		local python_count=0
+		local python_candidate
 		for python_candidate in /usr/bin/python* /usr/local/bin/python* /opt/homebrew/bin/python*; do
 			if [[ -x "${python_candidate}" ]]; then
 				echo "${python_candidate}" >&2
@@ -311,6 +310,7 @@ EOF
 				((python_count >= 5)) && break
 			fi
 		done
+
 		((python_count == 0)) && echo "penv:: No Python versions found in common paths" >&2
 		_penv_macos_hint
 		return 1
@@ -339,7 +339,6 @@ EOF
 		fi
 	fi
 
-	# Explicit path validation: ensure we're only removing .venv in current directory
 	if [[ -d "${env_name}" ]]; then
 		echo "Removing existing virtual environment: ${env_name}"
 		rm -rf "${env_name}" 2>/dev/null || {
@@ -366,7 +365,7 @@ Environment: ${PWD}/${env_name}
 EOF
 }
 
-# Set up lazy loading for expensive operations (using configuration)
+# Register NVM when enabled
 if [[ "${ZANGARMARSH_LAZY_LOADING:-true}" == "true" ]] && [[ "${ZANGARMARSH_ENABLE_NVM:-true}" == "true" ]]; then
 	nvm() {
 		unset -f nvm

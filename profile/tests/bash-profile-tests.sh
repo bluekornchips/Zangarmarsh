@@ -12,7 +12,7 @@ setup_file() {
 	return 0
 }
 
-@test "bash profile:: sets history variables" {
+@test "bash_profile:: sets history variables" {
 	run bash -c "source '${SCRIPT}' && printf 'SIZE=%s\nFILESIZE=%s\n' \"\$HISTSIZE\" \"\$HISTFILESIZE\""
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "^SIZE=100000$"

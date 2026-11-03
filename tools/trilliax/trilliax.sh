@@ -89,9 +89,8 @@ validate_targets() {
 
 	local requested_targets
 	IFS=',' read -ra requested_targets <<<"${targets_string}"
-	local target
-	local known
-	local matched
+
+	local matched known target
 	for target in "${requested_targets[@]}"; do
 		target=$(echo "${target}" | xargs)
 		matched=false
@@ -102,6 +101,7 @@ validate_targets() {
 				break
 			fi
 		done
+
 		if [[ "${matched}" != true ]]; then
 			echo "validate_targets:: Invalid target '${target}'. Available targets: ${available}" >&2
 			return 1
@@ -160,6 +160,7 @@ execute_clean() {
 		echo "${function_name}:: MAX_DEPTH must be an integer" >&2
 		return 1
 	fi
+
 	local list_file
 	list_file="$(mktemp "${TMPDIR:-/tmp}/trilliax-find.XXXXXX")" || {
 		echo "${function_name}:: Failed to create find listing file" >&2
@@ -329,6 +330,7 @@ run_trilliax() {
 				echo "run_trilliax:: Use '$(basename "$0") --help' for usage information" >&2
 				return 1
 			fi
+
 			target_dir="${2}"
 			shift 2
 			;;
@@ -338,6 +340,7 @@ run_trilliax() {
 				echo "run_trilliax:: Use '$(basename "$0") --help' for usage information" >&2
 				return 1
 			fi
+
 			targets_string="${2}"
 			shift 2
 			;;
@@ -359,6 +362,7 @@ run_trilliax() {
 				echo "run_trilliax:: Use '$(basename "$0") --help' for usage information" >&2
 				return 1
 			fi
+
 			target_dir="${1}"
 			shift
 			;;
@@ -387,8 +391,7 @@ run_trilliax() {
 
 	echo "run_trilliax:: Filthy, filthy, FILTHY!"
 	local errors=0
-	local target
-	local clean_fn
+	local clean_fn target
 	for target in "${ENABLED_TARGETS[@]}"; do
 		clean_fn="clean_${target}"
 		if ! declare -F "${clean_fn}" >/dev/null 2>&1; then
@@ -396,6 +399,7 @@ run_trilliax() {
 			errors=$((errors + 1))
 			continue
 		fi
+
 		"${clean_fn}" "${target_dir}" || errors=$((errors + 1))
 	done
 

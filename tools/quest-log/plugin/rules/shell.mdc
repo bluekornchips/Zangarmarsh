@@ -1,5 +1,5 @@
 ---
-description: Shared shell standards for quoting, status, destructive paths, dependencies, and guard clauses.
+description: Shared shell standards for quoting, status, function-ending returns, block spacing, and destructive paths.
 globs:
   - '**/*.sh'
   - '**/*.bash'
@@ -29,6 +29,13 @@ Keep bash and zsh scripts safe, readable, and honest about errors and cleanup.
   - `command args || return 1`
 - Keep `if` blocks when the branch logs, cleans up, assigns state, runs more than one command, or returns a computed status.
 - Group scripts as usage, validation and config, helpers, core logic, `main`, then the source guard when applicable.
+- End every function, including `main`, with one empty line and then `return <code>`. That empty line belongs only to the function-ending return.
+- An early `return` stays on the next line after the statement it belongs to. No empty line before it. This includes `return` after an `echo` or command inside `if`, `case`, and `command || { }`.
+- After a multi-line block, leave one empty line before the next statement in the same scope. The block closes with `}`, `fi`, `done`, or `esac`. That includes a later `return` that follows the whole block.
+- When that next line closes the enclosing block, keep it flush. No empty line before the `done`, `fi`, `esac`, `else`, `elif`, or `}` that ends or continues the `for`, `if`, `case`, or group you are inside.
+- One empty line does both jobs when a `return` is the next statement after a multi-line block. Do not insert a second empty line.
+- The separator is an empty line. A line that contains only spaces or tabs does not count.
+- Bash `local` placement is owned by `bash.mdc`: declare each local on the line that first assigns it. A bare `local` block at the top of a function is invalid.
 
 ## Usage
 
@@ -45,7 +52,11 @@ Keep bash and zsh scripts safe, readable, and honest about errors and cleanup.
 - Removing paths the script did not create, except for the cleanup tools listed below.
 - `rm -rf /`, `eval`, `exec`, or `sudo`.
 - Multi-line `if` blocks whose only body is a plain `return` with no other commands.
-- Blank lines before early `return` statements inside a function.
+- An empty line before an early `return`.
+- A function whose last `return` is not preceded by an empty line.
+- Another command or block on the line immediately after a closing `}`, `fi`, `done`, or `esac`. The closer of the enclosing block is not that next command.
+- An empty line before the `done`, `fi`, `esac`, or `}` that closes the enclosing block.
+- Two empty lines between a multi-line block and the function-ending `return`.
 
 ### Cleanup tool exception
 
@@ -54,3 +65,53 @@ These named tools may delete paths they did not create in the current run. All o
 - `tools/trilliax/trilliax.sh` may remove dev artifacts such as `.cursor`, caches, `node_modules`, and Python virtual environments.
 - `penv()` in `profile/functions.sh` may remove Python caches and `.venv` when recreating an environment.
 - `tools/auras/auras.sh` via buff/debuff may remove Auras-managed `.desktop` files and `~/.local/bin` symlinks created by prior Auras runs.
+
+## Example
+
+Required. Early `return` stays tight. One empty line sits after each multi-line block. The function ends with one empty line and `return 0`. The `done` that closes the loop stays flush.
+
+```bash
+load_plugins() {
+  if [[ -z "${git_lib}" ]]; then
+    echo "load_plugins:: git_lib is required" >&2
+    return 1
+  fi
+
+  source "${git_lib}" || {
+    echo "load_plugins:: failed to source ${git_lib}" >&2
+    return 1
+  }
+
+  source "${git_plugin}" || {
+    echo "load_plugins:: failed to source ${git_plugin}" >&2
+    return 1
+  }
+
+  local file
+  for file in "${extra[@]}"; do
+    source "${file}" || {
+      echo "load_plugins:: failed to source ${file}" >&2
+      return 1
+    }
+  done
+
+  return 0
+}
+```
+
+Rejected. The second `source` is stacked on the closing brace, and the early `return` has an empty line above it.
+
+```bash
+load_plugins() {
+  source "${git_lib}" || {
+    echo "load_plugins:: failed to source ${git_lib}" >&2
+
+    return 1
+  }
+  source "${git_plugin}" || {
+    echo "load_plugins:: failed to source ${git_plugin}" >&2
+    return 1
+  }
+  return 0
+}
+```
