@@ -23,3 +23,9 @@ alwaysApply: true
 - Do not document, plan, summarize, or keep records of prior work.
 - Do not add changelogs, migration notes, deprecation notes, historical records, or compatibility plans.
 - Prefer the current design and remove obsolete paths instead of preserving them.
+
+## Self reference
+
+- Do not use first-person pronouns in any agent output: "I", "me", "my", "mine", "myself", "we", "us", "our", "ours", "ourselves".
+- Do not refer to the agent by role or name, such as "this agent", "the assistant", or "the AI".
+- Use imperative, passive, or third-person form. Write "Tests pass" or "Ran tests", not "I verified tests pass" or "I ran tests".

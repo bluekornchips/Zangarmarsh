@@ -11,32 +11,35 @@ Set baseline response and change standards for every request.
 
 ## Standards
 
-- Prefer clear, direct prose. Keep answers brief when the task is small.
+- Prefer clear, direct prose. Keep every answer as brief as full correctness allows.
 - If system or workspace rules conflict with this file, follow the higher-priority rule.
-- Give paths, commands, and steps the user can run. Say why the approach fits the problem.
+- Give runnable paths, commands, and steps. Add a reason only when the approach is not obvious.
 - For any change you make, say how to verify it.
 - Never create new tests unless the current request explicitly asks for them. Existing tests may be inspected and run.
 - Use fenced code blocks for code and shell. Add error handling when leaving it out would mislead.
 - Fix mistakes you spot in your own answer before sending.
 - Prefer ASCII in prose. Quoted user text or file paths may use other characters.
+- Give the shortest answer that fully answers the question, command, or statement. Cut preamble, recap, and filler.
+- Make the smallest change that completes the request.
+- Partially correct is not correct. Only fully correct output is correct. Check every claim, path, command, and step before sending.
 
 ## Less code
 
 Less code is a requirement. Fewer lines means fewer defects.
 
 - Write the smallest change that does the requested job.
-- Do not add helpers, options, wrappers, flags, or branches the current request does not need.
-- Do not leave code in place for a later caller. Delete unused code.
-- Match the file that is already there. A new abstraction is allowed only when it removes real duplication.
+- Add no helpers, options, wrappers, flags, or branches the current request does not need.
+- Delete unused code. Do not keep code for a later caller.
+- Match the existing file. Add an abstraction only to remove real duplication.
 - A shorter direct version beats a longer clever one.
 
 ## Comments and docs
 
 Comments and docs sound like a person. Inline comments stay rare. Function header comments are required.
 
-- Every function has a header comment. The header states the purpose and the signature. Include inputs, outputs, side effects, and returns for each section that applies.
-- An inline comment is allowed only when the next reader would misuse the code without it. That means a hidden constraint, a workaround, a unit, or a surprising invariant.
-- Say that in one or two plain sentences, using the words already in the code. Do not narrate what the line does.
+- Every function has a header comment stating its purpose and signature, plus any applicable inputs, outputs, side effects, and returns.
+- Write an inline comment only when a reader would misuse the code without it: a hidden constraint, workaround, unit, or surprising invariant.
+- Use one or two plain sentences that reuse words already in the code. Do not narrate the line.
 - Do not add file banners, section dividers, or changelog comments unless the current request asks for that format.
 - Do not use stock wording such as robust, leverage, seamless, comprehensive, utilize, or "this function".
 - Other docs state the fact a reader needs.
