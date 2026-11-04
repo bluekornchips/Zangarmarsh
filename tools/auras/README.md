@@ -119,7 +119,6 @@ The `.desktop` file is for application menus and desktop environments. The bin s
 
 - Bash
 - A Linux desktop environment that reads Freedesktop `.desktop` launchers
-- GNU `stat -c %Y` and `sort -V` for `--ready-check`
 
 ## Testing
 

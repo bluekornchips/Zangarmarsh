@@ -115,8 +115,11 @@ write_if_changed() {
 	)"
 	existing_content="${existing_content%x}"
 
-	local display_path
-	display_path=$(realpath "${file_path}" 2>/dev/null || echo "${file_path}")
+	local display_path="${file_path}"
+	local display_dir
+	if display_dir="$(cd "$(dirname "${file_path}")" 2>/dev/null && pwd -P)"; then
+		display_path="${display_dir}/$(basename "${file_path}")"
+	fi
 
 	if [[ "${existing_content}" == "${new_content}" ]]; then
 		echo "No changes: ${display_path}"

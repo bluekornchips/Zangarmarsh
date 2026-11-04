@@ -38,6 +38,50 @@ appimage_version_from_name() {
 	return 0
 }
 
+# Return 0 when left dotted version is greater than right
+#
+# Inputs:
+# - $1 left version
+# - $2 right version
+#
+# Returns:
+# - 0 when left > right
+# - 1 when left <= right
+_version_gt() {
+	local left_rest="${1}."
+	local right_rest="${2}."
+	local left_part
+	local right_part
+
+	while [[ -n "${left_rest}" || -n "${right_rest}" ]]; do
+		left_part="${left_rest%%.*}"
+		right_part="${right_rest%%.*}"
+		if [[ "${left_rest}" == *.* ]]; then
+			left_rest="${left_rest#*.}"
+		else
+			left_rest=""
+		fi
+
+		if [[ "${right_rest}" == *.* ]]; then
+			right_rest="${right_rest#*.}"
+		else
+			right_rest=""
+		fi
+
+		left_part="${left_part:-0}"
+		right_part="${right_part:-0}"
+		if ((10#${left_part} > 10#${right_part})); then
+			return 0
+		fi
+
+		if ((10#${left_part} < 10#${right_part})); then
+			return 1
+		fi
+	done
+
+	return 1
+}
+
 # Choose the newest AppImage in one directory by version, then mtime
 #
 # Inputs:
@@ -48,7 +92,7 @@ appimage_version_from_name() {
 #
 # Returns:
 # - 0 when a winner is found
-# - 1 when app_dir is empty, missing, has no AppImage files, or GNU stat/sort is unavailable
+# - 1 when app_dir is empty, missing, or has no AppImage files
 pick_latest_appimage() {
 	local app_dir="$1"
 
@@ -62,51 +106,66 @@ pick_latest_appimage() {
 		return 1
 	fi
 
-	if ! command -v stat >/dev/null 2>&1 || ! command -v sort >/dev/null 2>&1; then
-		echo "pick_latest_appimage:: stat and sort are required" >&2
-		return 1
-	fi
-
-	if ! stat -c %Y / >/dev/null 2>&1; then
-		echo "pick_latest_appimage:: GNU stat -c %Y is required" >&2
-		return 1
-	fi
-
-	local records=()
-	local has_versioned=0
+	local paths=()
 	local path
+	local base
+	local has_versioned=0
 	local ver
-	local mtime
-	for path in "${app_dir}"/*.AppImage "${app_dir}"/*.appimage; do
+	# One walk so case-insensitive filesystems do not double-count via
+	# separate *.AppImage and *.appimage globs.
+	for path in "${app_dir}"/*; do
 		[[ -f "${path}" ]] || continue
+		base="${path##*/}"
+		case "${base}" in
+		*.AppImage | *.appimage) ;;
+		*) continue ;;
+		esac
 
-		ver="$(appimage_version_from_name "${path##*/}")"
-		if ! mtime="$(stat -c %Y "${path}")"; then
-			echo "pick_latest_appimage:: could not read mtime: ${path}" >&2
-			return 1
-		fi
-
+		paths+=("${path}")
+		ver="$(appimage_version_from_name "${base}")"
 		if [[ -n "${ver}" ]]; then
 			has_versioned=1
-			records+=("v	${ver}	${mtime}	${path}")
-		else
-			records+=("u		${mtime}	${path}")
 		fi
 	done
 
-	if ((${#records[@]} == 0)); then
+	if ((${#paths[@]} == 0)); then
 		echo "pick_latest_appimage:: no AppImage files in ${app_dir}" >&2
 		return 1
 	fi
 
-	local winner_line
-	if ((has_versioned)); then
-		winner_line="$(printf '%s\n' "${records[@]}" | grep '^v' | sort -t $'\t' -k2,2V -k3,3n | tail -n1)"
-	else
-		winner_line="$(printf '%s\n' "${records[@]}" | sort -t $'\t' -k3,3n | tail -n1)"
-	fi
+	local winner_path=""
+	local winner_ver=""
+	for path in "${paths[@]}"; do
+		ver="$(appimage_version_from_name "${path##*/}")"
+		if ((has_versioned)) && [[ -z "${ver}" ]]; then
+			continue
+		fi
 
-	local winner_path="${winner_line##*$'\t'}"
+		if [[ -z "${winner_path}" ]]; then
+			winner_path="${path}"
+			winner_ver="${ver}"
+			continue
+		fi
+
+		if [[ -n "${ver}" && -n "${winner_ver}" ]]; then
+			if _version_gt "${ver}" "${winner_ver}"; then
+				winner_path="${path}"
+				winner_ver="${ver}"
+				continue
+			fi
+
+			if _version_gt "${winner_ver}" "${ver}"; then
+				continue
+			fi
+		fi
+
+		# Same version, or both unversioned: bash -nt is portable, no stat.
+		if [[ "${path}" -nt "${winner_path}" ]]; then
+			winner_path="${path}"
+			winner_ver="${ver}"
+		fi
+	done
+
 	echo "${winner_path}"
 
 	return 0

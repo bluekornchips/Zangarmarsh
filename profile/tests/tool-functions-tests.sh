@@ -72,7 +72,17 @@ EOF
 	echo "${output}" | grep -Fq -- '/usr/bin/env'
 	echo "${output}" | grep -Fq -- 'alpine:latest'
 	# Image must come before the bash entry command.
-	echo "${output}" | grep -Pzq 'alpine:latest\nbash\n'
+	local prev=""
+	local line=""
+	local image_before_bash=0
+	while IFS= read -r line; do
+		if [[ "${prev}" == "alpine:latest" && "${line}" == "bash" ]]; then
+			image_before_bash=1
+			break
+		fi
+		prev="${line}"
+	done <<<"${output}"
+	[[ "${image_before_bash}" -eq 1 ]]
 }
 
 @test "drun:: requires an image argument" {
