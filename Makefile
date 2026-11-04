@@ -53,8 +53,8 @@ lint:
 
 syntax:
 	@$(CHECK_DEPS)
-	@bash -n $(FMT_FILES)
-	@zsh -n $(ZSH_FILES)
+	@for f in $(SHELL_FILES); do bash -n "$$f" || exit 1; done
+	@for f in $(ZSH_FILES); do zsh -n "$$f" || exit 1; done
 
 shellcheck:
 	@$(CHECK_DEPS)
