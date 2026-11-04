@@ -6,6 +6,7 @@
 setup_file() {
 	GIT_ROOT="$(git rev-parse --show-toplevel)" || return 1
 	source "${GIT_ROOT}/tests/fixtures.sh" || return 1
+
 	QUEST_LOG_ROOT="${ZANGARMARSH_ROOT}/tools/quest-log"
 	SCRIPT="${QUEST_LOG_ROOT}/quest-log.sh"
 	ZANGARMARSH_VSCODE_DIR="${ZANGARMARSH_ROOT}/tools/vscode"
@@ -25,36 +26,18 @@ setup() {
 
 teardown() {
 	quest_log_test_teardown
-
 	return 0
 }
 
 quest_log_test_setup() {
-	source "${GIT_ROOT}/tests/fixtures.sh"
-	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
 	local return_dir="${PWD}"
 
-	TEST_TEMP_DIR="$(mktemp -d "${base}/quest-log-test.XXXXXX")"
-
-	HOME="${TEST_TEMP_DIR}/home"
-	mkdir -p "${HOME}"
-	export HOME
-
-	PLUGIN_SOURCE_DIR="${TEST_TEMP_DIR}/plugin"
-	create_test_plugin_source "${PLUGIN_SOURCE_DIR}"
-	export PLUGIN_SOURCE_DIR
-
-	QUEST_LOG_PLUGIN_DIR="${HOME}/.cursor/plugins/local/quest-log"
-	export QUEST_LOG_PLUGIN_DIR
-
-	export TEST_TEMP_DIR
-	export ZANGARMARSH_ROOT
+	quest_log_test_home "quest-log-test"
 
 	cd "${ZANGARMARSH_ROOT}" || return 1
 	source_for_test "$SCRIPT" || return 1
 	SCRIPT_DIR="${QUEST_LOG_ROOT}"
 	export SCRIPT_DIR
-	export QUEST_LOG_ROOT
 	source_for_test "${ZANGARMARSH_ROOT}/tools/quest-log/lib/apply.sh" || return 1
 
 	cd "${TEST_TEMP_DIR}" || {
@@ -67,6 +50,7 @@ quest_log_test_setup() {
 	STATS_UNCHANGED=0
 	STATS_ERRORS=0
 	PLUGIN_ACTION=""
+	export STATS_CREATED STATS_UPDATED STATS_UNCHANGED STATS_ERRORS PLUGIN_ACTION
 
 	return 0
 }
@@ -138,18 +122,18 @@ quest_log_test_setup() {
 }
 
 @test 'integration:: run_quest_log writes macOS Application Support settings path' {
-	uname() {
-		[[ "$1" == "-s" ]] && {
-			echo "Darwin"
-			return 0
-		}
-
-		command uname "$@"
-	}
-
-	export -f uname
-
-	run run_quest_log
+	local mock_bin="${BATS_TEST_TMPDIR}/uname-mock-bin"
+	mkdir -p "${mock_bin}"
+	cat >"${mock_bin}/uname" <<'EOF'
+#!/usr/bin/env bash
+if [[ "${1:-}" == "-s" ]]; then
+	echo "Darwin"
+	exit 0
+fi
+exec /usr/bin/uname "$@"
+EOF
+	chmod +x "${mock_bin}/uname"
+	PATH="${mock_bin}:${PATH}" run run_quest_log
 	[[ "$status" -eq 0 ]]
 	[[ -f "${HOME}/Library/Application Support/Cursor/User/settings.json" ]]
 	jq -e '.["editor.formatOnSave"] == true' "${HOME}/Library/Application Support/Cursor/User/settings.json"
@@ -158,8 +142,9 @@ quest_log_test_setup() {
 }
 
 @test 'run_quest_log:: fails when plugin source is missing' {
+	# Already exported by quest_log_test_home; apply_quest_log reads the new value.
+	# shellcheck disable=SC2034
 	PLUGIN_SOURCE_DIR="/tmp/does-not-exist-plugin"
-	export PLUGIN_SOURCE_DIR
 
 	run run_quest_log
 	[[ "$status" -eq 1 ]]
@@ -245,6 +230,8 @@ quest_log_test_setup() {
 
 @test 'apply_quest_log:: backup trap does not evaluate TMPDIR metacharacters' {
 	local marker="${TEST_TEMP_DIR}/pwned"
+	# Intentional injection payload: proves the RETURN trap quotes backup_root.
+	# shellcheck disable=SC2089
 	local tricky="${TEST_TEMP_DIR}/tmp-a\"; touch ${marker}; echo \""
 	mkdir -p "${tricky}"
 
@@ -254,6 +241,7 @@ quest_log_test_setup() {
 	}
 
 	TMPDIR="${tricky}"
+	# shellcheck disable=SC2090
 	export TMPDIR
 
 	run apply_quest_log --settings-only
@@ -268,7 +256,7 @@ quest_log_test_setup() {
 	[[ ! -e "$(cursor_user_settings_path)" ]]
 }
 
-@test 'integration:: apply_quest_log restores plugin when settings sync fails' {
+@test 'integration:: apply_quest_log leaves an existing plugin untouched when settings sync fails' {
 	mkdir -p "${QUEST_LOG_PLUGIN_DIR}/rules"
 	echo "previous-plugin" >"${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc"
 
@@ -285,10 +273,53 @@ quest_log_test_setup() {
 	[[ ! -e "$(cursor_user_settings_path)" ]]
 }
 
+@test 'integration:: apply_quest_log restores previous settings when sync fails' {
+	local settings_file
+	settings_file="$(cursor_user_settings_path)"
+	mkdir -p "$(dirname "${settings_file}")"
+	echo '{"previous":true}' >"${settings_file}"
+
+	sync_cursor_user_settings() {
+		echo '{"partial":true}' >"$(cursor_user_settings_path)"
+		echo "sync_cursor_user_settings:: forced failure" >&2
+
+		return 1
+	}
+
+	run apply_quest_log --settings-only
+	[[ "$status" -eq 1 ]]
+	grep -q '"previous":true' "${settings_file}"
+}
+
+@test 'integration:: apply_quest_log skips plugin install and clears partial settings when sync fails' {
+	sync_cursor_user_settings() {
+		echo '{"partial":true}' >"$(cursor_user_settings_path)"
+		echo "sync_cursor_user_settings:: forced failure" >&2
+
+		return 1
+	}
+
+	run apply_quest_log
+	[[ "$status" -eq 1 ]]
+	[[ ! -e "${QUEST_LOG_PLUGIN_DIR}" ]]
+	[[ ! -e "$(cursor_user_settings_path)" ]]
+}
+
+@test '_quest_log_backup_settings:: copies an existing settings file' {
+	local backup_root="${TEST_TEMP_DIR}/backup"
+	local settings_file="${TEST_TEMP_DIR}/settings.json"
+	mkdir -p "${backup_root}"
+	echo '{}' >"${settings_file}"
+
+	run _quest_log_backup_settings "${backup_root}" "${settings_file}"
+	[[ "$status" -eq 0 ]]
+	[[ -f "${backup_root}/settings.json" ]]
+}
+
 ########################################################
 # Tracked plugin coherence
 ########################################################
-@test 'tracked plugin:: ships the declared rules and skills' {
+@test 'integration:: tracked plugin ships the declared rules and skills' {
 	local tracked_plugin="${ZANGARMARSH_ROOT}/tools/quest-log/plugin"
 
 	[[ -f "${tracked_plugin}/.cursor-plugin/plugin.json" ]]
@@ -298,7 +329,7 @@ quest_log_test_setup() {
 	done
 
 	local skill
-	for skill in blue-author blue-penmanship blue-review-comments blue-review blue-review-bash blue-review-lua blue-review-typescript blue-python-setup; do
+	for skill in blue-author blue-penmanship blue-review-comments blue-review blue-review-bash blue-review-lua blue-review-typescript blue-python-setup blueberry; do
 		[[ -f "${tracked_plugin}/skills/${skill}/SKILL.md" ]]
 	done
 
@@ -328,4 +359,34 @@ quest_log_test_setup() {
 	run env -u ZANGARMARSH_ROOT HOME="${HOME}" PATH="${PATH}" bash "${SCRIPT}" --help
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Install the quest-log Cursor plugin"
+}
+
+@test 'quest-log.sh:: --help works with a decoy ZANGARMARSH_ROOT' {
+	run env ZANGARMARSH_ROOT="/nonexistent/zangarmarsh-root" HOME="${HOME}" PATH="${PATH}" \
+		bash "${SCRIPT}" --help
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Install the quest-log Cursor plugin"
+}
+
+@test 'run_quest_log:: ignores an inherited ZANGARMARSH_ROOT from another checkout' {
+	local other_root="${TEST_TEMP_DIR}/other-root"
+	mkdir -p "${other_root}"
+	printf '# decoy\n' >"${other_root}/zangarmarsh.sh"
+
+	run env ZANGARMARSH_ROOT="${other_root}" HOME="${HOME}" PATH="${PATH}" \
+		bash "${SCRIPT}" --dry-run
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -Fq "quest-log: complete"
+}
+
+@test 'write_if_changed:: returns failure when the target file is not writable' {
+	local target="${TEST_TEMP_DIR}/readonly-settings.json"
+	printf '{}\n' >"${target}"
+	chmod a-w "${target}"
+
+	run write_if_changed "${target}" '{"ok":true}' "write_if_changed"
+	local write_status="${status}"
+	chmod u+w "${target}"
+	[[ "${write_status}" -eq 1 ]]
+	echo "$output" | grep -q "Failed to write file"
 }

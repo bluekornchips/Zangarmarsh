@@ -15,8 +15,9 @@ overwrites Cursor user settings. Both paths share `apply_quest_log`.
 - Replaces `~/.cursor/plugins/local/quest-log` with a fresh copy of
   `tools/quest-log/plugin/` on every run, so stale files never survive
 - Overwrites host Cursor `User/settings.json` from `tools/vscode/settings.json`
-- In full apply mode, undoes a successful plugin install by restoring the previous
-  plugin when settings sync fails afterward. Plugin install itself stays self-atomic.
+- In full apply mode, syncs settings first and installs the plugin only after
+  settings succeed, so a settings failure never touches the plugin. Settings
+  restore after a failed sync is best-effort. Plugin install itself stays self-atomic.
 
 ## Usage
 
@@ -32,6 +33,28 @@ questlog
 questlog --dry-run
 ```
 
+## Options and environment
+
+| Flag              | Meaning                                  |
+| ----------------- | ---------------------------------------- |
+| `-r`, `--dry-run` | Report planned writes without making any |
+| `-h`, `--help`    | Show usage                               |
+
+- `DRY_RUN=true`: Same as `--dry-run`
+- `QUEST_LOG_PLUGIN_DIR`: Override the plugin install path. It must still sit below `~/.cursor/plugins/local`
+- `PLUGIN_SOURCE_DIR`: Override the plugin source tree, default `tools/quest-log/plugin`
+- `HOME`: Required; selects the plugin and Cursor settings destinations
+
+Unknown flags and positional arguments fail with exit status 1. `--force` and `-f` are not supported.
+
+## Behavior
+
+- Always binds to the checkout that holds the script, ignoring an inherited `ZANGARMARSH_ROOT`.
+- The install path must be an absolute child of `~/.cursor/plugins/local` with no `..`, `.`, trailing slash, or symlink component below `HOME`; otherwise nothing is deleted or written.
+- The plugin is copied to a staging directory beside the install path and swapped in, so a failed copy leaves the previous install untouched.
+- If settings sync fails, previous Cursor settings are restored when a backup exists, or the incomplete file is removed when there were none. Restore is best-effort. The plugin is installed only after settings succeed.
+- The summary reports plugin action and counts of created, updated, and unchanged settings files. Any settings error makes the run exit with status 1.
+
 ## Plugin source layout
 
 `tools/quest-log/plugin/` is committed, hand-authored, and installed as-is:
@@ -40,7 +63,7 @@ questlog --dry-run
 plugin/
   .cursor-plugin/plugin.json   # plugin manifest
   rules/*.mdc                  # Cursor rules
-  skills/blue-*/SKILL.md       # blue-* skills
+  skills/*/SKILL.md            # blue-* and blueberry skills
 ```
 
 This tracked plugin is the canonical agent configuration for this repository.
@@ -68,8 +91,9 @@ The plugin follows this repository's GPL-3.0-only license.
 | `blue-review`            | Strict maintainability and ambition review  |
 | `blue-review-bash`       | Bash repository review checklist            |
 | `blue-review-lua`        | Lua review checklist                        |
-| `blue-python-setup`      | Python project bootstrap notes for the user |
+| `blue-python-setup`      | Python project setup notes for the user     |
 | `blue-review-typescript` | TypeScript review checklist                 |
+| `blueberry`              | Master pass over blue-review and penmanship |
 
 To add or change a rule or skill, edit the files under `plugin/` directly and
 run `questlog` to install the update.

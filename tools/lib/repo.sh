@@ -63,7 +63,6 @@ absolute_dir_of() {
 # - 1 when the start path is missing or zangarmarsh.sh cannot be found
 resolve_zangarmarsh_repo() {
 	local start_path="${1:-}"
-	local current
 
 	if [[ -n "${ZANGARMARSH_ROOT:-}" && -f "${ZANGARMARSH_ROOT}/zangarmarsh.sh" ]]; then
 		printf '%s\n' "${ZANGARMARSH_ROOT}"
@@ -75,6 +74,7 @@ resolve_zangarmarsh_repo() {
 		return 1
 	fi
 
+	local current
 	current="$(absolute_dir_of "${start_path}")" || return 1
 
 	while [[ -n "${current}" && "${current}" != "/" ]]; do
@@ -108,7 +108,6 @@ resolve_zangarmarsh_repo() {
 ensure_zangarmarsh_repo() {
 	local start_path="${1:-}"
 	local repo
-
 	repo="$(resolve_zangarmarsh_repo "${start_path}")" || return 1
 	ZANGARMARSH_ROOT="${repo}"
 	export ZANGARMARSH_ROOT

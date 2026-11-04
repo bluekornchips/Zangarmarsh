@@ -21,9 +21,10 @@ Zangarmarsh is a zone in World of Warcraft overwhelmed by blue ambiance, dampnes
 
 After you `source zangarmarsh.sh`, both shells load shared files under `profile/`:
 
-- `aliases.sh` and `functions.sh`: tool commands as functions, `penv`, `nvm` lazy load when enabled, `gw`, and related helpers
+- `aliases.sh`: short command aliases
+- `functions.sh`: `penv`, `gw`, `drun`, `tfp`, `tfa`, plus the `nvm` lazy loader when enabled
 
-Both shells load `tools/lib/platform.sh` so `PLATFORM` and `PLATFORM_OS` are set. Zsh also loads `profile/zsh/profile.zsh`, which sets PATH and display aliases, and in interactive shells sources the Oh My Zsh git plugin files, zsh-autosuggestions, and `profile/zsh/prompt.zsh` for the customizable prompt with Git branch and kubectl context.
+Both shells load `tools/lib/platform.sh` so `PLATFORM` and `PLATFORM_OS` are set, and `tools/tools.sh` for `questlog`, `trilliax`, and `auras`. Zsh also loads `profile/zsh/profile.zsh`, which sets PATH and display aliases, and in interactive shells loads Oh My Zsh with `plugins=(git zsh-autosuggestions)`, then `profile/zsh/prompt.zsh` for the customizable prompt with Git branch and kubectl context.
 
 Bash loads `profile/bash/profile.sh` for history and readline options only. It does not load the Zsh prompt. A second `source` of the same checkout is a no-op.
 
@@ -54,7 +55,7 @@ source /path/to/zangarmarsh/zangarmarsh.sh
 
 ## Install the quest-log plugin
 
-`make install` installs the tracked quest-log plugin. For `questlog` usage, settings paths, and plugin layout, see [tools/quest-log/README.md](tools/quest-log/README.md).
+`make install` installs profile hooks and the local Cursor plugin. For `questlog` usage, settings paths, and plugin layout, see [tools/quest-log/README.md](tools/quest-log/README.md).
 
 ## Notes on destructive tools
 
@@ -67,12 +68,12 @@ Zangarmarsh loads configuration from:
 - `profile/`: Shared env defaults, aliases, and functions for Bash and Zsh
 - `profile/config.sh`: Shared profile defaults for history, NVM, and prompt
 - `profile/bash/`: Bash-only history wiring and options
-- `profile/zsh/`: Zsh-only git plugin and autosuggestions load, platform PATH, prompt, completion
+- `profile/zsh/`: Zsh-only platform PATH, Oh My Zsh load with git and zsh-autosuggestions, and prompt
 - `tools/`: Optional CLI utilities documented in the per-tool READMEs under `tools/`
 
 ### Environment Variables
 
-Defaults live in `profile/config.sh`. Set a variable before sourcing `zangarmarsh.sh` to override.
+Defaults live in `profile/config.sh`. Set a variable before sourcing `zangarmarsh.sh` to override, except `ZANGARMARSH_BASH_HISTFILE` and `ZANGARMARSH_ZSH_HISTFILE`, which always follow `HOME`.
 
 #### Core
 
@@ -97,6 +98,7 @@ These apply when `profile/zsh/prompt.zsh` runs:
 - `ZANGARMARSH_SHOW_HOST=true`: Show hostname in prompt, default `true`
 - `ZANGARMARSH_SHORTEN_NAMES=true`: Shorten user and host to one character, default `true`
 - `ZANGARMARSH_PROMPT_SYMBOL=❯`: Trailing symbol, default `❯`
+- `ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE`: Ghost-text style for zsh-autosuggestions, default `fg=8`
 
 ## Features
 
@@ -109,13 +111,14 @@ These apply when `profile/zsh/prompt.zsh` runs:
 | Shared PLATFORM / PLATFORM_OS | Yes  | Yes |
 | Python venv helpers           | Yes  | Yes |
 | Node.js via NVM               | Yes  | Yes |
-| Oh My Zsh git plugin aliases  | No   | Yes |
+| Oh My Zsh git plugin          | No   | Yes |
+| zsh-autosuggestions           | No   | Yes |
 | Case-insensitive readline     | Yes  | No  |
 | Programmable completion       | No   | Yes |
 
 ## Tools
 
-After sourcing, functions map to scripts under `tools/` and work in interactive and non-interactive shells. Each script can also run standalone and resolve `ZANGARMARSH_ROOT` from its location.
+`zangarmarsh.sh` must be sourced from an interactive Bash or Zsh session. Non-interactive shells such as `bash -c`, `zsh -c`, scripts, and CI jobs are refused unless `ZANGARMARSH_TEST=1` is set for the bats harness. After a successful source, `questlog`, `trilliax`, and `auras` come from `tools/tools.sh` as shell functions, not aliases, that run the matching script under `ZANGARMARSH_ROOT`. They are not defined in shells that never sourced it. Each script can also run standalone and resolve `ZANGARMARSH_ROOT` from its location.
 
 | Command    | Tool      | Role                                                      |
 | ---------- | --------- | --------------------------------------------------------- |
@@ -125,12 +128,24 @@ After sourcing, functions map to scripts under `tools/` and work in interactive 
 
 Per-tool docs: [quest-log](tools/quest-log/README.md), [trilliax](tools/trilliax/README.md), [auras](tools/auras/README.md).
 
+## Shell functions
+
+These functions come from `profile/functions.sh` and are defined in both shells:
+
+| Function | Purpose                                                                                                         |
+| -------- | --------------------------------------------------------------------------------------------------------------- |
+| `gw`     | `gw add\|remove ...` passes through to `git worktree`; `gw NAME [BASE]` adds a sibling worktree on branch NAME  |
+| `penv`   | Create and activate `.venv` in the current directory with `uv`; leaves an existing `.venv` alone                |
+| `drun`   | Run `docker run -it --rm` on an image with `bash` as the entry command, usage `drun IMAGE [docker run args...]` |
+| `tfp`    | Run `terraform plan` and write `.terraform/zangarmarsh.tfplan`                                                  |
+| `tfa`    | Apply `.terraform/zangarmarsh.tfplan` from `tfp`                                                                |
+
 ## Requirements
 
 - Bash 3.2+ or Zsh 5.0+
 - Git for helpers that inspect the repository
 - Standard Unix tools such as grep, sed, and awk
-- Optional: Oh My Zsh plugin files under `~/.oh-my-zsh` (`lib/git.zsh`, `plugins/git`, `plugins/zsh-autosuggestions`) for the full interactive Zsh stack described in [profile/zsh/profile.zsh](profile/zsh/profile.zsh)
+- Optional for interactive Zsh: [Oh My Zsh](https://ohmyz.sh/) under `~/.oh-my-zsh`, plus [zsh-autosuggestions](https://github.com/zsh-users/zsh-autosuggestions) at `$ZSH/plugins/zsh-autosuggestions`
 
 ## License
 

@@ -6,6 +6,7 @@
 setup_file() {
 	GIT_ROOT="$(git rev-parse --show-toplevel)" || return 1
 	source "${GIT_ROOT}/tests/fixtures.sh" || return 1
+
 	QUEST_LOG_ROOT="${ZANGARMARSH_ROOT}/tools/quest-log"
 	SCRIPT="${QUEST_LOG_ROOT}/quest-log.sh"
 	ZANGARMARSH_VSCODE_DIR="${ZANGARMARSH_ROOT}/tools/vscode"
@@ -25,32 +26,15 @@ setup() {
 
 teardown() {
 	quest_log_test_teardown
-
 	return 0
 }
 
 plugin_lib_test_setup() {
-	source "${GIT_ROOT}/tests/fixtures.sh"
-	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
 	local return_dir="${PWD}"
-
-	TEST_TEMP_DIR="$(mktemp -d "${base}/quest-log-plugin-test.XXXXXX")"
-
-	HOME="${TEST_TEMP_DIR}/home"
-	mkdir -p "${HOME}"
-	export HOME
-
-	PLUGIN_SOURCE_DIR="${TEST_TEMP_DIR}/plugin"
-	create_test_plugin_source "${PLUGIN_SOURCE_DIR}"
-	export PLUGIN_SOURCE_DIR
-
-	QUEST_LOG_PLUGIN_DIR="${HOME}/.cursor/plugins/local/quest-log"
-	export QUEST_LOG_PLUGIN_DIR
 
 	DRY_RUN=false
 	export DRY_RUN
-	export TEST_TEMP_DIR
-	export ZANGARMARSH_ROOT
+	quest_log_test_home "quest-log-plugin-test"
 
 	cd "${ZANGARMARSH_ROOT}" || return 1
 	source_for_test "${QUEST_LOG_ROOT}/lib/plugin.sh" || return 1
@@ -83,9 +67,8 @@ plugin_lib_test_setup() {
 
 @test 'quest_log_plugin_dir:: fails when HOME is empty and no override is set' {
 	unset QUEST_LOG_PLUGIN_DIR
-	HOME=""
 
-	run quest_log_plugin_dir
+	HOME="" run quest_log_plugin_dir
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "HOME is required"
 }
@@ -152,7 +135,7 @@ plugin_lib_test_setup() {
 ########################################################
 
 @test 'install_quest_plugin:: fails when plugin manifest is missing' {
-	rm -f "${PLUGIN_SOURCE_DIR}/.cursor-plugin/plugin.json"
+	command rm -f "${PLUGIN_SOURCE_DIR}/.cursor-plugin/plugin.json"
 
 	run install_quest_plugin "${PLUGIN_SOURCE_DIR}"
 	[[ "$status" -eq 1 ]]
@@ -160,18 +143,18 @@ plugin_lib_test_setup() {
 }
 
 @test 'install_quest_plugin:: rejects an install path outside the Cursor local plugin directory' {
-	QUEST_LOG_PLUGIN_DIR="${TEST_TEMP_DIR}/unsafe-install"
+	local unsafe="${TEST_TEMP_DIR}/unsafe-install"
 
-	run install_quest_plugin "${PLUGIN_SOURCE_DIR}"
+	QUEST_LOG_PLUGIN_DIR="${unsafe}" run install_quest_plugin "${PLUGIN_SOURCE_DIR}"
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "install path must be below"
-	[[ ! -e "${QUEST_LOG_PLUGIN_DIR}" ]]
+	[[ ! -e "${unsafe}" ]]
 }
 
 @test 'install_quest_plugin:: rejects path traversal in the install directory' {
-	QUEST_LOG_PLUGIN_DIR="${HOME}/.cursor/plugins/local/quest-log/../../unsafe-install"
+	local unsafe="${HOME}/.cursor/plugins/local/quest-log/../../unsafe-install"
 
-	run install_quest_plugin "${PLUGIN_SOURCE_DIR}"
+	QUEST_LOG_PLUGIN_DIR="${unsafe}" run install_quest_plugin "${PLUGIN_SOURCE_DIR}"
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "path traversal is not allowed"
 }
@@ -211,8 +194,8 @@ plugin_lib_test_setup() {
 	[[ "$status" -eq 0 ]]
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/rules/stale.mdc" ]]
 
-	rm -f "${PLUGIN_SOURCE_DIR}/rules/stale.mdc"
-	rm -rf "${PLUGIN_SOURCE_DIR}/skills/blue-review"
+	command rm -f "${PLUGIN_SOURCE_DIR}/rules/stale.mdc"
+	command rm -rf "${PLUGIN_SOURCE_DIR}/skills/blue-review"
 
 	run install_quest_plugin "${PLUGIN_SOURCE_DIR}"
 	[[ "$status" -eq 0 ]]
@@ -232,7 +215,9 @@ plugin_lib_test_setup() {
 }
 
 @test 'uninstall_quest_plugin:: removes an installed plugin directory' {
-	install_quest_plugin "${PLUGIN_SOURCE_DIR}" >/dev/null
+	if ! install_quest_plugin "${PLUGIN_SOURCE_DIR}" >/dev/null; then
+		return 1
+	fi
 
 	run uninstall_quest_plugin
 	[[ "$status" -eq 0 ]]
@@ -241,7 +226,9 @@ plugin_lib_test_setup() {
 }
 
 @test 'uninstall_quest_plugin:: dry-run leaves the plugin directory in place' {
-	install_quest_plugin "${PLUGIN_SOURCE_DIR}" >/dev/null
+	if ! install_quest_plugin "${PLUGIN_SOURCE_DIR}" >/dev/null; then
+		return 1
+	fi
 	DRY_RUN=true
 
 	run uninstall_quest_plugin
@@ -251,27 +238,29 @@ plugin_lib_test_setup() {
 }
 
 @test 'uninstall_quest_plugin:: rejects an install path outside the Cursor local plugin directory' {
-	QUEST_LOG_PLUGIN_DIR="${TEST_TEMP_DIR}/unsafe-install"
-	mkdir -p "${QUEST_LOG_PLUGIN_DIR}"
+	local unsafe="${TEST_TEMP_DIR}/unsafe-install"
+	mkdir -p "${unsafe}"
 
-	run uninstall_quest_plugin
+	QUEST_LOG_PLUGIN_DIR="${unsafe}" run uninstall_quest_plugin
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "install path must be below"
-	[[ -d "${QUEST_LOG_PLUGIN_DIR}" ]]
+	[[ -d "${unsafe}" ]]
 }
 
 @test 'uninstall_quest_plugin:: rejects path traversal in the install directory' {
-	QUEST_LOG_PLUGIN_DIR="${HOME}/.cursor/plugins/local/quest-log/../../unsafe-install"
-	mkdir -p "${HOME}/.cursor/plugins/local/unsafe-install"
+	local leaf="${HOME}/.cursor/plugins/local/unsafe-install"
+	mkdir -p "${leaf}"
 
-	run uninstall_quest_plugin
+	QUEST_LOG_PLUGIN_DIR="${HOME}/.cursor/plugins/local/quest-log/../../unsafe-install" run uninstall_quest_plugin
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "path traversal is not allowed"
-	[[ -d "${HOME}/.cursor/plugins/local/unsafe-install" ]]
+	[[ -d "${leaf}" ]]
 }
 
 @test 'uninstall_quest_plugin:: fails when removal does not clear the path' {
-	install_quest_plugin "${PLUGIN_SOURCE_DIR}" >/dev/null
+	if ! install_quest_plugin "${PLUGIN_SOURCE_DIR}" >/dev/null; then
+		return 1
+	fi
 
 	rm() {
 		# Leave the install tree in place to force the post-remove check.

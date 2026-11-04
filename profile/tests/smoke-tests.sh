@@ -8,6 +8,7 @@ setup_file() {
 
 	GIT_ROOT="$(git rev-parse --show-toplevel)" || return 1
 	source "${GIT_ROOT}/tests/fixtures.sh" || return 1
+
 	ZANGARMARSH_SCRIPT="${ZANGARMARSH_ROOT}/zangarmarsh.sh"
 	export ZANGARMARSH_SCRIPT
 
@@ -16,6 +17,8 @@ setup_file() {
 
 setup() {
 	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
+
+	source "${GIT_ROOT}/tests/fixtures.sh" || return 1
 
 	TEST_DIR="$(mktemp -d "${base}/zangarmarsh-smoke.XXXXXX")"
 
@@ -36,26 +39,6 @@ setup() {
 
 teardown() {
 	[[ -n "${TEST_DIR}" && -d "${TEST_DIR}" ]] && rm -rf "${TEST_DIR}"
-
-	return 0
-}
-
-# Seed a minimal Oh My Zsh plugin tree for Zangarmarsh interactive load.
-#
-# Reads environment:
-# - ZSH
-#
-# Side Effects:
-# - Creates lib/git.zsh, the git plugin, and zsh-autosuggestions under ZSH
-#
-# Returns:
-# - 0 always
-seed_omz_plugins() {
-	mkdir -p "${ZSH}/lib" "${ZSH}/plugins/git" "${ZSH}/plugins/zsh-autosuggestions"
-	printf 'git_current_branch() { echo main; }\n' >"${ZSH}/lib/git.zsh"
-	printf 'alias ga="git add"\n' >"${ZSH}/plugins/git/git.plugin.zsh"
-	printf '# autosuggestions stub\n' >"${ZSH}/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh"
-
 	return 0
 }
 
@@ -139,14 +122,21 @@ measure_warm_zsh_load_ms() {
 		return 1
 	fi
 
-	# .zshrc was just rewritten. A newer dump keeps startup on compinit -C.
+	# .zshrc was just rewritten. Touch keeps dump usable across rewrites.
 	touch "${HOME}/.zcompdump" || return 1
 
 	local start_ms
 	start_ms="$(now_ms)" || return 1
 
+	# Real interactive startup. Close stdin and detach when setsid exists so
+	# parallel bats under an IDE pty cannot stop on job control.
 	# Do not use bats run here; this helper is called from command substitution.
-	if ! zsh -i -c 'exit' >/dev/null 2>&1; then
+	if command -v setsid >/dev/null 2>&1; then
+		if ! setsid zsh -i -c 'exit' </dev/null >/dev/null 2>&1; then
+			echo "measure_warm_zsh_load_ms:: zsh -i exited nonzero" >&2
+			return 1
+		fi
+	elif ! zsh -i -c 'exit' </dev/null >/dev/null 2>&1; then
 		echo "measure_warm_zsh_load_ms:: zsh -i exited nonzero" >&2
 		return 1
 	fi
@@ -160,45 +150,28 @@ measure_warm_zsh_load_ms() {
 }
 
 @test "integration:: zsh session startup times" {
-	seed_zcompdump || return 1
-	seed_omz_plugins || return 1
+	if ! seed_zcompdump; then
+		return 1
+	fi
+	if ! seed_omz_stub; then
+		return 1
+	fi
 
 	printf 'source "%s"\n' "${ZANGARMARSH_SCRIPT}" >"${HOME}/.zshrc"
 	local zm_ms
 	zm_ms="$(measure_warm_zsh_load_ms)" || return 1
-
-	cat >"${HOME}/.zshrc" <<EOF
-ZSH="${ZSH}"
-export ZSH
-ZSH_THEME="robbyrussell"
-plugins=(git zsh-autosuggestions)
-source "\${ZSH}/oh-my-zsh.sh"
-autoload -Uz compinit
-comp_dump="\${HOME}/.zcompdump"
-if [[ -f "\${comp_dump}" && "\${comp_dump}" -nt "\${HOME}/.zshrc" ]]; then
-	compinit -u -C
-else
-	compinit -u
-fi
-EOF
-	# Framework comparison needs oh-my-zsh.sh present; keep stubs only when timing plugins path.
-	touch "${ZSH}/oh-my-zsh.sh"
-	local omz_ms
-	omz_ms="$(measure_warm_zsh_load_ms)" || return 1
-
-	rm -rf "${ZSH}/lib" "${ZSH}/plugins/git"
-	printf 'source "%s"\n' "${ZANGARMARSH_SCRIPT}" >"${HOME}/.zshrc"
-	local zm_no_plugins_ms
-	zm_no_plugins_ms="$(measure_warm_zsh_load_ms)" || return 1
 
 	printf '\n' >"${HOME}/.zshrc"
 	local bare_ms
 	bare_ms="$(measure_warm_zsh_load_ms)" || return 1
 
 	cat <<EOF >&3
-zangarmarsh with plugins: ${zm_ms}ms
-omz framework stub: ${omz_ms}ms
-zangarmarsh without plugins: ${zm_no_plugins_ms}ms
+zangarmarsh with oh-my-zsh: ${zm_ms}ms
 bare zsh: ${bare_ms}ms
 EOF
+
+	# Warm startup must stay inside a fixed budget. The profile lazy loads
+	# heavy tools, so regressions here mean an eager load crept back in.
+	local budget_ms="${ZANGARMARSH_SMOKE_BUDGET_MS:-1000}"
+	[[ "${zm_ms}" -le "${budget_ms}" ]]
 }

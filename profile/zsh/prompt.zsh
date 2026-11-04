@@ -46,12 +46,17 @@ fi
 # - 0 when a ref is printed
 # - 1 when no git directory is found or HEAD cannot be read
 _prompt_git_from_head() {
+	# Declare once outside the loop. In zsh, repeated local or typeset of an
+	# existing name prints its value to stdout unless TYPESET_SILENT is set,
+	# and that leak is captured into the prompt via command substitution.
 	local dir="${PWD}"
+	local git_dir
+	local gitdir_line
+	local head_file
+	local head_content
 
 	while [[ -n "${dir}" ]]; do
-		local git_dir
 		if [[ -f "${dir}/.git" ]]; then
-			local gitdir_line
 			gitdir_line="$(<"${dir}/.git")" || return 1
 			# Worktree pointer: gitdir: /path/to/repo/.git/worktrees/name
 			if [[ "${gitdir_line}" == gitdir:* ]]; then
@@ -75,12 +80,11 @@ _prompt_git_from_head() {
 			continue
 		fi
 
-		local head_file="${git_dir}/HEAD"
+		head_file="${git_dir}/HEAD"
 		if [[ ! -f "${head_file}" ]]; then
 			return 1
 		fi
 
-		local head_content
 		head_content="$(<"${head_file}")" || return 1
 		head_content="${head_content%%$'\n'*}"
 		if [[ "${head_content}" == ref:\ refs/heads/* ]]; then
@@ -92,7 +96,6 @@ _prompt_git_from_head() {
 			print -r -- "${head_content[1,7]}"
 			return 0
 		fi
-
 		return 1
 	done
 
@@ -230,5 +233,23 @@ build_prompt() {
 	return 0
 }
 
-PROMPT="\$(build_prompt)"
+# build_prompt mutates cache globals. A command-substitution PROMPT would
+# run it in a subshell, so the cache never persists. Use a precmd hook.
+autoload -Uz add-zsh-hook
+
+# Refresh the rendered prompt string in the current shell before each prompt
+#
+# Side Effects:
+# - Sets _prompt_rendered from build_prompt
+#
+# Returns:
+# - 0 always
+_zangarmarsh_precmd_prompt() {
+	_prompt_rendered="$(build_prompt)"
+	return 0
+}
+
+_prompt_rendered=""
+add-zsh-hook precmd _zangarmarsh_precmd_prompt
+PROMPT='${_prompt_rendered}'
 unset RPROMPT

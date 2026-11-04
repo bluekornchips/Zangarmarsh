@@ -25,19 +25,9 @@ Thumbs.db
 *.profile/
 CLAUDE.md
 
-# Test artifacts
-test_*
-temp_*
+# Test artifacts under the repo root and temp trees
 *.test
-/gw-test.*/
-/penv-test.*/
-/nvm-test.*/
-/profile-test.*/
-/zangarmarsh-test.*/
-/zangarmarsh-load-test.*/
-/prompt-test.*/
-/quest-log-test.*/
-/trilliax-test.*/
+BATS-*/
 
 # Backup files
 *.bak

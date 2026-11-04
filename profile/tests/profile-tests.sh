@@ -18,6 +18,8 @@ setup_file() {
 setup() {
 	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
 
+	source "${GIT_ROOT}/tests/fixtures.sh" || return 1
+
 	TEST_DIR="$(mktemp -d "${base}/profile-test.XXXXXX")"
 	cd "${TEST_DIR}" || return 1
 
@@ -40,31 +42,27 @@ setup() {
 	ZANGARMARSH_VERBOSE=false
 	export ZANGARMARSH_VERBOSE
 
-	mkdir -p "${ZSH}/lib" "${ZSH}/plugins/git" "${ZSH}/plugins/zsh-autosuggestions"
-	printf 'git_current_branch() { echo main; }\n' >"${ZSH}/lib/git.zsh"
-	printf 'alias ga="git add"\n' >"${ZSH}/plugins/git/git.plugin.zsh"
-	printf '# autosuggestions stub\n' >"${ZSH}/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh"
+	seed_omz_stub
 
 	return 0
 }
 
 teardown() {
 	rm -rf "${TEST_DIR}"
-
 	return 0
 }
 
-@test "profile:: non-interactive zsh sets history and skips plugins" {
-	run env HOME="${HOME}" ZDOTDIR="${ZDOTDIR}" ZSH="${ZSH}" ZANGARMARSH_ROOT="${ZANGARMARSH_ROOT}" \
+@test "profile:: non-interactive zsh sets history and skips Oh My Zsh" {
+	run env -u ZANGARMARSH_TEST HOME="${HOME}" ZDOTDIR="${ZDOTDIR}" ZSH="${ZSH}" ZANGARMARSH_ROOT="${ZANGARMARSH_ROOT}" \
 		zsh -c "
 		source '${SCRIPT}' || exit 1
 		printf 'HISTSIZE=%s\n' \"\$HISTSIZE\"
-		printf 'COMP=%s\n' \"\${_zangarmarsh_compinit:-}\"
+		alias ga >/dev/null 2>&1 && printf 'GA=1\n' || printf 'GA=0\n'
 		type build_prompt >/dev/null 2>&1 && printf 'PROMPT_FN=1\n' || printf 'PROMPT_FN=0\n'
 	"
 	[[ "${status}" -eq 0 ]]
 	echo "${output}" | grep -q "^HISTSIZE=100000$"
-	echo "${output}" | grep -q "^COMP=$"
+	echo "${output}" | grep -q "^GA=0$"
 	echo "${output}" | grep -q "^PROMPT_FN=0$"
 }
 
@@ -85,34 +83,64 @@ teardown() {
 	echo "${output}" | grep -Fq "HISTORY_IGNORE=${shared}"
 }
 
-@test "integration:: profile loads git plugin, autosuggestions, and prompt interactively" {
+@test "platform.zsh:: nested source does not duplicate /usr/local/bin" {
+	# Controlled PATH so host duplicates do not mask prepend-once behavior.
 	run env HOME="${HOME}" ZDOTDIR="${ZDOTDIR}" ZSH="${ZSH}" ZANGARMARSH_ROOT="${ZANGARMARSH_ROOT}" \
-		zsh -i -c "
+		PATH="/usr/bin:/bin" \
+		zsh -c "
 		source '${SCRIPT}' || exit 1
-		printf 'COMP=%s\n' \"\$_zangarmarsh_compinit\"
-		printf 'STYLE=%s\n' \"\$ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE\"
-		printf 'GA=%s\n' \"\$(alias ga 2>/dev/null || true)\"
-		type build_prompt >/dev/null && printf 'PROMPT_FN=1\n'
+		first=\"\${PATH}\"
+		source '${ZANGARMARSH_ROOT}/profile/zsh/platform.zsh' || exit 1
+		second=\"\${PATH}\"
+		printf 'FIRST=%s\n' \"\${first}\"
+		printf 'SECOND=%s\n' \"\${second}\"
 	"
 	[[ "${status}" -eq 0 ]]
-	echo "${output}" | grep -q "^COMP=1$"
+	local first second
+	first="$(echo "${output}" | sed -n 's/^FIRST=//p')"
+	second="$(echo "${output}" | sed -n 's/^SECOND=//p')"
+	[[ "${first}" == "${second}" ]]
+	local count
+	count="$(echo ":${first}:" | tr ':' '\n' | grep -cx '/usr/local/bin')"
+	[[ "${count}" -eq 1 ]]
+}
+
+@test "integration:: profile loads Oh My Zsh with git and autosuggestions" {
+	run zsh -c "
+		source '${SCRIPT}' || exit 1
+		printf 'STYLE=%s\n' \"\$ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE\"
+		printf 'GA=%s\n' \"\$(alias ga 2>/dev/null || true)\"
+		printf 'PLUGINS=%s\n' \"\${plugins[*]}\"
+		type build_prompt >/dev/null && printf 'PROMPT_FN=1\n'
+		zstyle -t ':completion:*:*:*:*:*' menu select && printf 'MENU=1\n'
+		bindkey '^[[A' | grep -q up-line-or-beginning-search && printf 'UP_SEARCH=1\n'
+	"
+	[[ "${status}" -eq 0 ]]
 	echo "${output}" | grep -q "fg=8"
 	echo "${output}" | grep -q "^GA=.*git add"
+	echo "${output}" | grep -q "git"
+	echo "${output}" | grep -q "zsh-autosuggestions"
 	echo "${output}" | grep -q "^PROMPT_FN=1$"
+	echo "${output}" | grep -q "^MENU=1$"
+	echo "${output}" | grep -q "^UP_SEARCH=1$"
 }
 
-@test "integration:: profile warns when git plugin files are missing" {
+@test "integration:: history knobs win after Oh My Zsh lib/history.zsh" {
+	run zsh -c "
+		source '${SCRIPT}' || exit 1
+		printf 'HISTFILE=%s\n' \"\$HISTFILE\"
+		printf 'HISTSIZE=%s\n' \"\$HISTSIZE\"
+		printf 'SAVEHIST=%s\n' \"\$SAVEHIST\"
+	"
+	[[ "${status}" -eq 0 ]]
+	echo "${output}" | grep -q "^HISTFILE=${HOME}/.zsh_history$"
+	echo "${output}" | grep -q "^HISTSIZE=100000$"
+	echo "${output}" | grep -q "^SAVEHIST=100000$"
+}
+
+@test "integration:: profile warns when Oh My Zsh is missing" {
 	rm -rf "${ZSH}"
-	run env HOME="${HOME}" ZDOTDIR="${ZDOTDIR}" ZSH="${ZSH}" ZANGARMARSH_ROOT="${ZANGARMARSH_ROOT}" \
-		zsh -i -c "source '${SCRIPT}'"
+	run zsh -c "source '${SCRIPT}'"
 	[[ "${status}" -eq 0 ]]
-	echo "${output}" | grep -q "Oh My Zsh git plugin files are not installed"
-}
-
-@test "integration:: profile warns when zsh-autosuggestions is missing" {
-	rm -rf "${ZSH}/plugins/zsh-autosuggestions"
-	run env HOME="${HOME}" ZDOTDIR="${ZDOTDIR}" ZSH="${ZSH}" ZANGARMARSH_ROOT="${ZANGARMARSH_ROOT}" \
-		zsh -i -c "source '${SCRIPT}'"
-	[[ "${status}" -eq 0 ]]
-	echo "${output}" | grep -q "zsh-autosuggestions plugin is not installed"
+	echo "${output}" | grep -q "Oh My Zsh is not installed"
 }

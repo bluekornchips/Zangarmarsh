@@ -15,15 +15,13 @@ setup_file() {
 
 setup() {
 	source "$(dirname "${BATS_TEST_FILENAME}")/fixtures.sh"
-	source "${SCRIPT}"
-	auras_home_setup
+	auras_test_setup
 
 	return 0
 }
 
 teardown() {
 	auras_home_teardown
-
 	return 0
 }
 
@@ -54,7 +52,9 @@ setup_appimage_fixture() {
 ########################################################
 @test "write_application_desktop:: writes managed desktop entry with expected fields" {
 	local appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "demoapp.AppImage"
+	if ! make_appimage "${appdir}" "demoapp.AppImage"; then
+		return 1
+	fi
 	local appimage="${appdir}/demoapp.AppImage"
 
 	run write_application_desktop "demoapp" "${appimage}" "demoapp"
@@ -70,7 +70,9 @@ setup_appimage_fixture() {
 
 @test "write_application_desktop:: rejects relative AppImage path" {
 	local appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "demoapp.AppImage"
+	if ! make_appimage "${appdir}" "demoapp.AppImage"; then
+		return 1
+	fi
 	local appimage="apps/demoapp.AppImage"
 
 	cd "${AURAS_TEST_HOME}"
@@ -83,9 +85,13 @@ setup_appimage_fixture() {
 
 @test "write_application_desktop:: overwrites existing Auras-managed desktop file" {
 	local appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "demoapp.AppImage"
+	if ! make_appimage "${appdir}" "demoapp.AppImage"; then
+		return 1
+	fi
 	local appimage="${appdir}/demoapp.AppImage"
-	make_managed_desktop "demoapp"
+	if ! make_managed_desktop "demoapp"; then
+		return 1
+	fi
 
 	run write_application_desktop "demoapp" "${appimage}" "demoapp"
 	[[ "$status" -eq 0 ]]
@@ -95,7 +101,9 @@ setup_appimage_fixture() {
 
 @test "write_application_desktop:: refuses to overwrite unmanaged desktop file" {
 	local appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "demoapp.AppImage"
+	if ! make_appimage "${appdir}" "demoapp.AppImage"; then
+		return 1
+	fi
 	local appimage="${appdir}/demoapp.AppImage"
 	mkdir -p "${HOME}/.local/share/applications"
 	: >"${HOME}/.local/share/applications/demoapp.desktop"
@@ -108,13 +116,15 @@ setup_appimage_fixture() {
 
 @test "write_application_desktop:: rejects stem containing slash" {
 	local appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "demoapp.AppImage"
+	if ! make_appimage "${appdir}" "demoapp.AppImage"; then
+		return 1
+	fi
 	local appimage="${appdir}/demoapp.AppImage"
 
 	run write_application_desktop "evil/name" "${appimage}" "Label"
 	[[ "$status" -eq 1 ]]
 
-	grep -q "write_application_desktop:: name must be one segment without slashes" <<<"$output"
+	grep -q "desktop_path_for_stem:: name must be one segment without slashes" <<<"$output"
 }
 
 ########################################################
@@ -128,28 +138,39 @@ setup_appimage_fixture() {
 }
 
 ########################################################
-# write_application_bin_link
+# ensure_bin_link_writable + _auras_write_bin_link
 ########################################################
-@test "write_application_bin_link:: creates symlink to AppImage" {
+@test "_auras_write_bin_link:: creates symlink to AppImage after ensure" {
 	local appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "demoapp.AppImage"
+	if ! make_appimage "${appdir}" "demoapp.AppImage"; then
+		return 1
+	fi
 	local appimage="${appdir}/demoapp.AppImage"
+	local link_path
+	link_path="$(bin_link_path "demoapp")"
 
-	run write_application_bin_link "demoapp" "${appimage}"
+	run ensure_bin_link_writable "${link_path}" "${appimage}" "demoapp"
+	[[ "$status" -eq 0 ]]
+
+	run _auras_write_bin_link "demoapp" "${appimage}"
 	[[ "$status" -eq 0 ]]
 
 	[[ -L "${HOME}/.local/bin/demoapp" ]]
 	[[ "$(resolve_symlink_path "${HOME}/.local/bin/demoapp")" == "${appimage}" ]]
 }
 
-@test "write_application_bin_link:: refuses unmanaged existing regular file" {
+@test "ensure_bin_link_writable:: refuses unmanaged existing regular file" {
 	local appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "demoapp.AppImage"
+	if ! make_appimage "${appdir}" "demoapp.AppImage"; then
+		return 1
+	fi
 	local appimage="${appdir}/demoapp.AppImage"
 	mkdir -p "${HOME}/.local/bin"
 	: >"${HOME}/.local/bin/demoapp"
+	local link_path
+	link_path="$(bin_link_path "demoapp")"
 
-	run write_application_bin_link "demoapp" "${appimage}"
+	run ensure_bin_link_writable "${link_path}" "${appimage}" "demoapp"
 	[[ "$status" -eq 1 ]]
 
 	grep -q "ensure_bin_link_writable:: refusing to overwrite unmanaged bin path" <<<"$output"
@@ -159,7 +180,9 @@ setup_appimage_fixture() {
 # buff_launcher
 ########################################################
 @test "buff_launcher:: writes desktop entry and bin symlink" {
-	setup_appimage_fixture "demoapp"
+	if ! setup_appimage_fixture "demoapp"; then
+		return 1
+	fi
 
 	run buff_launcher "demoapp" "${APPIMAGE_PATH}"
 	[[ "$status" -eq 0 ]]
@@ -169,7 +192,9 @@ setup_appimage_fixture() {
 }
 
 @test "buff_main:: resolves a relative AppImage path" {
-	setup_appimage_fixture "demoapp"
+	if ! setup_appimage_fixture "demoapp"; then
+		return 1
+	fi
 
 	cd "${AURAS_TEST_HOME}"
 
@@ -181,7 +206,9 @@ setup_appimage_fixture() {
 }
 
 @test "buff_launcher:: rolls back desktop when bin link fails" {
-	setup_appimage_fixture "demoapp"
+	if ! setup_appimage_fixture "demoapp"; then
+		return 1
+	fi
 	mkdir -p "${HOME}/.local/bin"
 	chmod 555 "${HOME}/.local/bin"
 
@@ -191,6 +218,77 @@ setup_appimage_fixture() {
 
 	[[ ! -f "${HOME}/.local/share/applications/demoapp.desktop" ]]
 	grep -q "buff_launcher:: failed to write bin link" <<<"$output"
+}
+
+@test "buff_launcher:: does not overwrite unmanaged bin file or write desktop" {
+	if ! setup_appimage_fixture "demoapp"; then
+		return 1
+	fi
+	mkdir -p "${HOME}/.local/bin"
+	printf 'keep-me\n' >"${HOME}/.local/bin/demoapp"
+
+	run buff_launcher "demoapp" "${APPIMAGE_PATH}"
+	[[ "$status" -eq 1 ]]
+
+	[[ "$(cat "${HOME}/.local/bin/demoapp")" == "keep-me" ]]
+	[[ ! -f "${HOME}/.local/share/applications/demoapp.desktop" ]]
+	grep -q "ensure_bin_link_writable:: refusing to overwrite unmanaged bin path" <<<"$output"
+}
+
+@test "buff_main:: does not overwrite unmanaged bin file or write desktop" {
+	if ! setup_appimage_fixture "demoapp"; then
+		return 1
+	fi
+	mkdir -p "${HOME}/.local/bin"
+	printf 'keep-me\n' >"${HOME}/.local/bin/demoapp"
+
+	run buff_main "demoapp" "${APPIMAGE_PATH}"
+	[[ "$status" -eq 1 ]]
+
+	[[ "$(cat "${HOME}/.local/bin/demoapp")" == "keep-me" ]]
+	[[ ! -f "${HOME}/.local/share/applications/demoapp.desktop" ]]
+	grep -q "ensure_bin_link_writable:: refusing to overwrite unmanaged bin path" <<<"$output"
+}
+
+@test "buff_launcher:: restores existing desktop when bin link write fails" {
+	if ! setup_appimage_fixture "demoapp"; then
+		return 1
+	fi
+	if ! make_managed_desktop "demoapp" "/tmp/old.AppImage"; then
+		return 1
+	fi
+	local original
+	original="$(cat "${HOME}/.local/share/applications/demoapp.desktop")"
+
+	_auras_write_bin_link() {
+		return 1
+	}
+
+	run buff_launcher "demoapp" "${APPIMAGE_PATH}"
+	[[ "$status" -eq 1 ]]
+
+	[[ "$(cat "${HOME}/.local/share/applications/demoapp.desktop")" == "${original}" ]]
+	grep -q "buff_launcher:: failed to write bin link" <<<"$output"
+}
+
+@test "buff_main:: AppImage path with a space can be buffed and debuffed" {
+	local appdir="${AURAS_TEST_HOME}/my apps"
+	if ! make_appimage "${appdir}" "demoapp.AppImage"; then
+		return 1
+	fi
+	local appimage="${appdir}/demoapp.AppImage"
+
+	run buff_main "demoapp" "${appimage}"
+	[[ "$status" -eq 0 ]]
+
+	grep -q "Exec=\"${appimage}\" %u" "${HOME}/.local/share/applications/demoapp.desktop"
+	[[ "$(resolve_symlink_path "${HOME}/.local/bin/demoapp")" == "${appimage}" ]]
+
+	run debuff_appimage "demoapp"
+	[[ "$status" -eq 0 ]]
+
+	[[ ! -f "${HOME}/.local/share/applications/demoapp.desktop" ]]
+	[[ ! -e "${HOME}/.local/bin/demoapp" ]]
 }
 
 ########################################################
@@ -212,18 +310,22 @@ setup_appimage_fixture() {
 
 @test "main:: rejects legacy positional buff form" {
 	local appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "demoapp.AppImage"
+	if ! make_appimage "${appdir}" "demoapp.AppImage"; then
+		return 1
+	fi
 	local appimage="${appdir}/demoapp.AppImage"
 
 	run bash "$SCRIPT" --buff "${appimage}" demoapp
 	[[ "$status" -eq 1 ]]
 
-	grep -q "main:: unknown option" <<<"$output"
+	grep -q "main:: Unknown option" <<<"$output"
 }
 
 @test "main:: buff accepts flags in any order" {
 	local appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "demoapp.AppImage"
+	if ! make_appimage "${appdir}" "demoapp.AppImage"; then
+		return 1
+	fi
 	local appimage="${appdir}/demoapp.AppImage"
 
 	run bash "$SCRIPT" --appimage "${appimage}" --buff demoapp

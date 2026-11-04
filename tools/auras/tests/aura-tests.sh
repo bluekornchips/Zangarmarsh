@@ -15,15 +15,13 @@ setup_file() {
 
 setup() {
 	source "$(dirname "${BATS_TEST_FILENAME}")/fixtures.sh"
-	source "${SCRIPT}"
-	auras_home_setup
+	auras_test_setup
 
 	return 0
 }
 
 teardown() {
 	auras_home_teardown
-
 	return 0
 }
 
@@ -49,7 +47,9 @@ teardown() {
 ########################################################
 @test "resolve_appimage_path:: resolves relative AppImage directory" {
 	local appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "demoapp.AppImage"
+	if ! make_appimage "${appdir}" "demoapp.AppImage"; then
+		return 1
+	fi
 	local appimage="apps/demoapp.AppImage"
 	local expected="${appdir}/demoapp.AppImage"
 
@@ -61,7 +61,9 @@ teardown() {
 }
 
 @test "resolve_appimage_path:: resolves AppImage name in current directory" {
-	make_appimage "${AURAS_TEST_HOME}" "demoapp.AppImage"
+	if ! make_appimage "${AURAS_TEST_HOME}" "demoapp.AppImage"; then
+		return 1
+	fi
 	local expected="${AURAS_TEST_HOME}/demoapp.AppImage"
 
 	cd "${AURAS_TEST_HOME}"
@@ -84,7 +86,9 @@ teardown() {
 ########################################################
 @test "validate_appimage_path:: accepts executable absolute AppImage path" {
 	local appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "demoapp.AppImage"
+	if ! make_appimage "${appdir}" "demoapp.AppImage"; then
+		return 1
+	fi
 	local appimage="${appdir}/demoapp.AppImage"
 
 	run validate_appimage_path "${appimage}" "validate_appimage_path"
@@ -103,6 +107,40 @@ teardown() {
 	run validate_appimage_path "/tmp/bad%name.AppImage" "validate_appimage_path"
 	[[ "$status" -eq 1 ]]
 	grep -q "must not contain a quote or percent sign" <<<"$output"
+}
+
+@test "validate_appimage_path:: rejects a dollar sign" {
+	local bad_path="/tmp/bad\$name.AppImage"
+
+	run validate_appimage_path "${bad_path}" "validate_appimage_path"
+	[[ "$status" -eq 1 ]]
+
+	grep -q "must not contain a dollar sign" <<<"$output"
+}
+
+@test "validate_appimage_path:: rejects a backtick" {
+	run validate_appimage_path '/tmp/bad`name.AppImage' "validate_appimage_path"
+	[[ "$status" -eq 1 ]]
+
+	grep -q "must not contain a backtick" <<<"$output"
+}
+
+@test "validate_appimage_path:: rejects a backslash" {
+	run validate_appimage_path '/tmp/bad\name.AppImage' "validate_appimage_path"
+	[[ "$status" -eq 1 ]]
+
+	grep -q "must not contain a backslash" <<<"$output"
+}
+
+@test "validate_appimage_path:: accepts a path with a space" {
+	local appdir="${AURAS_TEST_HOME}/my apps"
+	if ! make_appimage "${appdir}" "demoapp.AppImage"; then
+		return 1
+	fi
+	local appimage="${appdir}/demoapp.AppImage"
+
+	run validate_appimage_path "${appimage}" "validate_appimage_path"
+	[[ "$status" -eq 0 ]]
 }
 
 @test "validate_appimage_path:: rejects non-AppImage extension" {
@@ -135,7 +173,9 @@ teardown() {
 ########################################################
 @test "prepare_appimage_path:: resolves relative AppImage path" {
 	local appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "demoapp.AppImage"
+	if ! make_appimage "${appdir}" "demoapp.AppImage"; then
+		return 1
+	fi
 	local appimage="apps/demoapp.AppImage"
 	local expected="${appdir}/demoapp.AppImage"
 
@@ -151,7 +191,9 @@ teardown() {
 ########################################################
 @test "resolve_symlink_path:: resolves absolute symlink targets without GNU readlink -f" {
 	local appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "demoapp.AppImage"
+	if ! make_appimage "${appdir}" "demoapp.AppImage"; then
+		return 1
+	fi
 	local appimage="${appdir}/demoapp.AppImage"
 	local link_path="${AURAS_TEST_HOME}/demoapp-link"
 	ln -sf "${appimage}" "${link_path}"
@@ -163,7 +205,9 @@ teardown() {
 
 @test "resolve_symlink_path:: resolves relative symlink targets" {
 	local appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "demoapp.AppImage"
+	if ! make_appimage "${appdir}" "demoapp.AppImage"; then
+		return 1
+	fi
 	local appimage="${appdir}/demoapp.AppImage"
 	local link_dir="${AURAS_TEST_HOME}/bin"
 	mkdir -p "${link_dir}"
@@ -178,7 +222,9 @@ teardown() {
 # desktop_entry_is_auras_managed
 ########################################################
 @test "desktop_entry_is_auras_managed:: accepts current marker and version" {
-	make_managed_desktop "demoapp"
+	if ! make_managed_desktop "demoapp"; then
+		return 1
+	fi
 
 	run desktop_entry_is_auras_managed "${HOME}/.local/share/applications/demoapp.desktop"
 	[[ "$status" -eq 0 ]]
@@ -212,16 +258,28 @@ teardown() {
 # desktop_entry_exec_path
 ########################################################
 @test "desktop_entry_exec_path:: parses quoted Exec with field code" {
-	make_managed_desktop "demoapp" "/tmp/demoapp.AppImage"
+	if ! make_managed_desktop "demoapp" "/tmp/demoapp.AppImage"; then
+		return 1
+	fi
 
 	run desktop_entry_exec_path "${HOME}/.local/share/applications/demoapp.desktop"
 	[[ "$status" -eq 0 ]]
 	[[ "$output" == "/tmp/demoapp.AppImage" ]]
 }
 
-@test "desktop_entry_exec_path:: rejects unparseable Exec line" {
+@test "desktop_entry_exec_path:: parses quoted Exec with spaces in path" {
+	if ! make_managed_desktop "demoapp" "/tmp/my apps/demoapp.AppImage"; then
+		return 1
+	fi
+
+	run desktop_entry_exec_path "${HOME}/.local/share/applications/demoapp.desktop"
+	[[ "$status" -eq 0 ]]
+	[[ "$output" == "/tmp/my apps/demoapp.AppImage" ]]
+}
+
+@test "desktop_entry_exec_path:: rejects Exec path containing a tab" {
 	mkdir -p "${HOME}/.local/share/applications"
-	printf '%s\n' 'Exec=broken line' >"${HOME}/.local/share/applications/demoapp.desktop"
+	printf 'Exec="/tmp/bad\tpath.AppImage" %%u\n' >"${HOME}/.local/share/applications/demoapp.desktop"
 
 	run desktop_entry_exec_path "${HOME}/.local/share/applications/demoapp.desktop"
 	[[ "$status" -eq 1 ]]
@@ -241,16 +299,51 @@ teardown() {
 	grep -q -- "--appimage PATH" <<<"$output"
 }
 
+@test "main:: --help mentions --ready-check" {
+	run bash "$SCRIPT" --help
+	[[ "$status" -eq 0 ]]
+
+	grep -q -- "--ready-check DIR" <<<"$output"
+}
+
+@test "main:: --help works when ZANGARMARSH_ROOT points at a missing tree" {
+	run env ZANGARMARSH_ROOT=/nonexistent bash "$SCRIPT" --help
+	[[ "$status" -eq 0 ]]
+
+	grep -q "Usage:" <<<"$output"
+}
+
+@test "main:: ignores an inherited ZANGARMARSH_ROOT from another checkout" {
+	local other_root="${AURAS_TEST_HOME}/other-root"
+	mkdir -p "${other_root}"
+	printf '# decoy\n' >"${other_root}/zangarmarsh.sh"
+
+	local appdir="${AURAS_TEST_HOME}/apps"
+	if ! make_appimage "${appdir}" "demoapp.AppImage"; then
+		return 1
+	fi
+	local appimage="${appdir}/demoapp.AppImage"
+
+	run env HOME="${HOME}" ZANGARMARSH_ROOT="${other_root}" \
+		bash "$SCRIPT" --buff demoapp --appimage "${appimage}"
+	[[ "$status" -eq 0 ]]
+
+	[[ -f "${HOME}/.local/share/applications/demoapp.desktop" ]]
+	[[ "$(resolve_symlink_path "${HOME}/.local/bin/demoapp")" == "${appimage}" ]]
+}
+
 @test "main:: script handles unknown options" {
 	run bash "$SCRIPT" --unknown
 	[[ "$status" -eq 1 ]]
 
-	grep -q "main:: unknown option" <<<"$output"
+	grep -q "main:: Unknown option" <<<"$output"
 }
 
 @test "main:: accepts short mode flags -b and -d" {
 	local appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "demoapp.AppImage"
+	if ! make_appimage "${appdir}" "demoapp.AppImage"; then
+		return 1
+	fi
 	local appimage="${appdir}/demoapp.AppImage"
 
 	run bash "$SCRIPT" -b demoapp -a "${appimage}"
@@ -259,8 +352,12 @@ teardown() {
 	[[ -f "${HOME}/.local/share/applications/demoapp.desktop" ]]
 	[[ "$(resolve_symlink_path "${HOME}/.local/bin/demoapp")" == "${appimage}" ]]
 
-	make_managed_desktop "curseforge" "${appimage}"
-	make_managed_bin_link "curseforge" "${appimage}"
+	if ! make_managed_desktop "curseforge" "${appimage}"; then
+		return 1
+	fi
+	if ! make_managed_bin_link "curseforge" "${appimage}"; then
+		return 1
+	fi
 
 	run bash "$SCRIPT" -d curseforge
 	[[ "$status" -eq 0 ]]
@@ -268,9 +365,16 @@ teardown() {
 	[[ ! -f "${HOME}/.local/share/applications/curseforge.desktop" ]]
 }
 
-@test "main:: rejects packages-dir after simplification" {
+@test "main:: rejects --buff combined with --debuff" {
+	run main --buff demoapp --debuff demoapp
+	[[ "$status" -eq 1 ]]
+
+	grep -q "main:: use only one of --buff, --ready-check, or --debuff" <<<"$output"
+}
+
+@test "main:: rejects unknown --packages-dir" {
 	run bash "$SCRIPT" --packages-dir "${HOME}" --buff demoapp --appimage /tmp/x.AppImage
 	[[ "$status" -eq 1 ]]
 
-	grep -q "main:: unknown option" <<<"$output"
+	grep -q "main:: Unknown option" <<<"$output"
 }

@@ -27,7 +27,7 @@ Keep executable Bash scripts compatible with Bash 3.2+ and consistent with this 
 - Leave a name undeclared until that statement. Do not gather `local` lines at the top of a function and assign them later.
 - Split assign and `export` onto separate lines when export intent should stand out. Export stays next to that assignment.
 - Every function has a header comment in the form shown in the example. State the purpose, then Inputs, Outputs, Side Effects, and Returns for each section that applies.
-- End every function, including `main`, with one empty line and then `return <code>`. Early returns do not get that line. Block spacing is owned by `shell.mdc`.
+- Follow `shell.mdc` for quoting, status codes, guard clauses, function-ending returns, block spacing, and destructive-path safety. Do not copy those rules into Bash-only guidance.
 - Support execution and sourcing with a `BASH_SOURCE[0]` source guard when the script exposes helper functions.
 - Use Bats for non-trivial shell. Use `@test "name:: description" {` for direct function tests.
 - Use `setup_file` and `setup` as the project already does.
@@ -39,7 +39,6 @@ Keep executable Bash scripts compatible with Bash 3.2+ and consistent with this 
 ### Allowed
 
 - Source guards such as `if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then`.
-- Shared shell rules from `shell.mdc` for quoting, status, guard clauses, and destructive-path safety.
 
 ### Denied
 
@@ -268,7 +267,6 @@ setup() {
   chmod +x "${mock_bin}/jq" "${mock_bin}/curl"
 
   PATH="${mock_bin}:${PATH}"
-  export PATH
 
   run health_check
   [[ "${status}" -eq 0 ]]

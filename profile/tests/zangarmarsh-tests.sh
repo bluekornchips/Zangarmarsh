@@ -28,7 +28,6 @@ setup() {
 
 teardown() {
 	rm -rf "${TEST_DIR}"
-
 	return 0
 }
 
@@ -38,37 +37,62 @@ teardown() {
 	echo "${output}" | grep -q "zangarmarsh:: source this file instead of executing it"
 }
 
+@test "zangarmarsh:: refuses a non-interactive bash source" {
+	run env -u ZANGARMARSH_TEST bash --noprofile --norc -c "source '${SCRIPT}'"
+	[[ "${status}" -eq 1 ]]
+	echo "${output}" | grep -q "zangarmarsh:: interactive shell required"
+}
+
+@test "zangarmarsh:: refuses a non-interactive zsh source" {
+	command -v zsh >/dev/null 2>&1 || skip "zsh not available"
+
+	run env -u ZANGARMARSH_TEST zsh -c "source '${SCRIPT}'"
+	[[ "${status}" -eq 1 ]]
+	echo "${output}" | grep -q "zangarmarsh:: interactive shell required"
+}
+
 @test "zangarmarsh:: sets ZANGARMARSH_ROOT and leaves VERBOSE unset by default" {
-	unset ZANGARMARSH_VERBOSE
-	source "${SCRIPT}"
-	[[ -n "${ZANGARMARSH_ROOT}" ]]
-	[[ -z "${ZANGARMARSH_VERBOSE:-}" ]]
+	run env -u ZANGARMARSH_VERBOSE bash --noprofile --norc -c "
+		source '${SCRIPT}' || exit 1
+		printf 'ROOT=%s\n' \"\${ZANGARMARSH_ROOT}\"
+		printf 'VERBOSE=%s\n' \"\${ZANGARMARSH_VERBOSE-__unset__}\"
+	"
+	[[ "${status}" -eq 0 ]]
+	echo "${output}" | grep -q '^ROOT=.'
+	echo "${output}" | grep -q '^VERBOSE=__unset__$'
 }
 
 @test "zangarmarsh:: preserves an existing ZANGARMARSH_VERBOSE value" {
-	ZANGARMARSH_VERBOSE=true
-	export ZANGARMARSH_VERBOSE
-	source "${SCRIPT}"
-	[[ "${ZANGARMARSH_VERBOSE}" == "true" ]]
+	run env ZANGARMARSH_VERBOSE=true bash --noprofile --norc -c "
+		source '${SCRIPT}' || exit 1
+		printf '%s\n' \"\${ZANGARMARSH_VERBOSE}\"
+	"
+	[[ "${status}" -eq 0 ]]
+	echo "${output}" | grep -qx 'true'
 }
 
 @test "zangarmarsh:: second source of the same root is a no-op" {
-	source "${SCRIPT}"
-	local first_root="${ZANGARMARSH_ROOT}"
-	[[ "${ZANGARMARSH_LOADED_ROOT}" == "${first_root}" ]]
-
-	source "${SCRIPT}"
-	[[ "${ZANGARMARSH_ROOT}" == "${first_root}" ]]
-	[[ "${ZANGARMARSH_LOADED_ROOT}" == "${first_root}" ]]
+	run bash --noprofile --norc -c "
+		source '${SCRIPT}' || exit 1
+		first_root=\"\${ZANGARMARSH_ROOT}\"
+		[[ \"\${ZANGARMARSH_LOADED_ROOT}\" == \"\${first_root}\" ]] || exit 2
+		source '${SCRIPT}' || exit 1
+		[[ \"\${ZANGARMARSH_ROOT}\" == \"\${first_root}\" ]] || exit 3
+		[[ \"\${ZANGARMARSH_LOADED_ROOT}\" == \"\${first_root}\" ]] || exit 4
+		printf 'ROOT=%s\n' \"\${first_root}\"
+	"
+	[[ "${status}" -eq 0 ]]
+	echo "${output}" | grep -q '^ROOT=.'
 }
 
 @test "zangarmarsh:: does not export the loaded-root guard" {
-	source "${SCRIPT}"
-	[[ "${ZANGARMARSH_LOADED_ROOT}" == "${ZANGARMARSH_ROOT}" ]]
-
-	run bash -c 'printf "%s\n" "${ZANGARMARSH_LOADED_ROOT:-}"'
+	run bash --noprofile --norc -c "
+		source '${SCRIPT}' || exit 1
+		[[ \"\${ZANGARMARSH_LOADED_ROOT}\" == \"\${ZANGARMARSH_ROOT}\" ]] || exit 2
+		bash --noprofile --norc -c 'printf \"CHILD=%s\\n\" \"\${ZANGARMARSH_LOADED_ROOT:-}\"'
+	"
 	[[ "${status}" -eq 0 ]]
-	[[ -z "${output}" ]]
+	echo "${output}" | grep -qx 'CHILD='
 }
 
 @test "zangarmarsh:: root follows the sourced script directory" {
@@ -78,24 +102,33 @@ teardown() {
 	ln -s "${origin}/tools" "${TEST_DIR}/tools"
 	cp "${SCRIPT}" "${TEST_DIR}/zangarmarsh.sh"
 
-	source "${TEST_DIR}/zangarmarsh.sh"
-	[[ "${ZANGARMARSH_ROOT}" == "${TEST_DIR}" ]]
+	run bash --noprofile --norc -c "
+		source '${TEST_DIR}/zangarmarsh.sh' || exit 1
+		printf 'ROOT=%s\n' \"\${ZANGARMARSH_ROOT}\"
+	"
+	[[ "${status}" -eq 0 ]]
+	echo "${output}" | grep -qx "ROOT=${TEST_DIR}"
 }
 
-@test "zangarmarsh:: keeps script-dir root when CWD is another git repo" {
-	local other_repo
-	other_repo="$(mktemp -d "${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}/other-git.XXXXXX")"
+@test "zangarmarsh:: keeps script-dir root when CWD is another git worktree" {
+	local other_repo="${TEST_DIR}/other-repo"
+	local other_worktree="${TEST_DIR}/other-worktree"
 	local expected_root
 	expected_root="$(cd "$(dirname "${SCRIPT}")" && pwd)"
-	create_mock_git_repo "${other_repo}"
-	cd "${other_repo}" || return 1
 
-	run bash -c "unset ZANGARMARSH_VERBOSE; source '${SCRIPT}' && printf '%s\n' \"\${ZANGARMARSH_ROOT}\""
+	mkdir -p "${other_repo}"
+	if ! create_mock_worktree "${other_repo}" "${other_worktree}" "other-branch"; then
+		return 1
+	fi
+
+	run bash --noprofile --norc -c "
+		cd '${other_worktree}' || exit 1
+		unset ZANGARMARSH_VERBOSE
+		source '${SCRIPT}' || exit 1
+		printf 'ROOT=%s\n' \"\${ZANGARMARSH_ROOT}\"
+	"
 	[[ "${status}" -eq 0 ]]
-	[[ "${output}" == "${expected_root}" ]]
-
-	cd - >/dev/null || return 1
-	rm -rf "${other_repo}"
+	echo "${output}" | grep -qx "ROOT=${expected_root}"
 }
 
 @test "integration:: bash parent still allows a child zsh to load the prompt" {
@@ -106,19 +139,20 @@ teardown() {
 	home="$(mktemp -d "${base}/zsh-from-bash.XXXXXX")" || return 1
 	printf 'source "%s"\n' "${SCRIPT}" >"${home}/.zshrc"
 	touch "${home}/.zcompdump"
-	mkdir -p "${home}/.oh-my-zsh/lib" "${home}/.oh-my-zsh/plugins/git" \
-		"${home}/.oh-my-zsh/plugins/zsh-autosuggestions"
-	printf 'git_current_branch() { echo main; }\n' >"${home}/.oh-my-zsh/lib/git.zsh"
-	printf 'alias ga="git add"\n' >"${home}/.oh-my-zsh/plugins/git/git.plugin.zsh"
-	printf '# autosuggestions stub\n' >"${home}/.oh-my-zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh"
+	local zsh_home="${home}/.oh-my-zsh"
+	if ! seed_omz_stub "${zsh_home}"; then
+		return 1
+	fi
 
-	source "${SCRIPT}"
-
-	run env HOME="${home}" ZDOTDIR="${home}" ZSH="${home}/.oh-my-zsh" \
-		zsh -i -c 'print -r -- "${PROMPT}"; type build_prompt'
+	run env HOME="${home}" ZDOTDIR="${home}" ZSH="${zsh_home}" zsh -c "
+		source '${home}/.zshrc' || exit 1
+		print -r -- \"\${PROMPT}\"
+		type build_prompt
+	"
 	local cmd_status="${status}"
 	rm -rf "${home}"
 	[[ "${cmd_status}" -eq 0 ]]
-	echo "${output}" | grep -Fq '$(build_prompt)'
+	local expected_prompt="\${_prompt_rendered}"
+	echo "${output}" | grep -Fq "${expected_prompt}"
 	echo "${output}" | grep -q 'build_prompt is a shell function'
 }

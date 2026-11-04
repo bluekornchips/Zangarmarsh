@@ -29,7 +29,7 @@ Keep bash and zsh scripts safe, readable, and honest about errors and cleanup.
   - `command args || return 1`
 - Keep `if` blocks when the branch logs, cleans up, assigns state, runs more than one command, or returns a computed status.
 - Group scripts as usage, validation and config, helpers, core logic, `main`, then the source guard when applicable.
-- End every function, including `main`, with one empty line and then `return <code>`. That empty line belongs only to the function-ending return.
+- End every function, including `main`, with `return <code>`. When the function body has 4 or more lines between the braces, put one empty line before that final `return`. That empty line belongs only to the function-ending return. Bodies with fewer than 4 lines omit the empty line.
 - An early `return` stays on the next line after the statement it belongs to. No empty line before it. This includes `return` after an `echo` or command inside `if`, `case`, and `command || { }`.
 - After a multi-line block, leave one empty line before the next statement in the same scope. The block closes with `}`, `fi`, `done`, or `esac`. That includes a later `return` that follows the whole block.
 - When that next line closes the enclosing block, keep it flush. No empty line before the `done`, `fi`, `esac`, `else`, `elif`, or `}` that ends or continues the `for`, `if`, `case`, or group you are inside.
@@ -53,7 +53,8 @@ Keep bash and zsh scripts safe, readable, and honest about errors and cleanup.
 - `rm -rf /`, `eval`, `exec`, or `sudo`.
 - Multi-line `if` blocks whose only body is a plain `return` with no other commands.
 - An empty line before an early `return`.
-- A function whose last `return` is not preceded by an empty line.
+- A function body of 4 or more lines whose last `return` is not preceded by an empty line.
+- An empty line before the final `return` in a function body with fewer than 4 lines.
 - Another command or block on the line immediately after a closing `}`, `fi`, `done`, or `esac`. The closer of the enclosing block is not that next command.
 - An empty line before the `done`, `fi`, `esac`, or `}` that closes the enclosing block.
 - Two empty lines between a multi-line block and the function-ending `return`.

@@ -29,3 +29,10 @@ alwaysApply: true
 - Do not use first-person pronouns in any agent output: "I", "me", "my", "mine", "myself", "we", "us", "our", "ours", "ourselves".
 - Do not refer to the agent by role or name, such as "this agent", "the assistant", or "the AI".
 - Use imperative, passive, or third-person form. Write "Tests pass" or "Ran tests", not "I verified tests pass" or "I ran tests".
+
+## Scoped exceptions
+
+Each exception applies only to the named skill output and only inside the named artifact. Everything else in this file still applies.
+
+- `blue-review-comments`: pull request review comments may use "we" as the shared voice of the review team, for example "We hold the merge when ...". No other first-person pronoun is allowed in those comments.
+- `blue-author`: `pr.md` and `issue.md` are delivery documents for the current change. They may describe what the current diff changes and what the current issue will deliver. They must not record prior work, history, changelogs, migration notes, or compatibility plans.

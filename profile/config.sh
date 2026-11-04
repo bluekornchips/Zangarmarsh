@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Shared profile config. Sourced early by zangarmarsh.sh.
-# Existing environment values win.
+# Existing environment values win, except history file paths which always follow HOME.
 #
 
 export ZANGARMARSH_HISTSIZE="${ZANGARMARSH_HISTSIZE:-100000}"

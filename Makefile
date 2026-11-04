@@ -8,6 +8,7 @@ ZSH_FILES   := $(shell find profile/zsh -name '*.zsh' -type f)
 
 BATS_FLAGS  := --timing --verbose-run --formatter pretty
 BATS         = TERM="$${TERM:-xterm}" bats $(BATS_FLAGS)
+CHECK_DEPS   := ./check_dependencies.sh
 
 .DEFAULT_GOAL := ci
 
@@ -25,8 +26,8 @@ help:
 		'  format       Rewrite shell scripts with shfmt defaults' \
 		'  help         Show this help' \
 		'  install      Install profile hooks and local Cursor plugin via profile/install.sh' \
-		'  lint         Check shfmt diff and shellcheck non-test *.sh' \
-		'  shellcheck   shellcheck -x on non-test *.sh' \
+		'  lint         Check shfmt diff and shellcheck on *.sh including bats' \
+		'  shellcheck   shellcheck -x on *.sh; bats files use -s bash' \
 		'  syntax       bash -n on *.sh and zsh -n on profile/zsh/*.zsh' \
 		'  test         Run all bats tests in parallel' \
 		'  test-serial  Run all bats tests serially' \
@@ -38,26 +39,29 @@ help:
 #################################################
 
 format:
-	@command -v shfmt >/dev/null 2>&1 || { echo "shfmt is not installed" >&2; exit 1; }
+	@$(CHECK_DEPS)
 	@echo "format: shfmt $$(shfmt -f . | wc -l) files"
 	@shfmt -w .
 	@echo "format: shfmt ok"
 
 lint:
-	@command -v shfmt >/dev/null 2>&1 || { echo "shfmt is not installed" >&2; exit 1; }
+	@$(CHECK_DEPS)
 	@echo "lint: shfmt $$(shfmt -f . | wc -l) files"
 	@shfmt -d .
 	@echo "lint: shfmt ok"
 	@$(MAKE) --no-print-directory shellcheck
 
 syntax:
+	@$(CHECK_DEPS)
 	@bash -n $(FMT_FILES)
 	@zsh -n $(ZSH_FILES)
 
 shellcheck:
-	@command -v shellcheck >/dev/null 2>&1 || { echo "shellcheck is not installed" >&2; exit 1; }
-	@echo "shellcheck: $$(echo $(SHELL_FILES) | wc -w) files"
+	@$(CHECK_DEPS)
+	@echo "shellcheck: $$(echo $(SHELL_FILES) | wc -w) non-test files"
 	@shellcheck -x $(SHELL_FILES)
+	@echo "shellcheck: $$(echo $(TEST_FILES) | wc -w) bats files"
+	@shellcheck -x -s bash $(TEST_FILES)
 	@echo "shellcheck: ok"
 
 #################################################
@@ -65,12 +69,15 @@ shellcheck:
 #################################################
 
 test:
+	@$(CHECK_DEPS)
 	@$(BATS) --jobs $(BATS_JOBS) --no-parallelize-within-files $(TEST_FILES)
 
 test-serial:
+	@$(CHECK_DEPS)
 	@$(BATS) $(TEST_FILES)
 
 test-smoke:
+	@$(CHECK_DEPS)
 	@$(BATS) profile/tests/smoke-tests.sh
 
 #################################################

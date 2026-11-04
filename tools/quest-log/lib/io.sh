@@ -11,6 +11,11 @@
 #
 # Side Effects:
 # - Displays color-coded diff to terminal
+# - Creates and removes a temporary file
+#
+# Returns:
+# - 0 always when the temp file can be created
+# - 1 when mktemp fails
 show_diff() {
 	local file_path="$1"
 	local new_content="$2"
@@ -21,6 +26,7 @@ show_diff() {
 	}
 
 	chmod 0600 "${temp_file}"
+	trap 'rm -f -- "${temp_file}"; trap - RETURN' RETURN
 	printf '%s' "${new_content}" >"${temp_file}"
 
 	if [[ -f "${file_path}" ]]; then
@@ -35,6 +41,7 @@ show_diff() {
 	fi
 
 	rm -f "${temp_file}"
+	trap - RETURN
 
 	return 0
 }
@@ -67,11 +74,14 @@ ensure_dir() {
 #
 # Outputs:
 # - file contents to stdout
+#
+# Returns:
+# - 0 always
 read_file_or_empty() {
 	local file_path="$1"
 
 	if [[ -f "${file_path}" ]]; then
-		cat "${file_path}" 2>/dev/null || printf ''
+		cat "${file_path}" 2>/dev/null
 	fi
 
 	return 0
@@ -82,8 +92,11 @@ read_file_or_empty() {
 # Inputs:
 # - $1, file_path, destination path
 # - $2, new_content, full new file body
-# - $3, stats_mode, "rule" to update create/update/unchanged STATS, "none" to skip those; STATS_ERRORS still increments on write failure
-# - $4, error_label, prefix for write failure messages
+# - $3, error_label, prefix for write failure messages
+#
+# Side Effects:
+# - Sets WRITE_IF_CHANGED_OUTCOME to unchanged, created, updated, or error
+# - Writes file_path when content differs
 #
 # Returns:
 # - 0 on success
@@ -91,8 +104,9 @@ read_file_or_empty() {
 write_if_changed() {
 	local file_path="$1"
 	local new_content="$2"
-	local stats_mode="${3:-none}"
-	local error_label="${4:-write_if_changed}"
+	local error_label="${3:-write_if_changed}"
+
+	WRITE_IF_CHANGED_OUTCOME="error"
 
 	local existing_content
 	existing_content="$(
@@ -106,35 +120,22 @@ write_if_changed() {
 
 	if [[ "${existing_content}" == "${new_content}" ]]; then
 		echo "No changes: ${display_path}"
-		if [[ "${stats_mode}" == "rule" ]]; then
-			STATS_UNCHANGED=$((STATS_UNCHANGED + 1))
-		fi
-
+		WRITE_IF_CHANGED_OUTCOME="unchanged"
 		return 0
 	fi
 
 	show_diff "${file_path}" "${new_content}"
-	printf '%s' "${new_content}" >"${file_path}"
-	if [[ ! -f "${file_path}" ]]; then
+	if ! printf '%s' "${new_content}" >"${file_path}"; then
 		echo "${error_label}:: Failed to write file: ${display_path}" >&2
-		STATS_ERRORS=$((STATS_ERRORS + 1))
 		return 1
 	fi
 
-	if [[ "${stats_mode}" == "rule" ]]; then
-		if [[ -n "${existing_content}" ]]; then
-			echo "Updated: ${display_path}"
-			STATS_UPDATED=$((STATS_UPDATED + 1))
-		else
-			echo "Created: ${display_path}"
-			STATS_CREATED=$((STATS_CREATED + 1))
-		fi
+	if [[ -n "${existing_content}" ]]; then
+		WRITE_IF_CHANGED_OUTCOME="updated"
+		echo "Updated: ${display_path}"
 	else
-		if [[ -n "${existing_content}" ]]; then
-			echo "Updated: ${file_path}"
-		else
-			echo "Created: ${file_path}"
-		fi
+		WRITE_IF_CHANGED_OUTCOME="created"
+		echo "Created: ${display_path}"
 	fi
 
 	return 0

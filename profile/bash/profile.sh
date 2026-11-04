@@ -7,8 +7,33 @@ if [[ -z "${ZANGARMARSH_ROOT:-}" ]]; then
 	return 1
 fi
 
-if ! source "${ZANGARMARSH_ROOT}/profile/config.sh"; then
-	echo "profile.sh:: Failed to source config.sh" >&2
+if [[ ! -f "${ZANGARMARSH_ROOT}/profile/config.sh" ]]; then
+	echo "profile.sh:: Required file not found: ${ZANGARMARSH_ROOT}/profile/config.sh" >&2
+	return 1
+fi
+
+source "${ZANGARMARSH_ROOT}/profile/config.sh" || {
+	echo "profile.sh:: Failed to source ${ZANGARMARSH_ROOT}/profile/config.sh" >&2
+	return 1
+}
+
+if [[ -z "${ZANGARMARSH_BASH_HISTFILE:-}" ]]; then
+	echo "profile.sh:: ZANGARMARSH_BASH_HISTFILE is required" >&2
+	return 1
+fi
+
+if [[ -z "${ZANGARMARSH_HISTSIZE:-}" ]]; then
+	echo "profile.sh:: ZANGARMARSH_HISTSIZE is required" >&2
+	return 1
+fi
+
+if [[ -z "${ZANGARMARSH_HISTCONTROL:-}" ]]; then
+	echo "profile.sh:: ZANGARMARSH_HISTCONTROL is required" >&2
+	return 1
+fi
+
+if [[ -z "${ZANGARMARSH_HIST_IGNORE:-}" ]]; then
+	echo "profile.sh:: ZANGARMARSH_HIST_IGNORE is required" >&2
 	return 1
 fi
 
@@ -33,11 +58,6 @@ shopt -s checkwinsize
 bind 'set horizontal-scroll-mode off' 2>/dev/null || true
 bind 'set completion-ignore-case on' 2>/dev/null || true
 
-# Ensure history file exists and is writable
-if [[ ! -f "${HISTFILE}" ]]; then
-	if ! touch "${HISTFILE}"; then
-		echo "profile.sh:: Cannot create history file ${HISTFILE}" >&2
-	elif ! chmod 600 "${HISTFILE}"; then
-		echo "profile.sh:: Cannot set history file mode ${HISTFILE}" >&2
-	fi
-fi
+[[ -f "${HISTFILE}" ]] || {
+	touch "${HISTFILE}" && chmod 600 "${HISTFILE}"
+} || true

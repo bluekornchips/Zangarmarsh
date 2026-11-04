@@ -35,7 +35,6 @@ setup() {
 
 teardown() {
 	rm -rf "${TEST_DIR}"
-
 	return 0
 }
 

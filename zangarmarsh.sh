@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Zangarmarsh shell configuration loader
-# This script should be sourced, not executed
+# Source from an interactive Bash or Zsh session only. Do not execute.
 
 if [[ -n "${BASH_VERSION:-}" && "${BASH_SOURCE[0]}" == "$0" ]]; then
 	echo "zangarmarsh:: source this file instead of executing it" >&2
@@ -9,7 +9,7 @@ if [[ -n "${BASH_VERSION:-}" && "${BASH_SOURCE[0]}" == "$0" ]]; then
 fi
 
 if [[ -n "${ZSH_VERSION:-}" ]]; then
-	case ${ZSH_EVAL_CONTEXT:-} in
+	case "${ZSH_EVAL_CONTEXT:-}" in
 	*:file*) ;;
 	*)
 		echo "zangarmarsh:: source this file instead of executing it" >&2
@@ -18,12 +18,26 @@ if [[ -n "${ZSH_VERSION:-}" ]]; then
 	esac
 fi
 
+# Interactive shells only. Bats sets ZANGARMARSH_TEST=1 so tests can source
+# under bash -c / zsh -c without faking a TTY or job control.
+if [[ -z "${ZANGARMARSH_TEST:-}" ]]; then
+	if [[ -n "${BASH_VERSION:-}" ]]; then
+		if [[ "$-" != *i* ]]; then
+			echo "zangarmarsh:: interactive shell required" >&2
+			return 1
+		fi
+	elif [[ -n "${ZSH_VERSION:-}" ]]; then
+		if [[ ! -o interactive ]]; then
+			echo "zangarmarsh:: interactive shell required" >&2
+			return 1
+		fi
+	fi
+fi
+
 if [[ -n "${BASH_SOURCE[0]}" ]]; then
 	SCRIPT_PATH="${BASH_SOURCE[0]}"
-elif [[ -n "${0}" ]]; then
-	SCRIPT_PATH="${0}"
 else
-	SCRIPT_PATH="$(cd "$(dirname "${0}")" && pwd)/$(basename "${0}")"
+	SCRIPT_PATH="${0}"
 fi
 
 # Always resolve from this file's location. An inherited ZANGARMARSH_ROOT from
@@ -64,15 +78,16 @@ COMMON_FILES=(
 load_common_components() {
 	local file
 	for file in "${COMMON_FILES[@]}"; do
-		if [[ ! -f "${ZANGARMARSH_ROOT}/profile/${file}" ]]; then
-			echo "load_common_components:: Required file not found: ${ZANGARMARSH_ROOT}/profile/${file}" >&2
+		local component="${ZANGARMARSH_ROOT}/profile/${file}"
+		if [[ ! -f "${component}" ]]; then
+			echo "load_common_components:: Required file not found: ${component}" >&2
 			return 1
 		fi
 
-		if ! source "${ZANGARMARSH_ROOT}/profile/${file}"; then
-			echo "load_common_components:: Failed to source ${ZANGARMARSH_ROOT}/profile/${file}" >&2
+		source "${component}" || {
+			echo "load_common_components:: Failed to source ${component}" >&2
 			return 1
-		fi
+		}
 	done
 
 	return 0
@@ -82,6 +97,11 @@ if ! load_common_components; then
 	echo "zangarmarsh:: Failed to load common components" >&2
 	return 1
 fi
+
+source "${ZANGARMARSH_ROOT}/tools/tools.sh" || {
+	echo "zangarmarsh:: Failed to source tools/tools.sh" >&2
+	return 1
+}
 
 SHELL_NAME=""
 if [[ -z "${ZSH_VERSION:-}" && -z "${BASH_VERSION:-}" ]]; then

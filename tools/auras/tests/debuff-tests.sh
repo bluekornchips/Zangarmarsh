@@ -15,15 +15,13 @@ setup_file() {
 
 setup() {
 	source "$(dirname "${BATS_TEST_FILENAME}")/fixtures.sh"
-	source "${SCRIPT}"
-	auras_home_setup
+	auras_test_setup
 
 	return 0
 }
 
 teardown() {
 	auras_home_teardown
-
 	return 0
 }
 
@@ -31,7 +29,9 @@ teardown() {
 # debuff_appimage
 ########################################################
 @test "debuff_appimage:: removes an Auras-managed desktop file" {
-	make_managed_desktop "demoapp"
+	if ! make_managed_desktop "demoapp"; then
+		return 1
+	fi
 
 	run debuff_appimage "demoapp"
 	[[ "$status" -eq 0 ]]
@@ -41,10 +41,16 @@ teardown() {
 
 @test "debuff_appimage:: removes matching managed bin symlink" {
 	local appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "demoapp.AppImage"
+	if ! make_appimage "${appdir}" "demoapp.AppImage"; then
+		return 1
+	fi
 	local appimage="${appdir}/demoapp.AppImage"
-	make_managed_desktop "demoapp" "${appimage}"
-	make_managed_bin_link "demoapp" "${appimage}"
+	if ! make_managed_desktop "demoapp" "${appimage}"; then
+		return 1
+	fi
+	if ! make_managed_bin_link "demoapp" "${appimage}"; then
+		return 1
+	fi
 
 	run debuff_appimage "demoapp"
 	[[ "$status" -eq 0 ]]
@@ -55,17 +61,23 @@ teardown() {
 
 @test "debuff_appimage:: fails when bin symlink target does not match desktop Exec" {
 	local appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "demoapp.AppImage"
+	if ! make_appimage "${appdir}" "demoapp.AppImage"; then
+		return 1
+	fi
 	local appimage="${appdir}/demoapp.AppImage"
-	make_managed_desktop "demoapp" "${appimage}"
-	make_managed_bin_link "demoapp" "/tmp/other.AppImage"
+	if ! make_managed_desktop "demoapp" "${appimage}"; then
+		return 1
+	fi
+	if ! make_managed_bin_link "demoapp" "/tmp/other.AppImage"; then
+		return 1
+	fi
 
 	run debuff_appimage "demoapp"
 	[[ "$status" -eq 1 ]]
 
-	[[ ! -f "${HOME}/.local/share/applications/demoapp.desktop" ]]
+	[[ -f "${HOME}/.local/share/applications/demoapp.desktop" ]]
 	[[ -L "${HOME}/.local/bin/demoapp" ]]
-	grep -q "remove_application_bin_link:: refusing to remove bin symlink" <<<"$output"
+	grep -q "ensure_bin_link_removable:: refusing to remove bin symlink" <<<"$output"
 }
 
 @test "debuff_appimage:: refuses to remove unmanaged desktop file" {
@@ -99,10 +111,16 @@ teardown() {
 
 @test "main:: debuff mode removes managed desktop entry and bin symlink" {
 	local appdir="${AURAS_TEST_HOME}/apps"
-	make_appimage "${appdir}" "demoapp.AppImage"
+	if ! make_appimage "${appdir}" "demoapp.AppImage"; then
+		return 1
+	fi
 	local appimage="${appdir}/demoapp.AppImage"
-	make_managed_desktop "demoapp" "${appimage}"
-	make_managed_bin_link "demoapp" "${appimage}"
+	if ! make_managed_desktop "demoapp" "${appimage}"; then
+		return 1
+	fi
+	if ! make_managed_bin_link "demoapp" "${appimage}"; then
+		return 1
+	fi
 
 	run bash "$SCRIPT" --debuff demoapp
 	[[ "$status" -eq 0 ]]

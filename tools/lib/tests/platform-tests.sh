@@ -6,6 +6,7 @@
 setup_file() {
 	GIT_ROOT="$(git rev-parse --show-toplevel)" || return 1
 	source "${GIT_ROOT}/tests/fixtures.sh" || return 1
+
 	SCRIPT="${ZANGARMARSH_ROOT}/tools/lib/platform.sh"
 	export SCRIPT
 
@@ -42,7 +43,10 @@ setup() {
 }
 
 @test "apply_platform_env:: exports PLATFORM and PLATFORM_OS" {
-	apply_platform_env
+	if ! apply_platform_env; then
+		return 1
+	fi
+
 	[[ -n "${PLATFORM}" ]]
 	[[ "${PLATFORM_OS}" == "macos" || "${PLATFORM_OS}" == "linux" ]]
 }
@@ -53,6 +57,9 @@ setup() {
 	export PLATFORM
 	export PLATFORM_OS
 
-	apply_platform_env
+	if ! apply_platform_env; then
+		return 1
+	fi
+
 	[[ "${PLATFORM_OS}" == "linux" ]]
 }

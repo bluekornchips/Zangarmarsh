@@ -28,14 +28,13 @@ setup() {
 	export DRY_RUN
 
 	source "${SCRIPT}"
-	source "${ZANGARMARSH_ROOT}/tools/quest-log/lib/plugin.sh"
+	source "${ZANGARMARSH_ROOT}/tools/quest-log/lib/apply.sh"
 
 	return 0
 }
 
 teardown() {
 	rm -rf "${TEST_HOME}"
-
 	return 0
 }
 
@@ -62,32 +61,45 @@ teardown() {
 	grep -q "unknown option" <<<"${output}"
 }
 
+@test "main:: ignores an inherited ZANGARMARSH_ROOT from another checkout" {
+	local other_root="${TEST_HOME}/other-root"
+	mkdir -p "${other_root}"
+	printf '# decoy\n' >"${other_root}/zangarmarsh.sh"
+
+	run env HOME="${HOME}" ZANGARMARSH_ROOT="${other_root}" \
+		"${SCRIPT}" --dry-run --zsh
+	[[ "${status}" -eq 0 ]]
+	echo "${output}" | grep -Fq "${GIT_ROOT}/zangarmarsh.sh"
+	echo "${output}" | grep -Fvq "${other_root}/zangarmarsh.sh"
+}
+
 ########################################################
 # validate_install_env, source helpers
 ########################################################
 @test "validate_install_env:: fails when HOME is empty" {
-	HOME=""
-
-	run validate_install_env
+	HOME="" run validate_install_env
 	[[ "${status}" -eq 1 ]]
 	grep -q "HOME is required" <<<"${output}"
 }
 
-@test "write_source_line:: emits a trailing newline" {
+@test "_canonical_source_command:: emits the source line without a trailing newline" {
 	local expected
 	expected="$(printf 'source %q' "${ZANGARMARSH_ROOT}/zangarmarsh.sh")"
 
-	run write_source_line
+	run _canonical_source_command
 	[[ "${status}" -eq 0 ]]
 	[[ "${output}" == "${expected}" ]]
-	[[ "$(write_source_line | wc -c)" -eq $((${#output} + 1)) ]]
+	[[ "$(printf '%s\n' "$(_canonical_source_command)" | wc -c)" -eq $((${#output} + 1)) ]]
 }
 
-@test "write_source_line:: quotes a root that contains shell metacharacters" {
+@test "_canonical_source_command:: quotes a root that contains shell metacharacters" {
 	local marker="${TEST_HOME}/pwned"
-	ZANGARMARSH_ROOT="${TEST_HOME}/a\"b; touch ${marker}; echo \""
+	local weird_root="${TEST_HOME}/a\"b; touch ${marker}; echo \""
+	local line
+	line="$(ZANGARMARSH_ROOT="${weird_root}" _canonical_source_command)"
 
-	run bash -c "$(write_source_line)"
+	run bash -c "${line}"
+	[[ "${status}" -ne 0 ]]
 	[[ ! -e "${marker}" ]]
 }
 
@@ -95,39 +107,39 @@ teardown() {
 # has_source_line
 ########################################################
 @test "has_source_line:: returns 1 when RC_FILE is missing" {
-	run has_source_line
+	run has_source_line "${RC_FILE}"
 	[[ "${status}" -eq 1 ]]
 }
 
 @test "has_source_line:: returns 0 once the line is present" {
-	write_source_line >"${RC_FILE}"
+	printf '%s\n' "$(_canonical_source_command)" >"${RC_FILE}"
 
-	run has_source_line
+	run has_source_line "${RC_FILE}"
 	[[ "${status}" -eq 0 ]]
 }
 
 @test "has_source_line:: matches a double-quoted absolute path" {
 	printf 'source "%s/zangarmarsh.sh"\n' "${ZANGARMARSH_ROOT}" >"${RC_FILE}"
 
-	run has_source_line
+	run has_source_line "${RC_FILE}"
 	[[ "${status}" -eq 0 ]]
 }
 
 @test "has_source_line:: matches a \$HOME form" {
-	mkdir -p "${HOME}/zm"
-	touch "${HOME}/zm/zangarmarsh.sh"
-	ZANGARMARSH_ROOT="${HOME}/zm"
-	export ZANGARMARSH_ROOT
-	printf 'source "$HOME/zm/zangarmarsh.sh"\n' >"${RC_FILE}"
+	local zm_root="${HOME}/zm"
+	mkdir -p "${zm_root}"
+	touch "${zm_root}/zangarmarsh.sh"
+	local home_line="source \"\$HOME/zm/zangarmarsh.sh\""
+	printf '%s\n' "${home_line}" >"${RC_FILE}"
 
-	run has_source_line
+	ZANGARMARSH_ROOT="${zm_root}" run has_source_line "${RC_FILE}"
 	[[ "${status}" -eq 0 ]]
 }
 
 @test "has_source_line:: ignores a stale source line from another root" {
 	printf 'source "/other/root/zangarmarsh.sh"\n' >"${RC_FILE}"
 
-	run has_source_line
+	run has_source_line "${RC_FILE}"
 	[[ "${status}" -eq 1 ]]
 }
 
@@ -135,11 +147,11 @@ teardown() {
 # install_zangarmarsh
 ########################################################
 @test "install_zangarmarsh:: creates RC_FILE and appends the source line" {
-	run install_zangarmarsh
+	run install_zangarmarsh "${RC_FILE}"
 	[[ "${status}" -eq 0 ]]
 
 	[[ -f "${RC_FILE}" ]]
-	grep -Fqx "$(source_line_text)" "${RC_FILE}"
+	grep -Fqx "$(_canonical_source_command)" "${RC_FILE}"
 	[[ "$(tail -c 1 "${RC_FILE}" | wc -c)" -eq 1 ]]
 	[[ -z "$(tail -c 1 "${RC_FILE}")" ]]
 }
@@ -147,65 +159,71 @@ teardown() {
 @test "install_zangarmarsh:: preserves existing content and adds a newline first" {
 	printf 'alias ll="ls -l"' >"${RC_FILE}"
 
-	run install_zangarmarsh
+	run install_zangarmarsh "${RC_FILE}"
 	[[ "${status}" -eq 0 ]]
 
 	local expected_file="${HOME}/expected.zshrc"
-	printf 'alias ll="ls -l"\n%s\n' "$(source_line_text)" >"${expected_file}"
+	printf 'alias ll="ls -l"\n%s\n' "$(_canonical_source_command)" >"${expected_file}"
 	cmp -s "${expected_file}" "${RC_FILE}"
 	[[ "$(wc -l <"${RC_FILE}")" -eq 2 ]]
 }
 
 @test "install_zangarmarsh:: is idempotent on a second run" {
-	install_zangarmarsh >/dev/null
+	if ! install_zangarmarsh "${RC_FILE}" >/dev/null; then
+		return 1
+	fi
 
-	run install_zangarmarsh
+	run install_zangarmarsh "${RC_FILE}"
 	[[ "${status}" -eq 0 ]]
 	grep -q "Already installed" <<<"${output}"
-	[[ "$(grep -Fcx "$(source_line_text)" "${RC_FILE}")" -eq 1 ]]
+	[[ "$(grep -Fcx "$(_canonical_source_command)" "${RC_FILE}")" -eq 1 ]]
 }
 
 @test "install_zangarmarsh:: collapses duplicate and alternate source forms" {
-	mkdir -p "${HOME}/zm"
-	touch "${HOME}/zm/zangarmarsh.sh"
-	ZANGARMARSH_ROOT="${HOME}/zm"
-	export ZANGARMARSH_ROOT
+	local zm_root="${HOME}/zm"
+	mkdir -p "${zm_root}"
+	touch "${zm_root}/zangarmarsh.sh"
+	local home_line="source \"\$HOME/zm/zangarmarsh.sh\""
+	{
+		printf 'alias ll="ls -l"\n'
+		printf 'source "%s/zangarmarsh.sh"\n' "${zm_root}"
+		printf '%s\n' "${home_line}"
+		printf 'source "/other/root/zangarmarsh.sh"\n'
+	} >"${RC_FILE}"
 
-	printf 'alias ll="ls -l"\n' >"${RC_FILE}"
-	printf 'source "%s/zangarmarsh.sh"\n' "${ZANGARMARSH_ROOT}" >>"${RC_FILE}"
-	printf 'source "$HOME/zm/zangarmarsh.sh"\n' >>"${RC_FILE}"
-	printf 'source "/other/root/zangarmarsh.sh"\n' >>"${RC_FILE}"
-
-	run install_zangarmarsh
+	ZANGARMARSH_ROOT="${zm_root}" run install_zangarmarsh "${RC_FILE}"
 	[[ "${status}" -eq 0 ]]
 	[[ "$(grep -Fc "zangarmarsh.sh" "${RC_FILE}")" -eq 2 ]]
-	[[ "$(grep -Fcx "$(source_line_text)" "${RC_FILE}")" -eq 1 ]]
+	[[ "$(grep -Fcx "$(ZANGARMARSH_ROOT="${zm_root}" _canonical_source_command)" "${RC_FILE}")" -eq 1 ]]
 	grep -Fqx 'source "/other/root/zangarmarsh.sh"' "${RC_FILE}"
 	grep -Fqx 'alias ll="ls -l"' "${RC_FILE}"
 }
 
 @test "install_zangarmarsh:: removes the official eager NVM block from bashrc" {
-	RC_FILE="${HOME}/.bashrc"
-	export RC_FILE
-	cat >"${RC_FILE}" <<EOF
+	local rc="${HOME}/.bashrc"
+	cat >"${rc}" <<EOF
 alias ll="ls -l"
 export NVM_DIR="\$HOME/.nvm"
 [ -s "\$NVM_DIR/nvm.sh" ] && \\. "\$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "\$NVM_DIR/bash_completion" ] && \\. "\$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 EOF
 
-	run install_zangarmarsh
+	run install_zangarmarsh "${rc}"
 	[[ "${status}" -eq 0 ]]
-	grep -Fqx 'alias ll="ls -l"' "${RC_FILE}"
-	grep -Fqx "$(source_line_text)" "${RC_FILE}"
-	! grep -Fq 'NVM_DIR' "${RC_FILE}"
-	! grep -Fq 'nvm.sh' "${RC_FILE}"
+	grep -Fqx 'alias ll="ls -l"' "${rc}"
+	grep -Fqx "$(_canonical_source_command)" "${rc}"
+	matched=0
+	grep -Fq 'NVM_DIR' "${rc}" && matched=1
+	[[ "${matched}" -eq 0 ]]
+	matched=0
+	grep -Fq 'nvm.sh' "${rc}" && matched=1
+	[[ "${matched}" -eq 0 ]]
 }
 
 @test "install_zangarmarsh:: dry-run reports the change without writing" {
 	DRY_RUN=true
 
-	run install_zangarmarsh
+	run install_zangarmarsh "${RC_FILE}"
 	[[ "${status}" -eq 0 ]]
 	grep -q "Would install into" <<<"${output}"
 	[[ ! -e "${RC_FILE}" ]]
@@ -216,17 +234,17 @@ EOF
 	printf 'alias ll="ls -l"\n' >"${real_rc}"
 	ln -s "${real_rc}" "${RC_FILE}"
 
-	run install_zangarmarsh
+	run install_zangarmarsh "${RC_FILE}"
 	[[ "${status}" -eq 0 ]]
 	[[ -L "${RC_FILE}" ]]
 	grep -Fqx 'alias ll="ls -l"' "${real_rc}"
-	grep -Fqx "$(source_line_text)" "${real_rc}"
+	grep -Fqx "$(_canonical_source_command)" "${real_rc}"
 }
 
 @test "install_zangarmarsh:: fails when RC_FILE is not writable" {
 	mkdir -p "${RC_FILE}"
 
-	run install_zangarmarsh
+	run install_zangarmarsh "${RC_FILE}"
 	[[ "${status}" -eq 1 ]]
 	grep -q "failed to append" <<<"${output}"
 }
@@ -235,68 +253,76 @@ EOF
 # uninstall_zangarmarsh
 ########################################################
 @test "uninstall_zangarmarsh:: reports not installed when RC_FILE is missing" {
-	run uninstall_zangarmarsh
+	run uninstall_zangarmarsh "${RC_FILE}"
 	[[ "${status}" -eq 0 ]]
 	grep -q "Not installed" <<<"${output}"
 }
 
 @test "uninstall_zangarmarsh:: removes only the Zangarmarsh line" {
-	printf 'alias ll="ls -l"\n%s' "$(write_source_line)" >"${RC_FILE}"
+	printf 'alias ll="ls -l"\n%s\n' "$(_canonical_source_command)" >"${RC_FILE}"
 
-	run uninstall_zangarmarsh
+	run uninstall_zangarmarsh "${RC_FILE}"
 	[[ "${status}" -eq 0 ]]
 
 	grep -Fqx 'alias ll="ls -l"' "${RC_FILE}"
-	! grep -Fqx "$(source_line_text)" "${RC_FILE}"
+	matched=0
+	grep -Fqx "$(_canonical_source_command)" "${RC_FILE}" && matched=1
+	[[ "${matched}" -eq 0 ]]
 }
 
 @test "uninstall_zangarmarsh:: removes every matching source form for this root" {
-	printf 'alias ll="ls -l"\n' >"${RC_FILE}"
-	printf 'source "%s/zangarmarsh.sh"\n' "${ZANGARMARSH_ROOT}" >>"${RC_FILE}"
-	write_source_line >>"${RC_FILE}"
-	printf 'source "/other/root/zangarmarsh.sh"\n' >>"${RC_FILE}"
+	{
+		printf 'alias ll="ls -l"\n'
+		printf 'source "%s/zangarmarsh.sh"\n' "${ZANGARMARSH_ROOT}"
+		printf '%s\n' "$(_canonical_source_command)"
+		printf 'source "/other/root/zangarmarsh.sh"\n'
+	} >"${RC_FILE}"
 
-	run uninstall_zangarmarsh
+	run uninstall_zangarmarsh "${RC_FILE}"
 	[[ "${status}" -eq 0 ]]
 
 	grep -Fqx 'alias ll="ls -l"' "${RC_FILE}"
 	grep -Fqx 'source "/other/root/zangarmarsh.sh"' "${RC_FILE}"
-	! grep -Fq "${ZANGARMARSH_ROOT}/zangarmarsh.sh" "${RC_FILE}"
+	matched=0
+	grep -Fq "${ZANGARMARSH_ROOT}/zangarmarsh.sh" "${RC_FILE}" && matched=1
+	[[ "${matched}" -eq 0 ]]
 }
 
 @test "uninstall_zangarmarsh:: preserves a symlinked RC_FILE" {
 	local real_rc="${HOME}/real-zshrc"
-	printf 'alias ll="ls -l"\n%s' "$(write_source_line)" >"${real_rc}"
+	printf 'alias ll="ls -l"\n%s\n' "$(_canonical_source_command)" >"${real_rc}"
 	ln -s "${real_rc}" "${RC_FILE}"
 
-	run uninstall_zangarmarsh
+	run uninstall_zangarmarsh "${RC_FILE}"
 	[[ "${status}" -eq 0 ]]
 	[[ -L "${RC_FILE}" ]]
 	grep -Fqx 'alias ll="ls -l"' "${real_rc}"
-	! grep -Fq "zangarmarsh.sh" "${real_rc}"
+	matched=0
+	grep -Fq "zangarmarsh.sh" "${real_rc}" && matched=1
+	[[ "${matched}" -eq 0 ]]
 }
 
 @test "uninstall_zangarmarsh:: dry-run reports the change without writing" {
-	write_source_line >"${RC_FILE}"
+	printf '%s\n' "$(_canonical_source_command)" >"${RC_FILE}"
 	DRY_RUN=true
 
-	run uninstall_zangarmarsh
+	run uninstall_zangarmarsh "${RC_FILE}"
 	[[ "${status}" -eq 0 ]]
 	grep -q "Would remove" <<<"${output}"
-	grep -Fqx "$(source_line_text)" "${RC_FILE}"
+	grep -Fqx "$(_canonical_source_command)" "${RC_FILE}"
 }
 
 @test "uninstall_zangarmarsh:: leaves a stale source line from another root" {
 	printf 'source "/other/root/zangarmarsh.sh"\n' >"${RC_FILE}"
 
-	run uninstall_zangarmarsh
+	run uninstall_zangarmarsh "${RC_FILE}"
 	[[ "${status}" -eq 0 ]]
 	grep -q "Not installed" <<<"${output}"
 	grep -Fqx 'source "/other/root/zangarmarsh.sh"' "${RC_FILE}"
 }
 
 ########################################################
-# install_cursor_plugin, uninstall_cursor_plugin
+# install_cursor_plugin, uninstall_quest_plugin
 ########################################################
 @test "quest_log_plugin_dir:: resolves under HOME" {
 	run quest_log_plugin_dir
@@ -319,25 +345,29 @@ EOF
 	[[ -f "$(quest_log_plugin_dir)/.cursor-plugin/plugin.json" ]]
 }
 
-@test "uninstall_cursor_plugin:: reports not installed when the directory is absent" {
-	run uninstall_cursor_plugin
+@test "uninstall_quest_plugin:: reports not installed when the directory is absent" {
+	run uninstall_quest_plugin
 	[[ "${status}" -eq 0 ]]
 	grep -q "not installed" <<<"${output}"
 }
 
-@test "uninstall_cursor_plugin:: removes an installed plugin directory" {
-	install_cursor_plugin >/dev/null
+@test "uninstall_quest_plugin:: removes an installed plugin directory" {
+	if ! install_cursor_plugin >/dev/null; then
+		return 1
+	fi
 
-	run uninstall_cursor_plugin
+	run uninstall_quest_plugin
 	[[ "${status}" -eq 0 ]]
 	[[ ! -e "$(quest_log_plugin_dir)" ]]
 }
 
-@test "uninstall_cursor_plugin:: dry-run makes no changes" {
-	install_cursor_plugin >/dev/null
+@test "uninstall_quest_plugin:: dry-run makes no changes" {
+	if ! install_cursor_plugin >/dev/null; then
+		return 1
+	fi
 	DRY_RUN=true
 
-	run uninstall_cursor_plugin
+	run uninstall_quest_plugin
 	[[ "${status}" -eq 0 ]]
 	grep -q "would remove" <<<"${output}"
 	[[ -e "$(quest_log_plugin_dir)" ]]
@@ -360,8 +390,12 @@ EOF
 
 	run "${SCRIPT}" --uninstall
 	[[ "${status}" -eq 0 ]]
-	! grep -Fq "zangarmarsh.sh" "${TEST_HOME}/.zshrc"
-	! grep -Fq "zangarmarsh.sh" "${TEST_HOME}/.bashrc"
+	matched=0
+	grep -Fq "zangarmarsh.sh" "${TEST_HOME}/.zshrc" && matched=1
+	[[ "${matched}" -eq 0 ]]
+	matched=0
+	grep -Fq "zangarmarsh.sh" "${TEST_HOME}/.bashrc" && matched=1
+	[[ "${matched}" -eq 0 ]]
 	[[ ! -e "${TEST_HOME}/.cursor/plugins/local/quest-log" ]]
 }
 
@@ -392,7 +426,9 @@ EOF
 }
 
 @test "integration:: --dry-run --uninstall makes no changes" {
-	"${SCRIPT}" >/dev/null
+	if ! "${SCRIPT}" >/dev/null; then
+		return 1
+	fi
 
 	run "${SCRIPT}" --dry-run --uninstall
 	[[ "${status}" -eq 0 ]]
@@ -423,8 +459,10 @@ EOF
 	[[ ! -e "${HOME}/.bashrc" ]]
 }
 
-@test "integration:: returns nonzero when uninstall_cursor_plugin fails" {
-	"${SCRIPT}" >/dev/null
+@test "integration:: returns nonzero when uninstall_quest_plugin fails" {
+	if ! "${SCRIPT}" >/dev/null; then
+		return 1
+	fi
 
 	uninstall_quest_plugin() {
 		printf 'uninstall_quest_plugin:: forced failure\n' >&2
@@ -435,6 +473,10 @@ EOF
 	run main --uninstall
 	[[ "${status}" -eq 1 ]]
 	grep -q "forced failure" <<<"${output}"
-	! grep -Fq "zangarmarsh.sh" "${HOME}/.zshrc"
-	! grep -Fq "zangarmarsh.sh" "${HOME}/.bashrc"
+	matched=0
+	grep -Fq "zangarmarsh.sh" "${HOME}/.zshrc" && matched=1
+	[[ "${matched}" -eq 0 ]]
+	matched=0
+	grep -Fq "zangarmarsh.sh" "${HOME}/.bashrc" && matched=1
+	[[ "${matched}" -eq 0 ]]
 }

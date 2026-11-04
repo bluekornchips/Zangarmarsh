@@ -58,7 +58,9 @@ teardown() {
 	local worktree_dir="${TEST_DIR}/add-root"
 
 	mkdir -p "${repo_dir}"
-	create_mock_git_repo "${repo_dir}"
+	if ! create_mock_git_repo "${repo_dir}"; then
+		return 1
+	fi
 	cd "${repo_dir}" || return 1
 
 	run gw add "${worktree_dir}" HEAD
@@ -71,7 +73,9 @@ teardown() {
 	local worktree_dir="${TEST_DIR}/add-subdir"
 
 	mkdir -p "${repo_dir}"
-	create_mock_git_repo "${repo_dir}"
+	if ! create_mock_git_repo "${repo_dir}"; then
+		return 1
+	fi
 	mkdir -p "${repo_dir}/subdir"
 	cd "${repo_dir}/subdir" || return 1
 
@@ -85,8 +89,12 @@ teardown() {
 	local worktree_dir="${TEST_DIR}/remove-me"
 
 	mkdir -p "${repo_dir}"
-	create_mock_git_repo "${repo_dir}"
-	git -C "${repo_dir}" worktree add "${worktree_dir}" HEAD >/dev/null 2>&1
+	if ! create_mock_git_repo "${repo_dir}"; then
+		return 1
+	fi
+	if ! git -C "${repo_dir}" worktree add "${worktree_dir}" HEAD >/dev/null 2>&1; then
+		return 1
+	fi
 	cd "${repo_dir}" || return 1
 
 	run gw remove "${worktree_dir}"
@@ -99,7 +107,9 @@ teardown() {
 	local worktree_dir="${repo_dir}/../feature-one"
 
 	mkdir -p "${repo_dir}"
-	create_mock_git_repo "${repo_dir}"
+	if ! create_mock_git_repo "${repo_dir}"; then
+		return 1
+	fi
 	local current_branch
 	current_branch="$(git -C "${repo_dir}" branch --show-current)"
 	cd "${repo_dir}" || return 1
@@ -116,11 +126,19 @@ teardown() {
 	local worktree_dir="${repo_dir}/../feature-two"
 
 	mkdir -p "${repo_dir}"
-	create_mock_git_repo "${repo_dir}"
-	git -C "${repo_dir}" checkout -b base-branch >/dev/null 2>&1
+	if ! create_mock_git_repo "${repo_dir}"; then
+		return 1
+	fi
+	if ! git -C "${repo_dir}" checkout -b base-branch >/dev/null 2>&1; then
+		return 1
+	fi
 	echo "base content" >"${repo_dir}/base_file"
-	git -C "${repo_dir}" add base_file >/dev/null 2>&1
-	git -C "${repo_dir}" commit -m "Base commit" >/dev/null 2>&1
+	if ! git -C "${repo_dir}" add base_file >/dev/null 2>&1; then
+		return 1
+	fi
+	if ! git -C "${repo_dir}" commit -m "Base commit" >/dev/null 2>&1; then
+		return 1
+	fi
 	cd "${repo_dir}" || return 1
 
 	run gw feature-two base-branch
@@ -131,7 +149,9 @@ teardown() {
 }
 
 @test "gw:: fails when shortcut receives too many arguments" {
-	create_mock_git_repo "${TEST_DIR}"
+	if ! create_mock_git_repo "${TEST_DIR}"; then
+		return 1
+	fi
 	cd "${TEST_DIR}" || return 1
 
 	run gw feature-three base-branch extra-arg
@@ -140,7 +160,9 @@ teardown() {
 }
 
 @test "gw:: rejects a name that leaves the sibling directory" {
-	create_mock_git_repo "${TEST_DIR}"
+	if ! create_mock_git_repo "${TEST_DIR}"; then
+		return 1
+	fi
 	cd "${TEST_DIR}" || return 1
 
 	run gw "../outside"
@@ -149,7 +171,9 @@ teardown() {
 }
 
 @test "gw:: rejects a name that starts with a dash" {
-	create_mock_git_repo "${TEST_DIR}"
+	if ! create_mock_git_repo "${TEST_DIR}"; then
+		return 1
+	fi
 	cd "${TEST_DIR}" || return 1
 
 	local dashed_name="-feature"
@@ -160,7 +184,9 @@ teardown() {
 }
 
 @test "gw:: fails when no shortcut name is provided" {
-	create_mock_git_repo "${TEST_DIR}"
+	if ! create_mock_git_repo "${TEST_DIR}"; then
+		return 1
+	fi
 	cd "${TEST_DIR}" || return 1
 
 	run gw

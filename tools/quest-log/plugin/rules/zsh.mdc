@@ -18,7 +18,7 @@ Keep Zsh profile and Zsh-owned scripts portable across hosts without treating th
 - Prefer Zsh-native syntax in Zsh files. Do not force Bash idioms into sourced Zsh profile modules.
 - Follow `shell.mdc` for quoting, status, guard clauses, function-ending returns, block spacing, and destructive-path safety. Do not copy those rules into Zsh-only guidance.
 - Keep direct-run entry blocks rare in sourced profile files. When a Zsh script is executable on its own, enable strict options that fit Zsh there.
-- Keep platform detection, prompt rendering, and Oh My Zsh wiring in their dedicated Zsh modules.
+- Keep platform detection, Oh My Zsh load, and prompt rendering in their dedicated Zsh modules.
 - Prefer small, sourced modules over large monolithic profile scripts.
 
 ## Usage

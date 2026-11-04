@@ -6,9 +6,16 @@
 _AURAS_SCRIPT="${BASH_SOURCE[0]:-$0}"
 _AURAS_DIR="$(cd "$(dirname "${_AURAS_SCRIPT}")" && pwd)"
 
+# Display usage information
+#
+# Side Effects:
+# - Writes usage text to stdout
+#
+# Returns:
+# - 0 always
 usage() {
 	cat <<EOF
-Usage: $(basename "$0") -b|--buff NAME -a|--appimage PATH | -d|--debuff NAME | -h|--help
+Usage: $(basename "$0") -b|--buff NAME -a|--appimage PATH | --ready-check DIR | -d|--debuff NAME | -h|--help
 
 Creates or refreshes a user .desktop launcher and a ~/.local/bin symlink for one
 AppImage. Debuff removes both when they were created by this script.
@@ -16,6 +23,10 @@ AppImage. Debuff removes both when they were created by this script.
 Buff requires NAME and --appimage PATH. Relative AppImage directories are resolved
 from the current working directory. NAME is the desktop file stem, desktop Name=,
 and the command name under ~/.local/bin.
+
+Ready-check takes a packages directory, scans each immediate subdirectory for
+AppImage files, picks the highest filename version then newest mtime, and buffs
+each stem named after its subdirectory.
 
 Existing launchers are overwritten only when they were created by this script
 and include the current Auras management marker.
@@ -27,6 +38,7 @@ Options:
   -h, --help             Show this help message
   -b, --buff NAME        Install managed launcher and bin symlink for NAME
   -a, --appimage PATH    AppImage path, required with --buff
+  --ready-check DIR      Buff latest AppImage in each child of DIR
   -d, --debuff NAME      Remove managed NAME.desktop and matching bin symlink
 
 EOF
@@ -37,29 +49,55 @@ EOF
 # Load shared Auras helpers after the repository root is known
 #
 # Side Effects:
+# - Clears any inherited ZANGARMARSH_ROOT and rebinds to this checkout
 # - Sources tools/auras/lib/auras.sh once per shell
 #
 # Returns:
 # - 0 on success
-# - 1 when ZANGARMARSH_ROOT is unset or sourcing fails
+# - 1 when repository resolution or sourcing fails
 _auras_load_lib() {
 	[[ -n "${_AURAS_LIBS_LOADED:-}" ]] && return 0
 
-	if [[ -z "${ZANGARMARSH_ROOT:-}" || ! -f "${ZANGARMARSH_ROOT}/zangarmarsh.sh" ]]; then
-		source "${_AURAS_DIR}/../lib/repo.sh" || return 1
-		ensure_zangarmarsh_repo "${_AURAS_DIR}" || return 1
-	fi
-
+	# Always bind to this checkout. An inherited ZANGARMARSH_ROOT from another
+	# tree would source the wrong tools/auras/lib/auras.sh.
+	unset ZANGARMARSH_ROOT
+	source "${_AURAS_DIR}/../lib/repo.sh" || return 1
+	ensure_zangarmarsh_repo "${_AURAS_DIR}" || return 1
 	source "${ZANGARMARSH_ROOT}/tools/auras/lib/auras.sh" || return 1
 	_AURAS_LIBS_LOADED=1
 
 	return 0
 }
 
+# Refuse a second mode flag on the same invocation
+#
+# Inputs:
+# - $1 current_mode, already selected mode or empty
+#
+# Returns:
+# - 0 when current_mode is empty
+# - 1 when a mode was already selected
+_auras_require_single_mode() {
+	local current_mode="$1"
+
+	if [[ -n "${current_mode}" ]]; then
+		echo "main:: use only one of --buff, --ready-check, or --debuff" >&2
+		return 1
+	fi
+
+	return 0
+}
+
 main() {
+	if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+		usage
+		return 0
+	fi
+
 	local mode=""
 	local appimage_path=""
 	local app_stem=""
+	local packages_dir=""
 
 	_auras_load_lib || return 1
 
@@ -69,28 +107,36 @@ main() {
 			usage
 			return 0
 			;;
-		-b | --buff | -d | --debuff)
-			if [[ -n "${mode}" ]]; then
-				echo "main:: use only one of --buff or --debuff" >&2
-				return 1
-			fi
-
+		-b | --buff)
+			_auras_require_single_mode "${mode}" || return 1
 			if (($# < 2)); then
-				if [[ "$1" == "-b" || "$1" == "--buff" ]]; then
-					echo "main:: --buff requires NAME" >&2
-				else
-					echo "main:: --debuff requires NAME" >&2
-				fi
-
+				echo "main:: --buff requires NAME" >&2
 				return 1
 			fi
 
-			if [[ "$1" == "-b" || "$1" == "--buff" ]]; then
-				mode="buff"
-			else
-				mode="debuff"
+			mode="buff"
+			app_stem="$2"
+			shift 2
+			;;
+		--ready-check)
+			_auras_require_single_mode "${mode}" || return 1
+			if (($# < 2)); then
+				echo "main:: --ready-check requires DIR" >&2
+				return 1
 			fi
 
+			mode="ready-check"
+			packages_dir="$2"
+			shift 2
+			;;
+		-d | --debuff)
+			_auras_require_single_mode "${mode}" || return 1
+			if (($# < 2)); then
+				echo "main:: --debuff requires NAME" >&2
+				return 1
+			fi
+
+			mode="debuff"
 			app_stem="$2"
 			shift 2
 			;;
@@ -104,8 +150,8 @@ main() {
 			shift 2
 			;;
 		*)
-			echo "main:: unknown option or argument '$1'" >&2
-			echo "Use '$(basename "$0") --help' for usage information" >&2
+			echo "main:: Unknown option '$1'" >&2
+			echo "main:: Use '$(basename "$0") --help' for usage information" >&2
 			return 1
 			;;
 		esac
@@ -119,6 +165,15 @@ main() {
 	case "${mode}" in
 	buff)
 		buff_main "${app_stem}" "${appimage_path}"
+		return $?
+		;;
+	ready-check)
+		if [[ -n "${appimage_path}" ]]; then
+			echo "main:: --appimage is only valid with --buff" >&2
+			return 1
+		fi
+
+		ready_check_main "${packages_dir}"
 		return $?
 		;;
 	debuff)

@@ -72,19 +72,26 @@ desktop_entry_exec_path() {
 	fi
 
 	local exec_path="${exec_line#Exec=}"
-	exec_path="${exec_path#\"}"
-	exec_path="${exec_path%\"}"
-	exec_path="${exec_path%% %u}"
-	exec_path="${exec_path%% %U}"
-	exec_path="${exec_path#\"}"
-	exec_path="${exec_path%\"}"
+	if [[ "${exec_path}" == \"* ]]; then
+		exec_path="${exec_path#\"}"
+		exec_path="${exec_path%%\"*}"
+	else
+		case "${exec_path}" in
+		*\ %u)
+			exec_path="${exec_path% %u}"
+			;;
+		*\ %U)
+			exec_path="${exec_path% %U}"
+			;;
+		esac
+	fi
 
 	if [[ -z "${exec_path}" ]]; then
 		echo "desktop_entry_exec_path:: Exec= path is empty in ${desktop_path}" >&2
 		return 1
 	fi
 
-	if [[ "${exec_path}" == *" "* || "${exec_path}" == *$'\t'* ]]; then
+	if [[ "${exec_path}" == *$'\t'* ]]; then
 		echo "desktop_entry_exec_path:: could not parse Exec= in ${desktop_path}" >&2
 		return 1
 	fi

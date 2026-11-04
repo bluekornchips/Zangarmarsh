@@ -8,6 +8,6 @@
     "oderwat.indent-rainbow",
     "redhat.vscode-yaml",
     "tim-koehler.helm-intellisense",
-    "timonwong.shellcheck",
+    "timonwong.shellcheck"
   ]
 }

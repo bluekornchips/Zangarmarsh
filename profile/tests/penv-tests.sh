@@ -49,6 +49,7 @@ PATH="${VIRTUAL_ENV}/bin:${PATH}"
 export PATH
 EOF
 			printf '#!/usr/bin/env bash\necho "Python 3.12.0"\n' >"${env_dir}/bin/python"
+			chmod +x "${env_dir}/bin/python"
 			ln -sf python "${env_dir}/bin/python3"
 			return 0
 		fi
@@ -84,7 +85,6 @@ setup() {
 # Clean up test environment
 teardown() {
 	rm -rf "$TEST_DIR"
-
 	return 0
 }
 
@@ -112,15 +112,15 @@ teardown() {
 	echo "$output" | grep -q "Unknown option"
 }
 
-@test "penv:: refuses to source a symlink activate script" {
+@test "penv:: recreates when existing .venv has no python" {
 	mkdir -p .venv/bin
-	echo 'echo pwned' >"${TEST_DIR}/evil-activate"
-	ln -s "${TEST_DIR}/evil-activate" .venv/bin/activate
+	touch .venv/bin/activate
 
 	run penv
-	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "refusing to source"
-	[[ ! -f ".venv/bin/python" ]]
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "Removing existing virtual environment"
+	echo "$output" | grep -q "Creating virtual environment"
+	[[ -x ".venv/bin/python" ]]
 }
 
 @test "penv:: fail with invalid Python version" {
@@ -152,14 +152,30 @@ teardown() {
 	[[ "$status" -eq 0 ]]
 }
 
-@test "penv:: activates existing virtual environment" {
+@test "penv:: leaves existing virtual environment alone without activating" {
 	mkdir -p .venv/bin
+	printf '#!/usr/bin/env bash\necho "Python 3.12.0"\n' >.venv/bin/python
+	chmod +x .venv/bin/python
 	touch .venv/bin/activate
+	touch .venv/original_file
 
-	run penv
-	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Virtual environment exists, activating"
-	echo "$output" | grep -q "Activated existing environment"
+	# Call without bats run so VIRTUAL_ENV stays in this shell if penv activated.
+	if ! penv; then
+		return 1
+	fi
+
+	[[ -f ".venv/original_file" ]]
+	[[ -z "${VIRTUAL_ENV:-}" ]]
+}
+
+@test "penv:: activates after creating a new virtual environment" {
+	# Call without bats run so activation is visible in this shell.
+	if ! penv; then
+		return 1
+	fi
+
+	[[ -n "${VIRTUAL_ENV:-}" ]]
+	[[ "${VIRTUAL_ENV}" == "${TEST_DIR}/.venv" ]]
 }
 
 @test "integration:: penv -d force recreates" {
@@ -183,22 +199,28 @@ teardown() {
 }
 
 @test "integration:: penv installs dependencies from pyproject.toml" {
-	create_mock_dependency_file "pyproject"
-	uv() { return 0; }
-	export -f uv
-
-	run penv
+	if ! create_mock_dependency_file "pyproject"; then
+		return 1
+	fi
+	local mock_bin="${BATS_TEST_TMPDIR}/uv-mock-bin"
+	mkdir -p "${mock_bin}"
+	printf '#!/usr/bin/env bash\nexit 0\n' >"${mock_bin}/uv"
+	chmod +x "${mock_bin}/uv"
+	PATH="${mock_bin}:${PATH}" run penv
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Found pyproject.toml. Installing with uv"
 }
 
 @test "integration:: penv uses locked uv sync when uv.lock exists" {
-	create_mock_dependency_file "pyproject"
+	if ! create_mock_dependency_file "pyproject"; then
+		return 1
+	fi
 	touch uv.lock
-	uv() { return 0; }
-	export -f uv
-
-	run penv
+	local mock_bin="${BATS_TEST_TMPDIR}/uv-lock-mock-bin"
+	mkdir -p "${mock_bin}"
+	printf '#!/usr/bin/env bash\nexit 0\n' >"${mock_bin}/uv"
+	chmod +x "${mock_bin}/uv"
+	PATH="${mock_bin}:${PATH}" run penv
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Found pyproject.toml. Installing with uv"
 }
@@ -216,17 +238,19 @@ teardown() {
 }
 
 @test "penv:: handles failed virtual environment creation" {
-	# Mock python3 to fail
-	python3() { return 1; }
-	export -f python3
-
-	run penv
+	unset -f python3
+	local mock_bin="${BATS_TEST_TMPDIR}/python-fail-bin"
+	mkdir -p "${mock_bin}"
+	printf '#!/usr/bin/env bash\nexit 1\n' >"${mock_bin}/python3"
+	chmod +x "${mock_bin}/python3"
+	PATH="${mock_bin}:${PATH}" run penv
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "Failed to create virtual environment"
 }
 
-@test "integration:: penv recreates when the activate script is missing" {
+@test "integration:: penv recreates when .venv/bin/python is missing" {
 	mkdir -p .venv/bin
+	touch .venv/bin/activate
 
 	run penv
 	[[ "$status" -eq 0 ]]
@@ -235,8 +259,9 @@ teardown() {
 }
 
 @test "penv:: preserves existing environment when no force flag" {
-	# Create actual test directory and files
 	mkdir -p .venv/bin
+	printf '#!/usr/bin/env bash\necho "Python 3.12.0"\n' >.venv/bin/python
+	chmod +x .venv/bin/python
 	touch .venv/bin/activate
 	touch .venv/original_file
 
@@ -256,14 +281,27 @@ teardown() {
 
 @test "penv:: handles platform-specific behavior" {
 	PLATFORM="macos"
-	export PLATFORM
 	PLATFORM_OS="macos"
-	export PLATFORM_OS
-	# Mock python3 to fail
-	python3() { return 1; }
-	export -f python3
-
-	run penv python9.99
+	unset -f python3
+	local mock_bin="${BATS_TEST_TMPDIR}/python-missing-bin"
+	mkdir -p "${mock_bin}"
+	# No python9.99 on PATH; leave python3 present so only the requested version fails.
+	printf '#!/usr/bin/env bash\nexit 0\n' >"${mock_bin}/python3"
+	chmod +x "${mock_bin}/python3"
+	PATH="${mock_bin}:${PATH}" run penv python9.99
 	[[ "$status" -ne 0 ]]
 	echo "$output" | grep -q "Try installing Python from https://www.python.org/downloads/"
+}
+
+@test "penv:: under zsh reports missing interpreter without glob abort" {
+	command -v zsh >/dev/null 2>&1 || skip "zsh not available"
+
+	run zsh -c "
+		setopt nomatch
+		source '${SCRIPT}' || exit 1
+		penv python9.99
+	"
+	[[ "${status}" -eq 1 ]]
+	echo "${output}" | grep -q "penv:: python9.99 not found"
+	echo "${output}" | grep -qv "no matches found"
 }

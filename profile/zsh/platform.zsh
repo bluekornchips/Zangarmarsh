@@ -14,8 +14,13 @@ if [[ -z "${PLATFORM_OS:-}" ]]; then
 	apply_platform_env || return 1
 fi
 
-PATH="/usr/local/bin:/usr/local/sbin:${PATH}"
-export PATH
+# Prepend once. Nested interactive shells must not stack duplicates.
+case ":${PATH}:" in
+*:/usr/local/bin:*) ;;
+*)
+	PATH="/usr/local/bin:/usr/local/sbin:${PATH}"
+	;;
+esac
 
 case "${PLATFORM_OS}" in
 macos)

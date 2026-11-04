@@ -4,6 +4,12 @@
 # Removes generated files and directories from development environments
 #
 
+_TRILLIAX_SCRIPT="${BASH_SOURCE[0]:-$0}"
+_TRILLIAX_DIR="$(cd "$(dirname "${_TRILLIAX_SCRIPT}")" && pwd)"
+# Shared helpers. Top-level source so both direct runs and bats sourcing get them.
+# shellcheck source=../lib/repo.sh
+source "${_TRILLIAX_DIR}/../lib/repo.sh"
+
 ENABLED_TARGETS=()
 ALL_TARGETS=(cursor python node fs)
 DEFAULT_MAX_DEPTH=10
@@ -92,7 +98,8 @@ validate_targets() {
 
 	local matched known target
 	for target in "${requested_targets[@]}"; do
-		target=$(echo "${target}" | xargs)
+		target="${target#"${target%%[![:space:]]*}"}"
+		target="${target%"${target##*[![:space:]]}"}"
 		matched=false
 		for known in "${ALL_TARGETS[@]}"; do
 			if [[ "${target}" == "${known}" ]]; then
@@ -149,8 +156,7 @@ execute_clean() {
 	fi
 
 	local target_dir_abs
-	target_dir_abs="$(cd "${target_dir}" && pwd 2>/dev/null)"
-	if [[ -z "${target_dir_abs}" ]] || [[ ! -d "${target_dir_abs}" ]]; then
+	if ! target_dir_abs="$(absolute_dir_of "${target_dir}" 2>/dev/null)"; then
 		echo "${function_name}:: Invalid target_dir: ${target_dir}" >&2
 		return 1
 	fi
@@ -175,16 +181,18 @@ execute_clean() {
 
 	local errors=0
 	local item
-	while IFS= read -r -d '' item || [[ -n "${item}" ]]; do
-		if [[ -z "${item}" || "${item}" == "${target_dir_abs}" ]]; then
+	while IFS= read -r -d '' item; do
+		# find also reports the root itself when it matches the expression
+		if [[ "${item}" == "${target_dir_abs}" ]]; then
 			continue
 		fi
 
-		if [[ "${item}" != "${target_dir_abs}" && "${item}" != "${target_dir_abs}/"* ]]; then
+		# Never remove anything outside the target tree
+		if [[ "${item}" != "${target_dir_abs}/"* ]]; then
 			continue
 		fi
 
-		if [[ "${DRY_RUN}" == "true" ]]; then
+		if [[ "${DRY_RUN:-}" == "true" ]]; then
 			echo "${function_name}:: Would remove: ${item}"
 			continue
 		fi
@@ -201,6 +209,28 @@ execute_clean() {
 	return 0
 }
 
+# Return whether a directory would be empty after listed child removals
+#
+# Inputs:
+# - $1 dir, directory to inspect
+# - $2 removed_list, newline-separated absolute paths already marked for removal
+#
+# Returns:
+# - 0 when every direct child is listed in removed_list or the directory has none
+# - 1 when at least one child would remain
+_trilliax_dir_empty_after_removals() {
+	local dir="$1"
+	local removed_list="$2"
+	local child
+	while IFS= read -r -d '' child; do
+		if ! grep -Fxq "${child}" "${removed_list}"; then
+			return 1
+		fi
+	done < <(find "${dir}" -mindepth 1 -maxdepth 1 -print0 2>/dev/null)
+
+	return 0
+}
+
 # Clean filesystem of empty directories
 #
 # Inputs:
@@ -212,18 +242,50 @@ execute_clean() {
 #
 # Returns:
 # - 0 on success
-# - 1 when execute_clean fails
+# - 1 when find or rmdir fails
 clean_fs() {
 	local target_dir="$1"
 
 	echo "clean_fs:: Cleaning empty directories."
 
-	if [[ "${DRY_RUN:-false}" == "true" ]]; then
-		execute_clean "clean_fs" "${target_dir}" -depth -type d -empty || return 1
+	local max_depth="${MAX_DEPTH:-${DEFAULT_MAX_DEPTH}}"
+	if [[ ! "${max_depth}" =~ ^[0-9]+$ ]]; then
+		echo "clean_fs:: MAX_DEPTH must be an integer" >&2
+		return 1
+	fi
+
+	if [[ "${DRY_RUN:-}" == "true" ]]; then
+		local dir_list
+		dir_list="$(mktemp "${TMPDIR:-/tmp}/trilliax-fs-dirs.XXXXXX")" || {
+			echo "clean_fs:: Failed to create directory listing file" >&2
+			return 1
+		}
+
+		local removed_list
+		removed_list="$(mktemp "${TMPDIR:-/tmp}/trilliax-fs-removed.XXXXXX")" || {
+			rm -f "${dir_list}"
+			echo "clean_fs:: Failed to create removal listing file" >&2
+			return 1
+		}
+
+		if ! find "${target_dir}" -mindepth 1 -maxdepth "${max_depth}" -depth -type d -print0 >"${dir_list}"; then
+			rm -f "${dir_list}" "${removed_list}"
+			echo "clean_fs:: find failed in ${target_dir}" >&2
+			return 1
+		fi
+
+		local dir
+		while IFS= read -r -d '' dir; do
+			if _trilliax_dir_empty_after_removals "${dir}" "${removed_list}"; then
+				echo "clean_fs:: Would remove: ${dir}"
+				printf '%s\n' "${dir}" >>"${removed_list}"
+			fi
+		done <"${dir_list}"
+
+		rm -f "${dir_list}" "${removed_list}"
 		return 0
 	fi
 
-	local max_depth="${MAX_DEPTH:-${DEFAULT_MAX_DEPTH}}"
 	find "${target_dir}" -mindepth 1 -maxdepth "${max_depth}" -depth -type d -empty -exec rmdir {} \; || return 1
 
 	return 0
@@ -369,7 +431,7 @@ run_trilliax() {
 		esac
 	done
 
-	if [[ -z "${target_dir}" || ! -d "${target_dir}" ]]; then
+	if [[ ! -d "${target_dir}" ]]; then
 		echo "run_trilliax:: Directory '${target_dir}' does not exist" >&2
 		return 1
 	fi
@@ -384,23 +446,15 @@ run_trilliax() {
 	MAX_DEPTH="${MAX_DEPTH:-${DEFAULT_MAX_DEPTH}}"
 	export MAX_DEPTH
 
-	pushd "${target_dir}" >/dev/null
-	target_dir="$(pwd)"
-	popd >/dev/null
+	target_dir="$(absolute_dir_of "${target_dir}")" || return 1
 	echo "run_trilliax:: Cleaning directory: ${target_dir}"
 
 	echo "run_trilliax:: Filthy, filthy, FILTHY!"
+	# ENABLED_TARGETS is validated against ALL_TARGETS, which maps 1:1 to clean_*.
 	local errors=0
-	local clean_fn target
+	local target
 	for target in "${ENABLED_TARGETS[@]}"; do
-		clean_fn="clean_${target}"
-		if ! declare -F "${clean_fn}" >/dev/null 2>&1; then
-			echo "run_trilliax:: missing cleaner for target '${target}'" >&2
-			errors=$((errors + 1))
-			continue
-		fi
-
-		"${clean_fn}" "${target_dir}" || errors=$((errors + 1))
+		"clean_${target}" "${target_dir}" || errors=$((errors + 1))
 	done
 
 	echo "run_trilliax:: Please don't say such things! The master is back, and things need to be kept tidy."

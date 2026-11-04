@@ -6,9 +6,14 @@
 setup_file() {
 	GIT_ROOT="$(git rev-parse --show-toplevel)" || return 1
 	source "${GIT_ROOT}/tests/fixtures.sh" || return 1
+
 	SCRIPT="${ZANGARMARSH_ROOT}/profile/config.sh"
 	export SCRIPT
 
+	return 0
+}
+
+setup() {
 	return 0
 }
 

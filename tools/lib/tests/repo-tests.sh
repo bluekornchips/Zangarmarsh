@@ -6,6 +6,7 @@
 setup_file() {
 	GIT_ROOT="$(git rev-parse --show-toplevel)" || return 1
 	source "${GIT_ROOT}/tests/fixtures.sh" || return 1
+
 	SCRIPT="${ZANGARMARSH_ROOT}/tools/lib/repo.sh"
 	export SCRIPT
 
@@ -14,7 +15,6 @@ setup_file() {
 
 setup() {
 	source "${SCRIPT}"
-
 	return 0
 }
 
@@ -54,7 +54,9 @@ setup() {
 
 @test "ensure_zangarmarsh_repo:: exports ZANGARMARSH_ROOT" {
 	unset ZANGARMARSH_ROOT
-	ensure_zangarmarsh_repo "${SCRIPT}"
+	if ! ensure_zangarmarsh_repo "${SCRIPT}"; then
+		return 1
+	fi
 	[[ -n "${ZANGARMARSH_ROOT}" ]]
 	[[ -f "${ZANGARMARSH_ROOT}/zangarmarsh.sh" ]]
 }

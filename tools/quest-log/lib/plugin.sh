@@ -2,14 +2,6 @@
 #
 # Quest-log Cursor plugin install and uninstall helpers
 #
-# Requires:
-# - ZANGARMARSH_ROOT set to the Zangarmarsh repository root before sourcing
-#
-
-if [[ -z "${ZANGARMARSH_ROOT:-}" ]]; then
-	printf 'plugin.sh:: ZANGARMARSH_ROOT is required\n' >&2
-	return 1
-fi
 
 source "${ZANGARMARSH_ROOT}/tools/quest-log/lib/io.sh"
 
@@ -57,13 +49,13 @@ _plugin_resolve_under_home() {
 	local base="${HOME}"
 
 	if [[ "${path}" != "${HOME}" && "${path}" != "${HOME}/"* ]]; then
-		echo "validate_plugin_install_dir:: install path must be below ${HOME}" >&2
+		echo "_plugin_resolve_under_home:: install path must be below ${HOME}" >&2
 		return 1
 	fi
 
 	if [[ -d "${base}" || -L "${base}" ]]; then
 		base="$(cd "${base}" && pwd -P)" || {
-			echo "validate_plugin_install_dir:: cannot resolve HOME" >&2
+			echo "_plugin_resolve_under_home:: cannot resolve HOME" >&2
 			return 1
 		}
 	fi
@@ -83,13 +75,13 @@ _plugin_resolve_under_home() {
 		fi
 
 		if [[ -z "${component}" || "${component}" == "." || "${component}" == ".." ]]; then
-			echo "validate_plugin_install_dir:: path traversal is not allowed" >&2
+			echo "_plugin_resolve_under_home:: path traversal is not allowed" >&2
 			return 1
 		fi
 
 		cursor="${cursor}/${component}"
 		if [[ -L "${cursor}" ]]; then
-			echo "validate_plugin_install_dir:: refusing symlink: ${cursor}" >&2
+			echo "_plugin_resolve_under_home:: refusing symlink: ${cursor}" >&2
 			return 1
 		fi
 
@@ -145,18 +137,9 @@ validate_plugin_install_dir() {
 		;;
 	esac
 
-	local resolved_install
-	resolved_install="$(_plugin_resolve_under_home "${install_dir}")" || return 1
-	local resolved_root
-	resolved_root="$(_plugin_resolve_under_home "${allowed_root}")" || return 1
-
-	case "${resolved_install}" in
-	"${resolved_root}"/*) ;;
-	*)
-		echo "validate_plugin_install_dir:: refusing unsafe install path: ${install_dir}" >&2
-		return 1
-		;;
-	esac
+	# String prefix checks above plus the symlink-aware walk below are enough;
+	# a second resolved-prefix case duplicated the same guarantee.
+	_plugin_resolve_under_home "${install_dir}" >/dev/null || return 1
 
 	return 0
 }
@@ -196,7 +179,7 @@ install_quest_plugin() {
 
 	echo "install_quest_plugin: running"
 
-	if [[ "${DRY_RUN:-false}" == true ]]; then
+	if [[ "${DRY_RUN:-}" == "true" ]]; then
 		echo "install_quest_plugin: would replace ${install_dir}"
 		return 0
 	fi
@@ -213,20 +196,20 @@ install_quest_plugin() {
 		return 1
 	fi
 
-	local backup_dir
-	backup_dir="$(mktemp -d "${install_parent}/.quest-log-backup.XXXXXX")" || {
-		rm -rf "${staging_dir}"
-		echo "install_quest_plugin:: Failed to create backup directory" >&2
-		return 1
-	}
-
-	rmdir "${backup_dir}" || {
-		rm -rf "${staging_dir}"
-		echo "install_quest_plugin:: Failed to prepare backup directory" >&2
-		return 1
-	}
-
+	local backup_dir=""
 	if [[ -e "${install_dir}" || -L "${install_dir}" ]]; then
+		backup_dir="$(mktemp -d "${install_parent}/.quest-log-backup.XXXXXX")" || {
+			rm -rf "${staging_dir}"
+			echo "install_quest_plugin:: Failed to allocate backup path" >&2
+			return 1
+		}
+
+		rmdir "${backup_dir}" || {
+			rm -rf "${staging_dir}" "${backup_dir}"
+			echo "install_quest_plugin:: Failed to free backup path" >&2
+			return 1
+		}
+
 		if ! mv "${install_dir}" "${backup_dir}"; then
 			rm -rf "${staging_dir}"
 			echo "install_quest_plugin:: Failed to stage existing installation" >&2
@@ -246,7 +229,9 @@ install_quest_plugin() {
 		return 1
 	fi
 
-	rm -rf "${backup_dir}"
+	if [[ -n "${backup_dir}" ]]; then
+		rm -rf "${backup_dir}"
+	fi
 
 	echo "install_quest_plugin: complete"
 
@@ -268,7 +253,6 @@ install_quest_plugin() {
 # - 1 when the path is unsafe or removal fails
 uninstall_quest_plugin() {
 	local install_dir
-
 	install_dir="$(quest_log_plugin_dir)" || return 1
 	validate_plugin_install_dir "${install_dir}" || return 1
 
@@ -277,7 +261,7 @@ uninstall_quest_plugin() {
 		return 0
 	fi
 
-	if [[ "${DRY_RUN:-false}" == true ]]; then
+	if [[ "${DRY_RUN:-}" == "true" ]]; then
 		echo "uninstall_quest_plugin: would remove ${install_dir}"
 		return 0
 	fi

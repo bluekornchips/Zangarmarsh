@@ -25,12 +25,16 @@ setup() {
 	export TEST_CLEANUP_DIR
 	mkdir -p "${TEST_CLEANUP_DIR}"
 
+	DRY_RUN=false
+	export DRY_RUN
+	MAX_DEPTH="${MAX_DEPTH:-10}"
+	export MAX_DEPTH
+
 	return 0
 }
 
 teardown() {
 	[[ -d "$TEST_DIR" ]] && rm -rf "$TEST_DIR"
-
 	return 0
 }
 
@@ -50,7 +54,9 @@ teardown() {
 	local test_dir="$TEST_CLEANUP_DIR"
 	mkdir -p "$test_dir/empty_dir"
 
-	DRY_RUN=true run clean_fs "$test_dir"
+	DRY_RUN=true
+
+	run clean_fs "$test_dir"
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "clean_fs:: Would remove: $test_dir/empty_dir"
 }
@@ -71,10 +77,12 @@ teardown() {
 	mkdir -p "$test_dir/empty_dir"
 	mkdir -p "$test_dir/empty_dir/empty_subdir"
 
-	DRY_RUN=true run clean_fs "$test_dir"
+	DRY_RUN=true
+
+	run clean_fs "$test_dir"
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "clean_fs:: Would remove: $test_dir/empty_dir"
-	echo "$output" | grep -q "clean_fs:: Would remove: $test_dir/empty_dir/empty_subdir"
+	echo "$output" | grep -Eq "clean_fs:: Would remove: ${test_dir}/empty_dir$"
+	echo "$output" | grep -Eq "clean_fs:: Would remove: ${test_dir}/empty_dir/empty_subdir$"
 }
 
 @test "clean_fs:: respects max depth limit" {
@@ -83,8 +91,6 @@ teardown() {
 	mkdir -p "$test_dir/shallow"
 
 	MAX_DEPTH=2
-	export MAX_DEPTH
-
 	run clean_fs "$test_dir"
 	[[ "$status" -eq 0 ]]
 	[[ ! -d "$test_dir/shallow" ]]
@@ -139,8 +145,8 @@ teardown() {
 @test "main:: handles unknown options" {
 	run "$SCRIPT" --invalid-option
 	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "trilliax:: Unknown option '--invalid-option'"
-	echo "$output" | grep -q "trilliax:: Use 'trilliax.sh --help' for usage information"
+	echo "$output" | grep -q "run_trilliax:: Unknown option '--invalid-option'"
+	echo "$output" | grep -q "run_trilliax:: Use 'trilliax.sh --help' for usage information"
 }
 
 @test "main:: rejects --dry-run option without targets" {
@@ -153,6 +159,20 @@ teardown() {
 	run "$SCRIPT" --dir "$TEST_CLEANUP_DIR"
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "validate_targets:: No targets specified"
+}
+
+@test "main:: -d selects the directory to clean" {
+	mkdir -p "${TEST_CLEANUP_DIR}/.cursor"
+
+	run "$SCRIPT" -d "$TEST_CLEANUP_DIR" --targets cursor
+	[[ "$status" -eq 0 ]]
+	[[ ! -d "${TEST_CLEANUP_DIR}/.cursor" ]]
+}
+
+@test "main:: -d requires a directory path" {
+	run "$SCRIPT" -d
+	[[ "$status" -eq 1 ]]
+	echo "$output" | grep -q "run_trilliax:: --dir requires a directory path"
 }
 
 @test "main:: accepts --all option" {
@@ -303,7 +323,9 @@ teardown() {
 	local test_dir="$TEST_CLEANUP_DIR"
 	mkdir -p "$test_dir/.cursor/subdir"
 
-	DRY_RUN=true run clean_cursor "$test_dir"
+	DRY_RUN=true
+
+	run clean_cursor "$test_dir"
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "clean_cursor:: Would remove:"
 	[[ -d "$test_dir/.cursor" ]]
@@ -342,7 +364,9 @@ teardown() {
 	echo "test" >"$test_dir/test.pyo"
 	echo "keep this" >"$test_dir/.env"
 
-	DRY_RUN=true run clean_python "$test_dir"
+	DRY_RUN=true
+
+	run clean_python "$test_dir"
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "clean_python:: Would remove:"
 	[[ -d "$test_dir/venv" ]]
@@ -387,7 +411,9 @@ teardown() {
 	echo "test" >"$test_dir/package-lock.json"
 	echo "test" >"$test_dir/yarn.lock"
 
-	DRY_RUN=true run clean_node "$test_dir"
+	DRY_RUN=true
+
+	run clean_node "$test_dir"
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "clean_node:: Would remove:"
 	[[ -d "$test_dir/node_modules" ]]
@@ -411,7 +437,8 @@ teardown() {
 		return 0
 	}
 
-	DRY_RUN=false run execute_clean "clean_fs" "$test_dir" -type f
+	DRY_RUN=false
+	run execute_clean "clean_fs" "$test_dir" -type f
 	unset -f find
 	[[ "$status" -eq 0 ]]
 	[[ -f "${sibling}/keep.txt" ]]
@@ -420,8 +447,6 @@ teardown() {
 @test "execute_clean:: rejects a non-integer MAX_DEPTH" {
 	local test_dir="$TEST_CLEANUP_DIR"
 	MAX_DEPTH="nope"
-	export MAX_DEPTH
-
 	run execute_clean "clean_fs" "$test_dir" -type d -empty
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "MAX_DEPTH must be an integer"
@@ -434,13 +459,15 @@ teardown() {
 	mkdir -p "$test_dir/a/b/.cursor"
 
 	MAX_DEPTH=2
-	export MAX_DEPTH
+	DRY_RUN=true
 
-	DRY_RUN=true run execute_clean "clean_cursor" "$test_dir" -type d -name ".cursor"
+	run execute_clean "clean_cursor" "$test_dir" -type d -name ".cursor"
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "Would remove: $test_dir/.cursor"
 	echo "$output" | grep -q "Would remove: $test_dir/a/.cursor"
-	! echo "$output" | grep -q "Would remove: $test_dir/a/b/.cursor"
+	matched=0
+	echo "$output" | grep -q "Would remove: $test_dir/a/b/.cursor" && matched=1
+	[[ "${matched}" -eq 0 ]]
 }
 
 @test "execute_clean:: returns 1 when rm fails" {
@@ -453,7 +480,8 @@ teardown() {
 		return 1
 	}
 
-	DRY_RUN=false run execute_clean "clean_fs" "$test_dir" -depth -type d -empty
+	DRY_RUN=false
+	run execute_clean "clean_fs" "$test_dir" -depth -type d -empty
 	unset -f rm
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "Failed to remove"

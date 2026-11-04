@@ -28,9 +28,10 @@ _nvm_load() {
 	fi
 
 	if [[ -s "${NVM_DIR}/bash_completion" ]]; then
-
 		\. "${NVM_DIR}/bash_completion" 2>/dev/null || true
 	fi
+
+	return 0
 }
 
 # Install Python dependencies from pyproject.toml
@@ -46,36 +47,28 @@ _nvm_load() {
 # - 0 if dependencies installed or no pyproject.toml found
 # - 1 if installation fails
 _penv_install_dependencies() {
-	local dependency_installed=false
-	local install_failed=false
-
-	if [[ -f "pyproject.toml" ]]; then
-		if ! command -v uv >/dev/null 2>&1; then
-			echo "_penv_install_dependencies:: uv is required for pyproject.toml" >&2
-			return 1
-		fi
-
-		echo "Found pyproject.toml. Installing with uv."
-		if [[ -f "uv.lock" ]]; then
-			if uv sync --active --locked 2>/dev/null; then
-				dependency_installed=true
-			fi
-		elif uv sync --active 2>/dev/null; then
-			dependency_installed=true
-		fi
-
-	fi
-
-	if [[ "${dependency_installed}" != true && -f "pyproject.toml" ]]; then
-		install_failed=true
-		echo "_penv_install_dependencies:: Dependency installation failed" >&2
-	elif [[ "${dependency_installed}" != true ]]; then
+	if [[ ! -f "pyproject.toml" ]]; then
 		echo "_penv_install_dependencies:: No pyproject.toml found"
+		return 0
 	fi
 
-	[[ "${install_failed}" == true ]] && return 1
+	if ! command -v uv >/dev/null 2>&1; then
+		echo "_penv_install_dependencies:: uv is required for pyproject.toml" >&2
+		return 1
+	fi
 
-	return 0
+	echo "Found pyproject.toml. Installing with uv."
+	if [[ -f "uv.lock" ]]; then
+		if uv sync --active --locked; then
+			return 0
+		fi
+	elif uv sync --active; then
+		return 0
+	fi
+
+	echo "_penv_install_dependencies:: Dependency installation failed" >&2
+
+	return 1
 }
 
 # Remove Python cache directories and compiled files under the current directory
@@ -114,6 +107,27 @@ _penv_clean_caches() {
 	return 0
 }
 
+# Refuse to source a missing or symlinked activate script
+#
+# Inputs:
+# - $1 activate_path, path to the venv activate script
+# - $2 caller_name, prefix for error messages
+#
+# Returns:
+# - 0 when activate_path is a regular file
+# - 1 when the path is a symlink or not a regular file
+_penv_refuse_bad_activate() {
+	local activate_path="$1"
+	local caller_name="$2"
+
+	if [[ -L "${activate_path}" || ! -f "${activate_path}" ]]; then
+		echo "${caller_name}:: refusing to source ${activate_path}" >&2
+		return 1
+	fi
+
+	return 0
+}
+
 # Create a .venv with the requested interpreter and activate it
 #
 # Inputs:
@@ -126,27 +140,24 @@ _penv_clean_caches() {
 # Returns:
 # - 0 on success
 # - 1 when venv creation or activation fails
-_penv_create_or_activate() {
+_penv_create_and_activate() {
 	local python_version="$1"
 	local env_name="$2"
 
 	echo "Creating virtual environment with ${python_version}: ${env_name}"
 	if ! "${python_version}" -m venv "${env_name}" 2>/dev/null; then
 		cat <<EOF >&2
-_penv_create_or_activate:: Failed to create virtual environment
-_penv_create_or_activate:: Make sure ${python_version} has venv module installed
-_penv_create_or_activate:: Install Python with a working venv module, then retry
+_penv_create_and_activate:: Failed to create virtual environment
+_penv_create_and_activate:: Make sure ${python_version} has venv module installed
+_penv_create_and_activate:: Install Python with a working venv module, then retry
 EOF
 		return 1
 	fi
 
-	if [[ -L "${env_name}/bin/activate" || ! -f "${env_name}/bin/activate" ]]; then
-		echo "_penv_create_or_activate:: refusing to source ${env_name}/bin/activate" >&2
-		return 1
-	fi
+	_penv_refuse_bad_activate "${env_name}/bin/activate" "_penv_create_and_activate" || return 1
 
 	if ! source "${env_name}/bin/activate" >/dev/null 2>&1; then
-		echo "_penv_create_or_activate:: Failed to activate virtual environment" >&2
+		echo "_penv_create_and_activate:: Failed to activate virtual environment" >&2
 		return 1
 	fi
 
@@ -242,18 +253,18 @@ gw() {
 	return $?
 }
 
-# Create or activate a Python virtual environment in the current directory
+# Create a Python virtual environment in the current directory
 #
 # Inputs:
 # - [-d|--delete]: force recreate the environment
 # - [python_version]: Python interpreter to use (default: python3)
 #
 # Side Effects:
-# - Creates/activates .venv in the current directory
-# - Removes existing .venv when -d is passed or activate is missing or unusable
+# - Creates and activates .venv when creating or recreating
+# - Removes existing .venv when -d is passed or .venv/bin/python is missing
 # - Cleans __pycache__, .mypy_cache, .pytest_cache, and .pyc files
 # - Installs dependencies from pyproject.toml with uv when creating or recreating .venv
-# - Activates an existing .venv without installing when -d is absent
+# - Leaves an existing usable .venv alone when -d is absent; does not source activate
 #
 # Returns:
 # - 0 on success
@@ -274,7 +285,7 @@ Options:
 	-d, --delete    Force recreate environment
 	-h, --help      Show this help
 Examples:
-	penv                 # Create/activate with default Python
+	penv                 # Create and activate .venv with default Python
 	penv python3.11     # Use specific Python version
 	penv -d              # Force recreate
 EOF
@@ -303,8 +314,13 @@ EOF
 		echo "penv:: Available Python versions:" >&2
 		local python_count=0
 		local python_candidate
+		# Zsh treats unmatched globs as errors; limit that to this scope.
+		if [[ -n "${ZSH_VERSION:-}" ]]; then
+			setopt local_options null_glob
+		fi
+
 		for python_candidate in /usr/bin/python* /usr/local/bin/python* /opt/homebrew/bin/python*; do
-			if [[ -x "${python_candidate}" ]]; then
+			if [[ -e "${python_candidate}" && -x "${python_candidate}" ]]; then
 				echo "${python_candidate}" >&2
 				python_count=$((python_count + 1))
 				((python_count >= 5)) && break
@@ -320,23 +336,9 @@ EOF
 	echo "Version: $("${python_version}" --version 2>/dev/null || echo "Version info unavailable")"
 
 	local env_name=".venv"
-	local activate_path="${env_name}/bin/activate"
-	if [[ -d "${env_name}" && "${force_recreate}" != true ]]; then
-		if [[ -e "${activate_path}" || -L "${activate_path}" ]]; then
-			if [[ -L "${activate_path}" || ! -f "${activate_path}" ]]; then
-				echo "penv:: refusing to source ${activate_path}" >&2
-				return 1
-			fi
-
-			echo "Virtual environment exists, activating: ${env_name}"
-			if source "${activate_path}" >/dev/null 2>&1; then
-				echo "Activated existing environment: ${env_name}"
-				return 0
-			fi
-
-			echo "penv:: Failed to activate ${env_name}" >&2
-			return 1
-		fi
+	if [[ -d "${env_name}" && "${force_recreate}" != true && -x "${env_name}/bin/python" ]]; then
+		echo "Virtual environment already exists: ${env_name}"
+		return 0
 	fi
 
 	if [[ -d "${env_name}" ]]; then
@@ -350,7 +352,7 @@ EOF
 	echo "Cleaning up cache files."
 	_penv_clean_caches || return 1
 
-	_penv_create_or_activate "${python_version}" "${env_name}" || return 1
+	_penv_create_and_activate "${python_version}" "${env_name}" || return 1
 
 	_penv_install_dependencies || return 1
 
@@ -363,10 +365,110 @@ Environment: ${PWD}/${env_name}
 ========================================
 
 EOF
+
+	return 0
+}
+
+# Run an interactive Docker container with bash as the entry command
+#
+# Inputs:
+# - $1 image, Docker image name
+# - $@ remaining args forwarded to docker run after the image
+#
+# Side Effects:
+# - Invokes docker run when docker is available
+#
+# Returns:
+# - Docker exit status
+# - 1 when the image argument is missing or docker is unavailable
+drun() {
+	local image="${1:-}"
+
+	if [[ -z "${image}" ]]; then
+		echo "drun:: image is required" >&2
+		echo "drun:: usage: drun IMAGE [docker run args...]" >&2
+		return 1
+	fi
+
+	if ! command -v docker >/dev/null 2>&1; then
+		echo "drun:: docker is not installed" >&2
+		return 1
+	fi
+
+	shift
+	docker run -it --rm --entrypoint /usr/bin/env "${image}" bash "$@"
+
+	return $?
+}
+
+# Run terraform plan and write .terraform/zangarmarsh.tfplan
+#
+# Inputs:
+# - $@ forwarded to terraform plan
+#
+# Side Effects:
+# - Writes .terraform/zangarmarsh.tfplan when terraform plan succeeds
+#
+# Returns:
+# - Terraform exit status
+# - 1 when terraform is missing or .terraform is not present
+tfp() {
+	local plan_path=".terraform/zangarmarsh.tfplan"
+
+	if ! command -v terraform >/dev/null 2>&1; then
+		echo "tfp:: terraform is not installed" >&2
+		return 1
+	fi
+
+	if [[ ! -d ".terraform" ]]; then
+		echo "tfp:: .terraform not found, run tfi first" >&2
+		return 1
+	fi
+
+	terraform plan -out "${plan_path}" "$@"
+
+	return $?
+}
+
+# Apply .terraform/zangarmarsh.tfplan from tfp
+#
+# Inputs:
+# - $@ forwarded to terraform apply
+#
+# Returns:
+# - Terraform exit status
+# - 1 when terraform is missing or the plan file is absent
+tfa() {
+	local plan_path=".terraform/zangarmarsh.tfplan"
+
+	if ! command -v terraform >/dev/null 2>&1; then
+		echo "tfa:: terraform is not installed" >&2
+		return 1
+	fi
+
+	if [[ ! -f "${plan_path}" ]]; then
+		echo "tfa:: plan not found: ${plan_path}, run tfp first" >&2
+		return 1
+	fi
+
+	terraform apply "${plan_path}" "$@"
+
+	return $?
 }
 
 # Register NVM when enabled
 if [[ "${ZANGARMARSH_LAZY_LOADING:-true}" == "true" ]] && [[ "${ZANGARMARSH_ENABLE_NVM:-true}" == "true" ]]; then
+	# Lazy NVM shim that loads the real nvm on first call
+	#
+	# Inputs:
+	# - $@ forwarded to the real nvm after load
+	#
+	# Side Effects:
+	# - Unsets this shim and sources NVM via _nvm_load
+	#
+	# Returns:
+	# - nvm exit status after load
+	# - 1 when nvm is unavailable after load
 	nvm() {
 		unset -f nvm
 		_nvm_load
