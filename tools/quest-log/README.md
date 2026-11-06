@@ -103,6 +103,7 @@ The plugin follows this repository's GPL-3.0-only license.
 | `blue-review`            | Strict maintainability and ambition review  |
 | `blue-review-bash`       | Bash repository review checklist            |
 | `blue-review-lua`        | Lua review checklist                        |
+| `blue-review-python`     | Python repository review checklist          |
 | `blue-python-setup`      | Python project setup notes for the user     |
 | `blue-review-typescript` | TypeScript review checklist                 |
 | `blueberry`              | Master pass over blue-review and penmanship |

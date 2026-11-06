@@ -15,9 +15,10 @@ Read all of these before reviewing or editing:
 1. [blue-review](../blue-review/SKILL.md)
 2. [blue-review-bash](../blue-review-bash/SKILL.md)
 3. [blue-review-lua](../blue-review-lua/SKILL.md)
-4. [blue-review-typescript](../blue-review-typescript/SKILL.md)
-5. [blue-review-comments](../blue-review-comments/SKILL.md)
-6. [blue-penmanship](../blue-penmanship/SKILL.md)
+4. [blue-review-python](../blue-review-python/SKILL.md)
+5. [blue-review-typescript](../blue-review-typescript/SKILL.md)
+6. [blue-review-comments](../blue-review-comments/SKILL.md)
+7. [blue-penmanship](../blue-penmanship/SKILL.md)
 
 ## Workflow
 
@@ -37,6 +38,7 @@ If the user names another base, use that. If `origin/main` is missing, use `main
 4. Apply language checklists only for languages present in the diff:
    - bash or shell -> blue-review-bash
    - Lua -> blue-review-lua
+   - Python -> blue-review-python
    - JavaScript or TypeScript -> blue-review-typescript
 5. Apply blue-penmanship. Output the drift plan. Stop. Wait for approval before any doc or comment edits.
 6. Phrase maintainability findings with blue-review-comments voice. Leave comments in the reply. Post to the pull request only when the user asks.
