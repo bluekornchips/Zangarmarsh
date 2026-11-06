@@ -4,6 +4,7 @@
 #
 
 source "${ZANGARMARSH_ROOT}/tools/quest-log/lib/plugin.sh"
+source "${ZANGARMARSH_ROOT}/tools/quest-log/lib/rules.sh"
 source "${ZANGARMARSH_ROOT}/tools/quest-log/lib/cursor-settings.sh"
 
 # Restore settings from an apply-time backup when settings sync fails
@@ -69,19 +70,51 @@ _quest_log_backup_settings() {
 	return 0
 }
 
-# Apply plugin install and/or Cursor settings overwrite
+# Install the local plugin tree and sync user rules from its rules/ directory
+#
+# Inputs:
+# - $1, plugin_source_dir, tracked plugin tree under tools/quest-log/plugin
+#
+# Side Effects:
+# - Syncs *.mdc rules into ~/.cursor/rules, then installs the plugin
+# - Sets PLUGIN_ACTION to install or dry-run, RULES_ACTION to sync or dry-run
+#
+# Returns:
+# - 0 on success
+# - 1 when rules or plugin install fails
+_apply_quest_log_plugin_and_rules() {
+	local plugin_source_dir="$1"
+	local rules_source_dir="${plugin_source_dir}/rules"
+
+	# Rules first so a plugin failure still leaves the no-reload user-rules path.
+	install_quest_rules "${rules_source_dir}" || return 1
+	install_quest_plugin "${plugin_source_dir}" || return 1
+
+	if [[ "${DRY_RUN:-}" == "true" ]]; then
+		PLUGIN_ACTION="dry-run"
+		RULES_ACTION="dry-run"
+	else
+		PLUGIN_ACTION="install"
+		RULES_ACTION="sync"
+	fi
+
+	return 0
+}
+
+# Apply plugin install, user-rules sync, and/or Cursor settings overwrite
 #
 # Inputs:
 # - --plugin-only, skip settings sync
-# - --settings-only, skip plugin install
+# - --settings-only, skip plugin and rules install
 #
 # Reads environment:
 # - ZANGARMARSH_ROOT, HOME, DRY_RUN, PLUGIN_SOURCE_DIR
 #
 # Side Effects:
-# - Overwrites Cursor user settings and/or installs the plugin
+# - Overwrites Cursor user settings and/or installs the plugin and user rules
 # - On settings failure, restores previous settings when a backup exists
-# - Sets PLUGIN_ACTION to installed, dry-run, or skipped
+# - Sets PLUGIN_ACTION to install, dry-run, or skipped
+# - Sets RULES_ACTION to sync, dry-run, or skipped
 #
 # Returns:
 # - 0 on success
@@ -118,7 +151,10 @@ apply_quest_log() {
 	fi
 
 	PLUGIN_SOURCE_DIR="${PLUGIN_SOURCE_DIR:-${ZANGARMARSH_ROOT}/tools/quest-log/plugin}"
-	export PLUGIN_ACTION="skipped"
+	PLUGIN_ACTION="skipped"
+	RULES_ACTION="skipped"
+	export PLUGIN_ACTION
+	export RULES_ACTION
 
 	if [[ "${do_plugin}" == true && ! -d "${PLUGIN_SOURCE_DIR}" ]]; then
 		echo "apply_quest_log:: plugin source not found: ${PLUGIN_SOURCE_DIR}" >&2
@@ -132,11 +168,14 @@ apply_quest_log() {
 
 	local plugin_dir
 	plugin_dir="$(quest_log_plugin_dir)" || return 1
+	local rules_dir
+	rules_dir="$(quest_log_rules_dir)" || return 1
 	local settings_file
 	settings_file="$(cursor_user_settings_path)" || return 1
 
 	if [[ "${do_plugin}" == true ]]; then
 		echo "apply_quest_log:: plugin destination: ${plugin_dir}"
+		echo "apply_quest_log:: rules destination: ${rules_dir}"
 	fi
 
 	if [[ "${do_settings}" == true ]]; then
@@ -149,16 +188,14 @@ apply_quest_log() {
 		fi
 
 		if [[ "${do_plugin}" == true ]]; then
-			install_quest_plugin "${PLUGIN_SOURCE_DIR}" || return 1
-			PLUGIN_ACTION="dry-run"
+			_apply_quest_log_plugin_and_rules "${PLUGIN_SOURCE_DIR}" || return 1
 		fi
 
 		return 0
 	fi
 
 	if [[ "${do_plugin}" == true && "${do_settings}" == false ]]; then
-		install_quest_plugin "${PLUGIN_SOURCE_DIR}" || return 1
-		PLUGIN_ACTION="installed"
+		_apply_quest_log_plugin_and_rules "${PLUGIN_SOURCE_DIR}" || return 1
 
 		return 0
 	fi
@@ -183,8 +220,7 @@ apply_quest_log() {
 	fi
 
 	if [[ "${do_plugin}" == true ]]; then
-		install_quest_plugin "${PLUGIN_SOURCE_DIR}" || return 1
-		PLUGIN_ACTION="installed"
+		_apply_quest_log_plugin_and_rules "${PLUGIN_SOURCE_DIR}" || return 1
 	fi
 
 	return 0

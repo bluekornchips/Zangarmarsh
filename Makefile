@@ -25,14 +25,14 @@ help:
 		'  ci           syntax, lint, then test' \
 		'  format       Rewrite shell scripts with shfmt defaults' \
 		'  help         Show this help' \
-		'  install      Install profile hooks and local Cursor plugin via profile/install.sh' \
+		'  install      Install profile hooks, Cursor plugin, and user rules via profile/install.sh' \
 		'  lint         Check shfmt diff and shellcheck on *.sh including bats' \
 		'  shellcheck   shellcheck -x on *.sh; bats files use -s bash' \
 		'  syntax       bash -n on *.sh and zsh -n on profile/zsh/*.zsh' \
 		'  test         Run all bats tests in parallel' \
 		'  test-serial  Run all bats tests serially' \
 		'  test-smoke   Run profile/tests/smoke-tests.sh' \
-		'  uninstall    Remove profile hooks and local Cursor plugin via profile/install.sh --uninstall'
+		'  uninstall    Remove profile hooks, Cursor plugin, and managed rules via profile/install.sh --uninstall'
 
 #################################################
 # Lint & Format

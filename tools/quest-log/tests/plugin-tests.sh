@@ -38,6 +38,7 @@ plugin_lib_test_setup() {
 
 	cd "${ZANGARMARSH_ROOT}" || return 1
 	source_for_test "${QUEST_LOG_ROOT}/lib/plugin.sh" || return 1
+	source_for_test "${QUEST_LOG_ROOT}/lib/rules.sh" || return 1
 
 	cd "${TEST_TEMP_DIR}" || {
 		cd "${return_dir}" || true
@@ -273,4 +274,163 @@ plugin_lib_test_setup() {
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "failed to remove"
 	[[ -d "${QUEST_LOG_PLUGIN_DIR}" ]]
+}
+
+########################################################
+# quest_log_rules_dir / validate_rules_install_dir
+########################################################
+
+@test 'quest_log_rules_dir:: uses QUEST_LOG_RULES_DIR when set' {
+	run quest_log_rules_dir
+	[[ "$status" -eq 0 ]]
+	[[ "$output" == "${QUEST_LOG_RULES_DIR}" ]]
+}
+
+@test 'quest_log_rules_dir:: defaults under HOME when override is unset' {
+	unset QUEST_LOG_RULES_DIR
+
+	run quest_log_rules_dir
+	[[ "$status" -eq 0 ]]
+	[[ "$output" == "${HOME}/.cursor/rules" ]]
+}
+
+@test 'quest_log_rules_dir:: fails when HOME is empty and no override is set' {
+	unset QUEST_LOG_RULES_DIR
+
+	HOME="" run quest_log_rules_dir
+	[[ "$status" -eq 1 ]]
+	echo "$output" | grep -q "HOME is required"
+}
+
+@test 'validate_rules_install_dir:: accepts ~/.cursor/rules' {
+	run validate_rules_install_dir "${HOME}/.cursor/rules"
+	[[ "$status" -eq 0 ]]
+}
+
+@test 'validate_rules_install_dir:: rejects a path other than ~/.cursor/rules' {
+	run validate_rules_install_dir "${HOME}/.cursor/plugins/local/quest-log"
+	[[ "$status" -eq 1 ]]
+	echo "$output" | grep -q "install path must be"
+}
+
+@test 'validate_rules_install_dir:: rejects path traversal' {
+	run validate_rules_install_dir "${HOME}/.cursor/rules/../escape"
+	[[ "$status" -eq 1 ]]
+	echo "$output" | grep -q "path traversal is not allowed"
+}
+
+@test 'validate_rules_install_dir:: rejects a trailing slash' {
+	run validate_rules_install_dir "${HOME}/.cursor/rules/"
+	[[ "$status" -eq 1 ]]
+	echo "$output" | grep -q "trailing slash is not allowed"
+}
+
+@test 'validate_rules_install_dir:: rejects a symlinked rules directory' {
+	mkdir -p "${HOME}/.cursor" "${TEST_TEMP_DIR}/outside"
+	ln -s "${TEST_TEMP_DIR}/outside" "${HOME}/.cursor/rules"
+
+	run validate_rules_install_dir "${HOME}/.cursor/rules"
+	[[ "$status" -eq 1 ]]
+	echo "$output" | grep -q "refusing symlink"
+}
+
+########################################################
+# install_quest_rules / uninstall_quest_rules
+########################################################
+
+@test 'install_quest_rules:: dry-run reports without writing' {
+	DRY_RUN=true
+
+	run install_quest_rules "${PLUGIN_SOURCE_DIR}/rules"
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "would sync"
+	[[ ! -e "${QUEST_LOG_RULES_DIR}" ]]
+}
+
+@test 'install_quest_rules:: installs rules and writes a manifest' {
+	run install_quest_rules "${PLUGIN_SOURCE_DIR}/rules"
+	[[ "$status" -eq 0 ]]
+	[[ -f "${QUEST_LOG_RULES_DIR}/always.mdc" ]]
+	[[ -f "${QUEST_LOG_RULES_DIR}/.quest-log.manifest" ]]
+	grep -Fxq "always.mdc" "${QUEST_LOG_RULES_DIR}/.quest-log.manifest"
+	cmp -s "${PLUGIN_SOURCE_DIR}/rules/always.mdc" "${QUEST_LOG_RULES_DIR}/always.mdc"
+}
+
+@test 'install_quest_rules:: leaves non-managed files in place' {
+	mkdir -p "${QUEST_LOG_RULES_DIR}"
+	echo "mine" >"${QUEST_LOG_RULES_DIR}/user-owned.mdc"
+
+	run install_quest_rules "${PLUGIN_SOURCE_DIR}/rules"
+	[[ "$status" -eq 0 ]]
+	[[ -f "${QUEST_LOG_RULES_DIR}/always.mdc" ]]
+	grep -q "mine" "${QUEST_LOG_RULES_DIR}/user-owned.mdc"
+}
+
+@test 'install_quest_rules:: prunes removed managed rules' {
+	echo "drop-me" >"${PLUGIN_SOURCE_DIR}/rules/stale.mdc"
+
+	run install_quest_rules "${PLUGIN_SOURCE_DIR}/rules"
+	[[ "$status" -eq 0 ]]
+	[[ -f "${QUEST_LOG_RULES_DIR}/stale.mdc" ]]
+
+	command rm -f "${PLUGIN_SOURCE_DIR}/rules/stale.mdc"
+	run install_quest_rules "${PLUGIN_SOURCE_DIR}/rules"
+	[[ "$status" -eq 0 ]]
+	[[ ! -f "${QUEST_LOG_RULES_DIR}/stale.mdc" ]]
+	[[ -f "${QUEST_LOG_RULES_DIR}/always.mdc" ]]
+}
+
+@test 'install_quest_rules:: updates changed rule content' {
+	run install_quest_rules "${PLUGIN_SOURCE_DIR}/rules"
+	[[ "$status" -eq 0 ]]
+
+	echo "new rule" >"${PLUGIN_SOURCE_DIR}/rules/always.mdc"
+	run install_quest_rules "${PLUGIN_SOURCE_DIR}/rules"
+	[[ "$status" -eq 0 ]]
+	grep -q "new rule" "${QUEST_LOG_RULES_DIR}/always.mdc"
+}
+
+@test 'uninstall_quest_rules:: reports not installed when manifest is absent' {
+	run uninstall_quest_rules
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "not installed"
+}
+
+@test 'uninstall_quest_rules:: removes managed rules and keeps user files' {
+	mkdir -p "${QUEST_LOG_RULES_DIR}"
+	echo "mine" >"${QUEST_LOG_RULES_DIR}/user-owned.mdc"
+
+	if ! install_quest_rules "${PLUGIN_SOURCE_DIR}/rules" >/dev/null; then
+		return 1
+	fi
+
+	run uninstall_quest_rules
+	[[ "$status" -eq 0 ]]
+	[[ ! -f "${QUEST_LOG_RULES_DIR}/always.mdc" ]]
+	[[ ! -f "${QUEST_LOG_RULES_DIR}/.quest-log.manifest" ]]
+	grep -q "mine" "${QUEST_LOG_RULES_DIR}/user-owned.mdc"
+	echo "$output" | grep -q "removed managed rules"
+}
+
+@test 'uninstall_quest_rules:: dry-run leaves managed rules in place' {
+	if ! install_quest_rules "${PLUGIN_SOURCE_DIR}/rules" >/dev/null; then
+		return 1
+	fi
+	DRY_RUN=true
+
+	run uninstall_quest_rules
+	[[ "$status" -eq 0 ]]
+	echo "$output" | grep -q "would remove"
+	[[ -f "${QUEST_LOG_RULES_DIR}/always.mdc" ]]
+	[[ -f "${QUEST_LOG_RULES_DIR}/.quest-log.manifest" ]]
+}
+
+@test 'uninstall_quest_rules:: rejects an install path outside ~/.cursor/rules' {
+	local unsafe="${TEST_TEMP_DIR}/unsafe-rules"
+	mkdir -p "${unsafe}"
+
+	QUEST_LOG_RULES_DIR="${unsafe}" run uninstall_quest_rules
+	[[ "$status" -eq 1 ]]
+	echo "$output" | grep -q "install path must be"
+	[[ -d "${unsafe}" ]]
 }

@@ -336,13 +336,17 @@ EOF
 	run install_cursor_plugin
 	[[ "${status}" -eq 0 ]]
 	grep -q "would replace" <<<"${output}"
+	grep -q "would sync" <<<"${output}"
 	[[ ! -e "$(quest_log_plugin_dir)" ]]
+	[[ ! -e "$(quest_log_rules_dir)" ]]
 }
 
-@test "install_cursor_plugin:: installs the plugin manifest under HOME" {
+@test "install_cursor_plugin:: installs the plugin manifest and user rules under HOME" {
 	run install_cursor_plugin
 	[[ "${status}" -eq 0 ]]
 	[[ -f "$(quest_log_plugin_dir)/.cursor-plugin/plugin.json" ]]
+	[[ -f "$(quest_log_rules_dir)/always.mdc" ]]
+	[[ -f "$(quest_log_rules_dir)/.quest-log.manifest" ]]
 }
 
 @test "uninstall_quest_plugin:: reports not installed when the directory is absent" {
@@ -373,6 +377,17 @@ EOF
 	[[ -e "$(quest_log_plugin_dir)" ]]
 }
 
+@test "uninstall_quest_rules:: removes managed rules installed by install_cursor_plugin" {
+	if ! install_cursor_plugin >/dev/null; then
+		return 1
+	fi
+
+	run uninstall_quest_rules
+	[[ "${status}" -eq 0 ]]
+	[[ ! -f "$(quest_log_rules_dir)/always.mdc" ]]
+	[[ ! -f "$(quest_log_rules_dir)/.quest-log.manifest" ]]
+}
+
 ########################################################
 # main, end to end via the CLI
 ########################################################
@@ -382,6 +397,8 @@ EOF
 	[[ -f "${TEST_HOME}/.zshrc" ]]
 	[[ -f "${TEST_HOME}/.bashrc" ]]
 	[[ -f "${TEST_HOME}/.cursor/plugins/local/quest-log/.cursor-plugin/plugin.json" ]]
+	[[ -f "${TEST_HOME}/.cursor/rules/always.mdc" ]]
+	[[ -f "${TEST_HOME}/.cursor/rules/.quest-log.manifest" ]]
 	local expected
 	expected="$(printf 'source %q' "${ZANGARMARSH_ROOT}/zangarmarsh.sh")"
 	grep -Fqx "${expected}" "${TEST_HOME}/.zshrc"
@@ -397,6 +414,8 @@ EOF
 	grep -Fq "zangarmarsh.sh" "${TEST_HOME}/.bashrc" && matched=1
 	[[ "${matched}" -eq 0 ]]
 	[[ ! -e "${TEST_HOME}/.cursor/plugins/local/quest-log" ]]
+	[[ ! -f "${TEST_HOME}/.cursor/rules/always.mdc" ]]
+	[[ ! -f "${TEST_HOME}/.cursor/rules/.quest-log.manifest" ]]
 }
 
 @test "integration:: --zsh installs only into ~/.zshrc" {
@@ -423,6 +442,7 @@ EOF
 	[[ ! -e "${TEST_HOME}/.zshrc" ]]
 	[[ ! -e "${TEST_HOME}/.bashrc" ]]
 	[[ ! -e "${TEST_HOME}/.cursor/plugins/local/quest-log" ]]
+	[[ ! -e "${TEST_HOME}/.cursor/rules" ]]
 }
 
 @test "integration:: --dry-run --uninstall makes no changes" {
@@ -435,14 +455,16 @@ EOF
 	grep -Fq "zangarmarsh.sh" "${TEST_HOME}/.zshrc"
 	grep -Fq "zangarmarsh.sh" "${TEST_HOME}/.bashrc"
 	[[ -e "${TEST_HOME}/.cursor/plugins/local/quest-log" ]]
+	[[ -f "${TEST_HOME}/.cursor/rules/always.mdc" ]]
 }
 
-@test "integration:: rolls back the plugin when rc install fails" {
+@test "integration:: rolls back the plugin and rules when rc install fails" {
 	mkdir -p "${HOME}/.zshrc"
 
 	run main --zsh
 	[[ "${status}" -eq 1 ]]
 	[[ ! -e "$(quest_log_plugin_dir)" ]]
+	[[ ! -e "$(quest_log_rules_dir)/always.mdc" ]]
 }
 
 @test "main:: returns nonzero when plugin install fails" {

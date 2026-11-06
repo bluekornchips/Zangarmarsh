@@ -50,7 +50,8 @@ quest_log_test_setup() {
 	STATS_UNCHANGED=0
 	STATS_ERRORS=0
 	PLUGIN_ACTION=""
-	export STATS_CREATED STATS_UPDATED STATS_UNCHANGED STATS_ERRORS PLUGIN_ACTION
+	RULES_ACTION=""
+	export STATS_CREATED STATS_UPDATED STATS_UNCHANGED STATS_ERRORS PLUGIN_ACTION RULES_ACTION
 
 	return 0
 }
@@ -64,12 +65,14 @@ quest_log_test_setup() {
 	STATS_UPDATED=3
 	STATS_UNCHANGED=1
 	STATS_ERRORS=0
-	PLUGIN_ACTION="installed"
+	PLUGIN_ACTION="install"
+	RULES_ACTION="sync"
 
 	run print_summary
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "quest-log summary"
-	echo "$output" | grep -q "plugin: installed"
+	echo "$output" | grep -q "plugin: install"
+	echo "$output" | grep -q "rules: sync"
 	echo "$output" | grep -q "cursor created: 2"
 	echo "$output" | grep -q "cursor updated: 3"
 	echo "$output" | grep -q "cursor unchanged: 1"
@@ -142,11 +145,8 @@ EOF
 }
 
 @test 'run_quest_log:: fails when plugin source is missing' {
-	# Already exported by quest_log_test_home; apply_quest_log reads the new value.
-	# shellcheck disable=SC2034
-	PLUGIN_SOURCE_DIR="/tmp/does-not-exist-plugin"
-
-	run run_quest_log
+	# Prefix keeps the fixture PLUGIN_SOURCE_DIR intact for later tests.
+	PLUGIN_SOURCE_DIR="/tmp/does-not-exist-plugin" run run_quest_log
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "plugin source not found"
 }
@@ -170,12 +170,14 @@ EOF
 	echo "$output" | grep -q "run_quest_log:: Unexpected argument"
 }
 
-@test 'run_quest_log:: dry-run does not write plugin or Cursor settings' {
+@test 'run_quest_log:: dry-run does not write plugin, rules, or Cursor settings' {
 	run run_quest_log --dry-run
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "would replace"
+	echo "$output" | grep -q "would sync"
 	echo "$output" | grep -q "would overwrite"
 	[[ ! -e "${QUEST_LOG_PLUGIN_DIR}" ]]
+	[[ ! -e "${QUEST_LOG_RULES_DIR}" ]]
 	[[ ! -e "$(cursor_user_settings_path)" ]]
 }
 
@@ -184,14 +186,18 @@ EOF
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "would replace"
 	[[ ! -e "${QUEST_LOG_PLUGIN_DIR}" ]]
+	[[ ! -e "${QUEST_LOG_RULES_DIR}" ]]
 }
 
-@test 'integration:: run_quest_log installs plugin and overwrites host Cursor settings' {
+@test 'integration:: run_quest_log installs plugin, rules, and overwrites host Cursor settings' {
 	run run_quest_log
 	[[ "$status" -eq 0 ]]
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc" ]]
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/skills/blue-review/SKILL.md" ]]
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/.cursor-plugin/plugin.json" ]]
+	[[ -f "${QUEST_LOG_RULES_DIR}/always.mdc" ]]
+	[[ -f "${QUEST_LOG_RULES_DIR}/.quest-log.manifest" ]]
+	cmp -s "${PLUGIN_SOURCE_DIR}/rules/always.mdc" "${QUEST_LOG_RULES_DIR}/always.mdc"
 	local settings_file
 	settings_file="$(cursor_user_settings_path)"
 	[[ -f "${settings_file}" ]]
@@ -203,7 +209,8 @@ EOF
 	run run_quest_log
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "quest-log summary"
-	echo "$output" | grep -q "plugin: installed"
+	echo "$output" | grep -q "plugin: install"
+	echo "$output" | grep -q "rules: sync"
 	echo "$output" | grep -Eq 'cursor: no files synced|cursor total:'
 }
 
@@ -249,11 +256,20 @@ EOF
 	[[ ! -e "${marker}" ]]
 }
 
-@test 'apply_quest_log:: plugin-only skips Cursor settings' {
+@test 'apply_quest_log:: plugin-only skips Cursor settings and syncs rules' {
 	run apply_quest_log --plugin-only
 	[[ "$status" -eq 0 ]]
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/.cursor-plugin/plugin.json" ]]
+	[[ -f "${QUEST_LOG_RULES_DIR}/always.mdc" ]]
 	[[ ! -e "$(cursor_user_settings_path)" ]]
+}
+
+@test 'apply_quest_log:: settings-only skips plugin and rules' {
+	run apply_quest_log --settings-only
+	[[ "$status" -eq 0 ]]
+	[[ ! -e "${QUEST_LOG_PLUGIN_DIR}" ]]
+	[[ ! -e "${QUEST_LOG_RULES_DIR}" ]]
+	[[ -f "$(cursor_user_settings_path)" ]]
 }
 
 @test 'integration:: apply_quest_log leaves an existing plugin untouched when settings sync fails' {
@@ -270,6 +286,7 @@ EOF
 	[[ "$status" -eq 1 ]]
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc" ]]
 	grep -q "previous-plugin" "${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc"
+	[[ ! -e "${QUEST_LOG_RULES_DIR}" ]]
 	[[ ! -e "$(cursor_user_settings_path)" ]]
 }
 
@@ -291,7 +308,7 @@ EOF
 	grep -q '"previous":true' "${settings_file}"
 }
 
-@test 'integration:: apply_quest_log skips plugin install and clears partial settings when sync fails' {
+@test 'integration:: apply_quest_log skips plugin and rules install and clears partial settings when sync fails' {
 	sync_cursor_user_settings() {
 		echo '{"partial":true}' >"$(cursor_user_settings_path)"
 		echo "sync_cursor_user_settings:: forced failure" >&2
@@ -302,6 +319,7 @@ EOF
 	run apply_quest_log
 	[[ "$status" -eq 1 ]]
 	[[ ! -e "${QUEST_LOG_PLUGIN_DIR}" ]]
+	[[ ! -e "${QUEST_LOG_RULES_DIR}" ]]
 	[[ ! -e "$(cursor_user_settings_path)" ]]
 }
 

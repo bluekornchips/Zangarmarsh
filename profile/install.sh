@@ -15,12 +15,12 @@ usage() {
 Usage: $(basename "$0") [OPTIONS]
 
 Add or remove Zangarmarsh from ~/.zshrc and/or ~/.bashrc and install its
-local Cursor plugin.
+local Cursor plugin and user rules.
 
 Options:
   -h, --help       Show this help
   -r, --dry-run    Show changes without modifying user files
-  -u, --uninstall  Remove Zangarmarsh and its local Cursor plugin
+  -u, --uninstall  Remove Zangarmarsh, its local Cursor plugin, and managed rules
       --zsh        Target ~/.zshrc only, or with --bash both files
       --bash       Target ~/.bashrc only, or with --zsh both files
 
@@ -486,7 +486,7 @@ uninstall_zangarmarsh() {
 	return 0
 }
 
-# Install the local Cursor quest-log plugin only
+# Install the local Cursor quest-log plugin and user rules
 #
 # Returns:
 # - apply_quest_log exit status
@@ -551,6 +551,7 @@ main() {
 		done
 
 		uninstall_quest_plugin || errors=$((errors + 1))
+		uninstall_quest_rules || errors=$((errors + 1))
 		if ((errors == 0)); then
 			return 0
 		fi
@@ -558,11 +559,12 @@ main() {
 		return 1
 	fi
 
-	# Plugin first; roll it back if an rc update fails.
+	# Plugin and rules first; roll them back if an rc update fails.
 	install_cursor_plugin || return 1
 	for rc_file in "${rc_files[@]}"; do
 		if ! install_zangarmarsh "${rc_file}"; then
 			uninstall_quest_plugin || true
+			uninstall_quest_rules || true
 			return 1
 		fi
 	done

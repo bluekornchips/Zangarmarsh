@@ -18,16 +18,16 @@ usage() {
 Usage: $0 [OPTIONS]
 
 Install the quest-log Cursor plugin from tools/quest-log/plugin under
-~/.cursor/plugins/local/quest-log and overwrite host Cursor user settings
-from tools/vscode/settings.json.
+~/.cursor/plugins/local/quest-log, sync rules into ~/.cursor/rules, and
+overwrite host Cursor user settings from tools/vscode/settings.json.
 
 OPTIONS:
     -h, --help          Show this help message
     -r, --dry-run       Show planned changes without writing files
 
 EXAMPLES:
-    $0                  # Install plugin and overwrite Cursor user settings
-    $0 --dry-run        # Show planned plugin and settings writes
+    $0                  # Install plugin, rules, and overwrite Cursor settings
+    $0 --dry-run        # Show planned plugin, rules, and settings writes
 EOF
 
 	return 0
@@ -39,6 +39,7 @@ STATS_UPDATED=0
 STATS_UNCHANGED=0
 STATS_ERRORS=0
 PLUGIN_ACTION=""
+RULES_ACTION=""
 
 # Load quest-log libraries after ZANGARMARSH_ROOT is known
 #
@@ -76,14 +77,26 @@ print_summary() {
 	printf '\nquest-log summary\n'
 
 	case "${PLUGIN_ACTION:-}" in
-	installed)
-		printf '  plugin: installed\n'
+	install)
+		printf '  plugin: install\n'
 		;;
 	dry-run)
 		printf '  plugin: dry-run\n'
 		;;
 	skipped)
 		printf '  plugin: skipped\n'
+		;;
+	esac
+
+	case "${RULES_ACTION:-}" in
+	sync)
+		printf '  rules: sync\n'
+		;;
+	dry-run)
+		printf '  rules: dry-run\n'
+		;;
+	skipped)
+		printf '  rules: skipped\n'
 		;;
 	esac
 
@@ -113,7 +126,7 @@ print_summary() {
 # - All command line arguments
 #
 # Side Effects:
-# - Installs the plugin, overwrites host Cursor user settings, prints summary
+# - Installs the plugin and user rules, overwrites host Cursor settings, prints summary
 #
 # Returns:
 # - 0 on success
@@ -136,6 +149,7 @@ run_quest_log() {
 
 	DRY_RUN="${DRY_RUN:-false}"
 	PLUGIN_ACTION=""
+	RULES_ACTION=""
 
 	while (($# > 0)); do
 		case "$1" in

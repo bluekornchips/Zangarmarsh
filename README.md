@@ -39,7 +39,8 @@ make install
 `make install` writes one canonical source line into `~/.zshrc` and `~/.bashrc`,
 collapses duplicate or alternate source forms for this checkout, removes the
 official eager NVM block from `~/.bashrc`, and installs the tracked quest-log
-plugin. Pass `--zsh` or `--bash` to `profile/install.sh` to target only one shell rc file.
+plugin plus user rules under `~/.cursor/rules`. Pass `--zsh` or `--bash` to
+`profile/install.sh` to target only one shell rc file.
 
 Dry-run first with:
 
@@ -55,7 +56,9 @@ source /path/to/zangarmarsh/zangarmarsh.sh
 
 ## Install the quest-log plugin
 
-`make install` installs profile hooks and the local Cursor plugin. For `questlog` usage, settings paths, and plugin layout, see [tools/quest-log/README.md](tools/quest-log/README.md).
+`make install` installs profile hooks, the local Cursor plugin, and user rules.
+For `questlog` usage, settings paths, rules sync, and plugin layout, see
+[tools/quest-log/README.md](tools/quest-log/README.md).
 
 ## Notes on destructive tools
 
