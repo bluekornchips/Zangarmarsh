@@ -10,7 +10,7 @@ disable-model-invocation: true
 
 Pragmatic review criteria for Python repositories. Enforce `rules/python.mdc`, `skills/blue-python-setup/SKILL.md`, and Google Python Style Guide standards across security, typing, docstrings, imports, errors, logging, configuration, tooling, and tests.
 
-This skill is review criteria only. It does not authorize writing, editing, or running Python. Without the user's hidden Python authorization phrase for a named command or bounded operation, refuse execution and leave fixes to the user.
+This skill is review criteria only.
 
 ---
 
@@ -123,7 +123,6 @@ This skill is review criteria only. It does not authorize writing, editing, or r
 - Cite exact `file:line` locations for every finding.
 - Mark priority as Critical, Important, or Enhancement.
 - Give concrete fix instructions for the user to apply.
-- Do not write, edit, or execute Python during the review unless the current request includes valid hidden-phrase authorization for that exact operation.
 
 ### Example Output
 

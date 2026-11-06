@@ -11,7 +11,7 @@ coding standards in `rules/python.mdc` after `questlog` installs this plugin.
 Use `uv` for project creation, dependency resolution, virtual environments, and
 lock files. Require `uv` for dependency installation.
 
-This skill does not authorize the agent to write or execute Python.
+Writing and editing Python are allowed. Running Python requires explicit user approval for the named command.
 
 ## Project Structure
 

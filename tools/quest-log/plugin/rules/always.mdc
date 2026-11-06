@@ -54,6 +54,13 @@ Comments and docs sound like a person. Inline comments stay rare. Function heade
 - Do not use stock wording such as robust, leverage, seamless, comprehensive, utilize, or "this function".
 - Other docs state the fact a reader needs.
 
+## Python
+
+- Writing, generating, and editing Python is allowed.
+- Always wait for explicit user approval before running Python, directly or indirectly.
+- Indirect execution includes shell scripts, Make targets, package scripts, hooks, and test suites that may invoke Python.
+- Approval covers only the command or bounded operation the user names in the current request. It does not carry to later requests.
+
 ## Usage
 
 ### Allowed
