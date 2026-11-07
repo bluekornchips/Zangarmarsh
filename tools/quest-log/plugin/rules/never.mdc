@@ -11,6 +11,8 @@ alwaysApply: true
 - Do not maintain legacy interfaces, paths, formats, behavior, or migration shims.
 - Do not document, plan, summarize, or keep records of prior work.
 - Do not add changelogs, migration notes, deprecation notes, historical records, or compatibility plans.
+- Do not leak conversation, prompt, or iteration history into code comments, pull request descriptions, or other maintainer-facing prose.
+- Do not write edit-diary comments that describe what just changed, for example `Used to be x; now y`.
 - Prefer the current design and remove obsolete paths instead of preserving them.
 
 ## Self reference
@@ -23,5 +25,5 @@ alwaysApply: true
 
 Each exception applies only to the named skill output and only inside the named artifact. Everything else in this file still applies.
 
-- `blue-review-comments`: pull request review comments may use "we" as the shared voice of the review team, for example "We hold the merge when ...". No other first-person pronoun is allowed in those comments.
+- `blue-review-comments`: pull request review comments may use "we" as the shared voice of the review team, for example "We hold the merge when tests fail". No other first-person pronoun is allowed in those comments.
 - `blue-author`: `pr.md` and `issue.md` are delivery documents for the current change. They may describe what the current diff changes and what the current issue will deliver. They must not record prior work, history, changelogs, migration notes, or compatibility plans.

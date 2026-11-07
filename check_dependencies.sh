@@ -3,7 +3,6 @@
 # Verify local tools required by Makefile format, lint, syntax, shellcheck, and test targets.
 #
 
-# Commands required for format, lint, syntax, shellcheck, and bats targets.
 REQUIRED_COMMANDS=(bash bats jq shellcheck shfmt zsh)
 
 # Confirm each entry in REQUIRED_COMMANDS exists on PATH

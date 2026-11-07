@@ -25,9 +25,6 @@ teardown() {
 	return 0
 }
 
-########################################################
-# applications_dir
-########################################################
 @test "applications_dir:: echoes applications path under HOME" {
 
 	run applications_dir
@@ -42,9 +39,6 @@ teardown() {
 	grep -q "applications_dir:: HOME is not set" <<<"$output"
 }
 
-########################################################
-# resolve_appimage_path
-########################################################
 @test "resolve_appimage_path:: resolves relative AppImage directory" {
 	local appdir="${AURAS_TEST_HOME}/apps"
 	if ! make_appimage "${appdir}" "demoapp.AppImage"; then
@@ -81,9 +75,6 @@ teardown() {
 	grep -q "resolve_appimage_path:: AppImage directory does not exist" <<<"$output"
 }
 
-########################################################
-# validate_appimage_path
-########################################################
 @test "validate_appimage_path:: accepts executable absolute AppImage path" {
 	local appdir="${AURAS_TEST_HOME}/apps"
 	if ! make_appimage "${appdir}" "demoapp.AppImage"; then
@@ -168,9 +159,6 @@ teardown() {
 	grep -q "validate_appimage_path:: AppImage file is not executable" <<<"$output"
 }
 
-########################################################
-# prepare_appimage_path
-########################################################
 @test "prepare_appimage_path:: resolves relative AppImage path" {
 	local appdir="${AURAS_TEST_HOME}/apps"
 	if ! make_appimage "${appdir}" "demoapp.AppImage"; then
@@ -186,9 +174,6 @@ teardown() {
 	[[ "$output" == "${expected}" ]]
 }
 
-########################################################
-# resolve_symlink_path
-########################################################
 @test "resolve_symlink_path:: resolves absolute symlink targets without GNU readlink -f" {
 	local appdir="${AURAS_TEST_HOME}/apps"
 	if ! make_appimage "${appdir}" "demoapp.AppImage"; then
@@ -218,9 +203,6 @@ teardown() {
 	[[ "$output" == "${appimage}" ]]
 }
 
-########################################################
-# desktop_entry_is_auras_managed
-########################################################
 @test "desktop_entry_is_auras_managed:: accepts current marker and version" {
 	if ! make_managed_desktop "demoapp"; then
 		return 1
@@ -254,9 +236,6 @@ teardown() {
 	[[ "$status" -eq 1 ]]
 }
 
-########################################################
-# desktop_entry_exec_path
-########################################################
 @test "desktop_entry_exec_path:: parses quoted Exec with field code" {
 	if ! make_managed_desktop "demoapp" "/tmp/demoapp.AppImage"; then
 		return 1
@@ -287,9 +266,6 @@ teardown() {
 	grep -q "desktop_entry_exec_path:: could not parse Exec=" <<<"$output"
 }
 
-########################################################
-# main
-########################################################
 @test "main:: script handles help option" {
 	run bash "$SCRIPT" --help
 	[[ "$status" -eq 0 ]]

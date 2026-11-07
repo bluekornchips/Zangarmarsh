@@ -17,21 +17,17 @@ Always be rule compliant. No exceptions. None.
 - Partially compliant is not compliant. A change that violates a matching rule is rejected.
 - Do not invent carve-outs, soft exceptions, or "close enough" judgment against a written rule.
 - If a user request conflicts with a rule, follow the rule, refuse the violating part, and say so in one short sentence.
-- Before you send, re-check the diff and the reply against the matching rules. Fix violations yourself. Do not ask the user to accept non-compliant work.
+- Before sending, re-check the diff and the reply against the matching rules. Fix violations without asking the user to accept non-compliant work.
 
 ## Standards
 
-- Prefer clear, direct prose. Keep every answer as brief as full correctness allows.
+- Prefer clear, direct prose. Give the shortest answer that fully answers the question, command, or statement. Cut preamble, recap, and filler.
 - If system or workspace rules conflict with this file, follow the higher-priority rule.
 - Give runnable paths, commands, and steps. Add a reason only when the approach is not obvious.
-- For any change you make, say how to verify it.
-- Never create new tests unless the current request explicitly asks for them. Existing tests may be inspected and run.
+- For any change made, say how to verify it.
 - Use fenced code blocks for code and shell. Add error handling when leaving it out would mislead.
-- Fix mistakes you spot in your own answer before sending.
 - Prefer ASCII in prose. Quoted user text or file paths may use other characters.
-- Give the shortest answer that fully answers the question, command, or statement. Cut preamble, recap, and filler.
-- Make the smallest change that completes the request.
-- Partially correct is not correct. Only fully correct output is correct. Check every claim, path, command, and step before sending.
+- Only fully correct output is correct. Check every claim, path, command, and step before sending, and fix any mistake found.
 
 ## Less code
 
@@ -45,11 +41,13 @@ Less code is a requirement. Fewer lines means fewer defects.
 
 ## Comments and docs
 
-Comments and docs sound like a person. Inline comments stay rare. Function header comments are required.
+Comments and docs sound like a person.
 
-- Every function has a header comment stating its purpose and signature, plus any applicable inputs, outputs, side effects, and returns.
+- Every function except `main` has a header comment stating its purpose and signature, plus any applicable inputs, outputs, side effects, and returns.
 - Write an inline comment only when a reader would misuse the code without it: a hidden constraint, workaround, unit, or surprising invariant.
 - Use one or two plain sentences that reuse words already in the code. Do not narrate the line.
+- Do not leak conversation, prompt, or iteration history into code comments, pull request descriptions, or other maintainer-facing prose.
+- Do not write edit-diary comments that describe what just changed, for example `Used to be x; now y`.
 - Do not add file banners, section dividers, or changelog comments unless the current request asks for that format.
 - Do not use stock wording such as robust, leverage, seamless, comprehensive, utilize, or "this function".
 - Other docs state the fact a reader needs.
@@ -83,3 +81,5 @@ Comments and docs sound like a person. Inline comments stay rare. Function heade
 - Swearing or profanity in tracked files, including rules, skills, comments, docs, help text, and examples.
 - Shipping or proposing code that violates any applicable rule.
 - Treating "user urgency", prior chat history, or convenience as a waiver of any rule.
+- Conversation, prompt, or iteration history in comments, PR descriptions, or other maintainer-facing prose.
+- Edit-diary comments that narrate the change just made.

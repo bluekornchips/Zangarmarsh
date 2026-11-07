@@ -6,11 +6,9 @@ disable-model-invocation: true
 
 # Blueberry
 
-Master pass over every blue-review skill and blue-penmanship. Do not invent extra criteria. Read each sibling skill and follow it.
+Master pass over every blue-review skill and blue-penmanship. Add no criteria of its own. Read each sibling skill and follow it.
 
 ## Sibling skills
-
-Read all of these before reviewing or editing:
 
 1. [blue-review](../blue-review/SKILL.md)
 2. [blue-review-bash](../blue-review-bash/SKILL.md)
@@ -36,12 +34,12 @@ If the user names another base, use that. If `origin/main` is missing, use `main
 
 3. Apply blue-review to the whole change set.
 4. Apply language checklists only for languages present in the diff:
-   - bash or shell -> blue-review-bash
-   - Lua -> blue-review-lua
-   - Python -> blue-review-python
-   - JavaScript or TypeScript -> blue-review-typescript
-5. Apply blue-penmanship. Output the drift plan. Stop. Wait for approval before any doc or comment edits.
-6. Phrase maintainability findings with blue-review-comments voice. Leave comments in the reply. Post to the pull request only when the user asks.
+   - bash or shell: blue-review-bash
+   - Lua: blue-review-lua
+   - Python: blue-review-python
+   - JavaScript or TypeScript: blue-review-typescript
+5. Apply blue-penmanship. Output the drift plan and stop for approval.
+6. Phrase maintainability findings with blue-review-comments voice.
 
 ## Output
 
@@ -55,4 +53,4 @@ Use the blue-penmanship plan shape for each confirmed drift finding. If there is
 
 ### Hold
 
-Do not edit docs or comments until the user approves the penmanship plan. Do not post pull request comments until the user asks.
+Leave comments in the reply. Post to the pull request only when the user asks. Edit docs and comments only after the user approves the penmanship plan.

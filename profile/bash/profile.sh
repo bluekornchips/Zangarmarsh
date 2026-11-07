@@ -37,7 +37,6 @@ if [[ -z "${ZANGARMARSH_HIST_IGNORE:-}" ]]; then
 	return 1
 fi
 
-# Bash history configuration
 [[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "Loading bash history configuration" >&2
 # Force the bash history path. An inherited HISTFILE from zsh would point at
 # ~/.zsh_history and pull extended_history lines into bash.

@@ -36,11 +36,7 @@ cd Zangarmarsh
 make install
 ```
 
-`make install` writes one canonical source line into `~/.zshrc` and `~/.bashrc`,
-collapses duplicate or alternate source forms for this checkout, removes the
-official eager NVM block from `~/.bashrc`, and installs the tracked quest-log
-plugin plus user rules under `~/.cursor/rules`. Pass `--zsh` or `--bash` to
-`profile/install.sh` to target only one shell rc file.
+`make install` writes one canonical source line into `~/.zshrc` and `~/.bashrc`, collapses duplicate or alternate source forms for this checkout, removes the official eager NVM block from `~/.bashrc`, and installs the tracked quest-log plugin plus user rules under `~/.cursor/rules`. Pass `--zsh` or `--bash` to `profile/install.sh` to target only one shell rc file.
 
 Dry-run first with:
 
@@ -54,15 +50,9 @@ Manual source without the installer:
 source /path/to/zangarmarsh/zangarmarsh.sh
 ```
 
-## Install the quest-log plugin
+`make install` installs profile hooks, the local Cursor plugin, and user rules. For `questlog` usage, settings paths, rules sync, and plugin layout, see [tools/quest-log/README.md](tools/quest-log/README.md).
 
-`make install` installs profile hooks, the local Cursor plugin, and user rules.
-For `questlog` usage, settings paths, rules sync, and plugin layout, see
-[tools/quest-log/README.md](tools/quest-log/README.md).
-
-## Notes on destructive tools
-
-- Trilliax can delete generated trees and caches
+Trilliax can delete generated trees and caches.
 
 ## Configuration
 
@@ -102,22 +92,6 @@ These apply when `profile/zsh/prompt.zsh` runs:
 - `ZANGARMARSH_SHORTEN_NAMES=true`: Shorten user and host to one character, default `true`
 - `ZANGARMARSH_PROMPT_SYMBOL=❯`: Trailing symbol, default `❯`
 - `ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE`: Ghost-text style for zsh-autosuggestions, default `fg=8`
-
-## Features
-
-| Feature                       | Bash | Zsh |
-| ----------------------------- | ---- | --- |
-| Shared aliases and tools      | Yes  | Yes |
-| Git branch in prompt          | No   | Yes |
-| Kubernetes context in prompt  | No   | Yes |
-| Platform PATH setup           | No   | Yes |
-| Shared PLATFORM / PLATFORM_OS | Yes  | Yes |
-| Python venv helpers           | Yes  | Yes |
-| Node.js via NVM               | Yes  | Yes |
-| Oh My Zsh git plugin          | No   | Yes |
-| zsh-autosuggestions           | No   | Yes |
-| Case-insensitive readline     | Yes  | No  |
-| Programmable completion       | No   | Yes |
 
 ## Tools
 

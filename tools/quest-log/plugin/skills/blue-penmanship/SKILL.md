@@ -6,9 +6,7 @@ disable-model-invocation: true
 
 # Blue Penmanship
 
-Audit comments, docs, and references against current code. Follow local Cursor rules. Do not add comments or docs unless a claim is false without them.
-
-Find only confirmed drift. Ignore style. Do not expand into security, UX, or dead-code cleanup unless a comment or doc is the defect.
+Audit comments, docs, and references against current code. Find only confirmed drift. Ignore style. Do not expand into security, UX, or dead-code cleanup unless a comment or doc is the defect.
 
 ## Scope
 
@@ -37,41 +35,34 @@ git diff origin/main...HEAD
 
 Apply `rules/always.mdc` Comments and docs, plus the language rule for the file.
 
-- Inline comments stay rare. Keep one only for a hidden constraint, workaround, unit, or surprising invariant.
-- Required function headers stay when they are true. Correct a false header. Do not delete a required header.
-- Other docs state the fact a reader needs.
-- Do not add file banners, section dividers, changelog comments, or records of prior work.
-- Do not preserve obsolete paths as history. Prefer the current design.
-- Do not write swearing or profanity into tracked files, including rules, skills, comments, docs, help text, and examples.
-- Do not write personal identifiable information into tracked files. That includes real names, emails, phone numbers, home addresses, government IDs, and private account identifiers that identify a person. Placeholders such as `user@example.com` are allowed when they are clearly fictional.
+- Keep a true required function header. Correct a false one. Never delete a required header.
+- Keep an inline comment only for a hidden constraint, workaround, unit, or surprising invariant.
+- Do not preserve obsolete paths as history.
+- Tracked files hold no swearing, profanity, or personal identifiable information. That covers real names, emails, phone numbers, home addresses, government IDs, and private account identifiers. Clearly fictional placeholders such as `user@example.com` are allowed.
 
 Missing required headers are out of scope. Point the user at blue-review when that is the real ask.
 
 ## Drift
 
-Report a finding only when you have read the claim line and the contradicting source line.
+Report a finding only after reading the claim line and the contradicting source line.
 
 - Dead: describes files, commands, names, or behavior that no longer exist
 - Unused: orphan docs or comments attached to deleted or unreachable code
 - Outdated: once true, now contradicted by code
 - Incorrect: wrong paths, targets, env names, routes, or contracts
-- Useless: narrating comments, type restatements, duplicated prose, placeholders
+- Useless: narrating comments, edit-diary comments, conversation or prompt leakage, type restatements, duplicated prose, placeholders
 - Profane: swearing or profanity in a tracked file
 - Pii: real personal identifiable information in a tracked file
 
-A true required header is not useless. A true inline comment is useless when it only restates the next line.
-
-Skip hunches, style nits, and notes that the prose could be clearer.
-
-Do not skip swearing, profanity, or personal identifiable information. Those are content defects, not style. Report them even when the surrounding claim is otherwise accurate.
+A true inline comment is useless when it only restates the next line. Skip hunches, style nits, and notes that the prose could be clearer. Report profane and pii findings even when the surrounding claim is accurate.
 
 ## Workflow
 
 1. List changed and untracked files in scope.
 2. Collect claims: documented commands, paths, targets, env names, routes, contracts, and comments that assert behavior.
-3. Verify each claim against current code. Read both lines.
+3. Verify each claim against current code.
 4. Output a plan. Stop. Wait for approval before editing.
-5. After approval, delete or correct. Do not rewrite working prose. Do not add a comment or doc unless the remaining text would be false without it.
+5. After approval, apply the Edit rules.
 
 ## Plan
 
@@ -96,16 +87,12 @@ If there is no confirmed drift, say so and stop.
 
 ## Edit
 
-When the user approves:
-
 - Delete dead, unused, and useless text.
 - Correct outdated and incorrect claims with the smallest wording change.
-- Delete or rewrite `profane` text without swearing.
-- Delete or replace `pii` with non-identifying wording or a clear fictional placeholder.
-- Do not rewrite working prose.
-- Do not add comments or docs unless a claim is false without them.
-- Do not turn obsolete behavior into a history note.
-- Do not introduce swearing, profanity, or personal identifiable information while editing.
+- Rewrite `profane` text without swearing.
+- Replace `pii` with non-identifying wording or a clear fictional placeholder.
+- Leave working prose alone.
+- Add a comment or doc only when the remaining text would be false without it.
 
 ## Example
 

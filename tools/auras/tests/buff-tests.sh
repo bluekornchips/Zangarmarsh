@@ -25,6 +25,16 @@ teardown() {
 	return 0
 }
 
+# Create an executable AppImage fixture under AURAS_TEST_HOME
+#
+# Inputs:
+# - $1 stem, optional AppImage basename without extension, default demoapp
+#
+# Side Effects:
+# - Sets and exports APPIMAGE_APPDIR and APPIMAGE_PATH
+#
+# Returns:
+# - 0 on success
 setup_appimage_fixture() {
 	local stem="${1:-demoapp}"
 
@@ -32,11 +42,10 @@ setup_appimage_fixture() {
 	make_appimage "${APPIMAGE_APPDIR}" "${stem}.AppImage"
 	APPIMAGE_PATH="${APPIMAGE_APPDIR}/${stem}.AppImage"
 	export APPIMAGE_APPDIR APPIMAGE_PATH
+
+	return 0
 }
 
-########################################################
-# ensure_desktop_entry_writable
-########################################################
 @test "ensure_desktop_entry_writable:: refuses unmanaged existing desktop file" {
 	mkdir -p "${HOME}/.local/share/applications"
 	: >"${HOME}/.local/share/applications/demoapp.desktop"
@@ -47,9 +56,6 @@ setup_appimage_fixture() {
 	grep -q "ensure_desktop_entry_writable:: refusing to overwrite unmanaged desktop file" <<<"$output"
 }
 
-########################################################
-# write_application_desktop
-########################################################
 @test "write_application_desktop:: writes managed desktop entry with expected fields" {
 	local appdir="${AURAS_TEST_HOME}/apps"
 	if ! make_appimage "${appdir}" "demoapp.AppImage"; then
@@ -127,9 +133,6 @@ setup_appimage_fixture() {
 	grep -q "desktop_path_for_stem:: name must be one segment without slashes" <<<"$output"
 }
 
-########################################################
-# bin_link_dir
-########################################################
 @test "bin_link_dir:: echoes bin path under HOME" {
 
 	run bin_link_dir
@@ -137,9 +140,6 @@ setup_appimage_fixture() {
 	[[ "$output" == "${HOME}/.local/bin" ]]
 }
 
-########################################################
-# ensure_bin_link_writable + _auras_write_bin_link
-########################################################
 @test "_auras_write_bin_link:: creates symlink to AppImage after ensure" {
 	local appdir="${AURAS_TEST_HOME}/apps"
 	if ! make_appimage "${appdir}" "demoapp.AppImage"; then
@@ -176,9 +176,6 @@ setup_appimage_fixture() {
 	grep -q "ensure_bin_link_writable:: refusing to overwrite unmanaged bin path" <<<"$output"
 }
 
-########################################################
-# buff_launcher
-########################################################
 @test "buff_launcher:: writes desktop entry and bin symlink" {
 	if ! setup_appimage_fixture "demoapp"; then
 		return 1
@@ -291,9 +288,6 @@ setup_appimage_fixture() {
 	[[ ! -e "${HOME}/.local/bin/demoapp" ]]
 }
 
-########################################################
-# main
-########################################################
 @test "main:: buff mode requires name" {
 	run bash "$SCRIPT" --buff
 	[[ "$status" -eq 1 ]]

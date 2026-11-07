@@ -236,6 +236,7 @@ buff_launcher() {
 			echo "buff_launcher:: could not create desktop backup" >&2
 			return 1
 		}
+
 		trap 'rm -f "${desktop_backup}"' RETURN
 		if ! cp "${desktop_path}" "${desktop_backup}"; then
 			echo "buff_launcher:: could not back up desktop: ${desktop_path}" >&2

@@ -6,43 +6,23 @@ disable-model-invocation: true
 
 # Python Project Setup
 
-User reference for creating a small Python project that follows the Python
-coding standards in `rules/python.mdc` after `questlog` installs this plugin.
-Use `uv` for project creation, dependency resolution, virtual environments, and
-lock files. Require `uv` for dependency installation.
+User reference for a small Python project that follows `rules/python.mdc` after `questlog` installs this plugin. Use `uv` for project creation, dependencies, virtual environments, and lock files.
 
 Writing and editing Python are allowed. Running Python requires explicit user approval for the named command.
 
-## Project Structure
-
-Create the following directory structure:
+## Layout
 
 ```text
 project-name/
-├── src/
-│   └── project_name/
-│       └── main.py
-├── tests/
-│   └── test_main.py
+├── src/project_name/main.py
+├── tests/test_main.py
 ├── .gitignore
 ├── Makefile
 ├── pyproject.toml
 └── README.md
 ```
 
-## Step-by-Step Setup
-
-### 1. Create Project Directory Structure
-
-```bash
-mkdir -p project-name/src/project_name
-mkdir -p project-name/tests
-cd project-name
-```
-
-### 2. Create the project with `uv`
-
-For a new application or library, start with:
+## 1. Create the project
 
 ```bash
 uv init --package project-name
@@ -51,26 +31,9 @@ uv add --dev ruff pytest pytest-cov
 uv lock
 ```
 
-For an existing project, preserve its build backend and add the tools with:
+For an existing project, keep its build backend and run only the last two commands. Keep `uv.lock` in version control and use `--locked` in CI. Add `mypy` with `uv add --dev mypy` when strict typing is needed.
 
-```bash
-uv add --dev ruff pytest pytest-cov
-uv lock
-```
-
-Keep `uv.lock` in version control for applications and reproducible
-development environments. Use `--locked` in CI.
-
-If the project needs strict static typing, add mypy separately:
-
-```bash
-uv add --dev mypy
-```
-
-The project should declare a supported Python range in `pyproject.toml`, for
-example `requires-python = ">=3.11"`.
-
-Recommended tool configuration:
+Declare a supported range in `pyproject.toml`, for example `requires-python = ">=3.11"`, and add:
 
 ```toml
 [tool.ruff]
@@ -82,194 +45,68 @@ select = ["E", "F", "I", "B", "UP", "SIM"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-python_files = ["test_*.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
 addopts = ["--cov=src", "--cov-report=term-missing", "-v"]
 ```
 
-### 3. Create `src/project_name/main.py`
-
-This file demonstrates all mandatory requirements:
+## 2. Create `src/project_name/main.py`
 
 ```python
-"""Main module demonstrating Python coding standards."""
+"""Minimal module showing typing, docstrings, logging, and env validation."""
 
 import logging
 import os
-from collections.abc import Generator
-from contextlib import contextmanager
 
-# Configure logging (never use print for debugging)
 logger = logging.getLogger(__name__)
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
-
-
-@contextmanager
-def example_context_manager() -> Generator[None, None, None]:
-    """Example context manager for resource management."""
-    logger.info("Entering context")
-    try:
-        yield
-    finally:
-        logger.info("Exiting context")
-
-
-def validate_input(value: int) -> None:
-    """Validate input parameter.
-
-    Args:
-        value: Integer value to validate.
-
-    Raises:
-        ValueError: If value is negative.
-    """
-    if value < 0:
-        raise ValueError(f"Value must be non-negative, got {value}")
-
-
-def example_function(items: list[str] | None = None) -> list[str]:
-    """Example function demonstrating proper practices.
-
-    Uses immutable default arguments, type hints, and proper error handling.
-
-    Args:
-        items: Optional list of strings. Defaults to None.
-
-    Returns:
-        List of strings.
-
-    Raises:
-        ValueError: If items contains invalid data.
-    """
-    if items is None:
-        items = []
-
-    if not isinstance(items, list):
-        raise ValueError(f"Expected list, got {type(items)}")
-
-    try:
-        result = [item.upper() for item in items]
-        logger.info(f"Processed {len(result)} items")
-        return result
-    except AttributeError as e:
-        logger.error(f"Invalid item type in list: {e}")
-        raise ValueError("All items must be strings") from e
 
 
 def get_api_key() -> str:
-    """Get API key from environment variable.
+    """Read the API key from the environment.
 
     Returns:
-        API key string.
+        The API_KEY value.
 
     Raises:
-        ValueError: If API_KEY environment variable is not set.
+        ValueError: If API_KEY is not set.
     """
     api_key = os.getenv("API_KEY")
     if api_key is None:
         raise ValueError("API_KEY environment variable is not set")
+    logger.info("API key loaded")
     return api_key
 
 
 def main() -> None:
-    """Main entry point."""
-    logger.info("Application started")
-
-    with example_context_manager():
-        try:
-            result = example_function(["hello", "world"])
-            logger.info(f"Result: {result}")
-        except ValueError as e:
-            logger.error(f"Error processing items: {e}")
+    logging.basicConfig(level=logging.INFO)
+    get_api_key()
 
 
 if __name__ == "__main__":
     main()
 ```
 
-### 4. Create `tests/test_main.py`
+## 3. Create `tests/test_main.py`
 
 ```python
 """Tests for main module."""
 
-import os
 import pytest
-from unittest.mock import patch
 
-from project_name.main import (
-    example_function,
-    get_api_key,
-    validate_input,
-)
+from project_name.main import get_api_key
 
 
-def test_example_function_with_items() -> None:
-    """Test example_function with provided items."""
-    result = example_function(["hello", "world"])
-    assert result == ["HELLO", "WORLD"]
-
-
-def test_example_function_with_none() -> None:
-    """Test example_function with None (default argument)."""
-    result = example_function()
-    assert result == []
-
-
-def test_example_function_with_empty_list() -> None:
-    """Test example_function with empty list."""
-    result = example_function([])
-    assert result == []
-
-
-def test_example_function_raises_value_error_for_invalid_type() -> None:
-    """Test example_function raises ValueError for invalid input type."""
-    with pytest.raises(ValueError, match="Expected list"):
-        example_function("not a list")  # type: ignore[arg-type]
-
-
-def test_example_function_raises_value_error_for_non_string_items() -> None:
-    """Test example_function raises ValueError for non-string items."""
-    with pytest.raises(ValueError, match="All items must be strings"):
-        example_function([123, 456])  # type: ignore[list-item]
-
-
-def test_get_api_key_success() -> None:
-    """Test get_api_key retrieves API key from environment."""
-    with patch.dict(os.environ, {"API_KEY": "test-key-123"}):
-        result = get_api_key()
-        assert result == "test-key-123"
-
-
-def test_get_api_key_raises_value_error_when_missing() -> None:
-    """Test get_api_key raises ValueError when API_KEY is not set."""
-    with patch.dict(os.environ, {}, clear=True):
-        with pytest.raises(ValueError, match="API_KEY environment variable is not set"):
-            get_api_key()
-
-
-def test_validate_input_success() -> None:
-    """Test validate_input accepts non-negative values."""
-    validate_input(0)
-    validate_input(1)
-    validate_input(100)
-
-
-def test_validate_input_raises_value_error_for_negative() -> None:
-    """Test validate_input raises ValueError for negative values."""
-    with pytest.raises(ValueError, match="Value must be non-negative"):
-        validate_input(-1)
+def test_get_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Return the key when API_KEY is set, raise ValueError when it is not."""
+    monkeypatch.setenv("API_KEY", "test-key")
+    assert get_api_key() == "test-key"
+    monkeypatch.delenv("API_KEY")
+    with pytest.raises(ValueError, match="API_KEY"):
+        get_api_key()
 ```
 
-### 5. Create `Makefile`
-
-If a project wants a Makefile, keep it as a thin wrapper around `uv`:
+## 4. Create `Makefile`
 
 ```makefile
-.PHONY: install format lint typecheck test all
+.PHONY: install format lint test all
 
 install:
 	uv sync
@@ -286,89 +123,43 @@ test:
 all: format lint test
 ```
 
-### 6. Create `.gitignore`
+## 5. Create `.gitignore`
 
 ```gitignore
 .venv/
 __pycache__/
-*.pyc
-*.pyo
 .mypy_cache/
 .pytest_cache/
-htmlcov/
 .coverage
 dist/
 *.egg-info/
 ```
 
-### 7. Create `README.md`
+## 6. Create `README.md`
 
 ````markdown
 # project-name
 
 Brief description of the project.
 
-## Requirements
-
-- Python 3.11 or greater
-
 ## Setup
 
 ```bash
 make install
 ```
-````
-
-## Usage
-
-```bash
-source .venv/bin/activate
-python -m project_name.main
-```
 
 ## Development
 
 ```bash
-make format   # Format with Ruff
-make lint     # Lint with Ruff
-make test     # Run tests with coverage
-make all      # Run all of the above
-```
-
-````
-
-## Verification Commands
-
-After setup, run these commands to verify everything works:
-
-```bash
-# Create the environment and install locked dependencies
-uv sync --locked
-
-# Format code with Ruff
-uv run ruff format src/ tests/
-
-# Lint code with Ruff
-uv run ruff check src/ tests/
-
-# Type check with mypy when configured
-uv run mypy src/
-
-# Run tests with coverage
-uv run pytest
-
-# Or run all formatting, linting, typing, and tests
 make all
+```
 ````
 
-For projects that cannot use `uv`, stop and document that requirement rather
-than adding another installer path:
+## Verification
 
 ```bash
-# Install uv, then use the locked project environment
-curl -LsSf https://astral.sh/uv/install.sh | sh
 uv sync --locked
-uv run pytest
+make all
 ```
 
-All commands should pass without errors.
+Without `uv`, stop and document that requirement. Do not add another installer path.

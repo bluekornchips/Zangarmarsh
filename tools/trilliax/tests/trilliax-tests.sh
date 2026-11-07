@@ -38,14 +38,11 @@ teardown() {
 	return 0
 }
 
-########################################################
-# clean_fs
-########################################################
 @test "clean_fs:: removes empty directories" {
 	local test_dir="$TEST_CLEANUP_DIR"
 	mkdir -p "$test_dir/empty_dir"
 
-	run clean_fs "$test_dir" "false"
+	run clean_fs "$test_dir"
 	[[ "$status" -eq 0 ]]
 	[[ ! -d "$test_dir/empty_dir" ]]
 }
@@ -66,7 +63,7 @@ teardown() {
 	mkdir -p "$test_dir/empty_dir"
 	mkdir -p "$test_dir/empty_dir/empty_subdir"
 
-	run clean_fs "$test_dir" "false"
+	run clean_fs "$test_dir"
 	[[ "$status" -eq 0 ]]
 	[[ ! -d "$test_dir/empty_dir" ]]
 	[[ ! -d "$test_dir/empty_dir/empty_subdir" ]]
@@ -113,12 +110,9 @@ teardown() {
 	run "$SCRIPT" --targets fs --dry-run "$test_dir"
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "clean_fs:: Would remove: $test_dir/empty_to_preview"
-	[[ -d "$test_dir/empty_to_preview" ]] # Should still exist in dry-run mode
+	[[ -d "$test_dir/empty_to_preview" ]]
 }
 
-########################################################
-# Script structure and help
-########################################################
 @test "main:: has proper shebang and structure" {
 	run bash -n "$SCRIPT"
 	[[ "$status" -eq 0 ]]
@@ -210,9 +204,6 @@ teardown() {
 	echo "$output" | grep -q "clean_fs:: Cleaning empty directories."
 }
 
-########################################################
-# Target selection tests
-########################################################
 @test "validate_targets:: accepts --targets option with single target" {
 	mkdir -p "${TEST_CLEANUP_DIR}/.cursor"
 
@@ -283,9 +274,6 @@ teardown() {
 	echo "$output" | grep -q "clean_python:: Cleaning Python files."
 }
 
-########################################################
-# Main
-########################################################
 @test "run_trilliax:: fails when sourced without targets" {
 	run run_trilliax "$TEST_CLEANUP_DIR"
 	[[ "$status" -eq 1 ]]
@@ -307,14 +295,11 @@ teardown() {
 	[[ ! -d "${spaced_dir}/empty_dir" ]]
 }
 
-########################################################
-# Cleanup
-########################################################
 @test "clean_cursor:: removes .cursor directories" {
 	local test_dir="$TEST_CLEANUP_DIR"
 	mkdir -p "$test_dir/.cursor/subdir"
 
-	run clean_cursor "$test_dir" "false"
+	run clean_cursor "$test_dir"
 	[[ "$status" -eq 0 ]]
 	[[ ! -d "$test_dir/.cursor" ]]
 }
@@ -342,7 +327,7 @@ teardown() {
 	echo "test" >"$test_dir/test.pyo"
 	echo "keep this" >"$test_dir/.env"
 
-	run clean_python "$test_dir" "false"
+	run clean_python "$test_dir"
 	[[ "$status" -eq 0 ]]
 	[[ ! -d "$test_dir/venv" ]]
 	[[ ! -d "$test_dir/.venv" ]]
@@ -390,7 +375,7 @@ teardown() {
 	echo "test" >"$test_dir/npm-debug.log"
 	echo "test" >"$test_dir/yarn-error.log"
 
-	run clean_node "$test_dir" "false"
+	run clean_node "$test_dir"
 	[[ "$status" -eq 0 ]]
 	[[ ! -d "$test_dir/node_modules" ]]
 	[[ ! -d "$test_dir/.npm" ]]

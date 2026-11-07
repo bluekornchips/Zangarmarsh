@@ -2,10 +2,6 @@
 
 Creates, refreshes, and removes user `.desktop` launcher entries and `~/.local/bin` symlinks for AppImage files.
 
-## What It Does
-
-Auras installs AppImages either one at a time or via a packages-directory ready-check:
-
 ```text
 ~/.local/share/applications/<name>.desktop
 ~/.local/bin/<name>  ->  resolved AppImage path
@@ -13,7 +9,7 @@ Auras installs AppImages either one at a time or via a packages-directory ready-
 
 The name is used for the desktop file stem, the desktop entry `Name=` value, and the shell command under `~/.local/bin`.
 
-With `--buff`, you supply an explicit AppImage path. With `--ready-check DIR`, Auras scans each immediate subdirectory of `DIR`, picks the newest AppImage in that folder by filename version then modification time, and buffs it using the subdirectory name as the stem.
+With `--buff`, supply an explicit AppImage path. With `--ready-check DIR`, Auras scans each immediate subdirectory of `DIR`, picks the newest AppImage in that folder by filename version then modification time, and buffs it using the subdirectory name as the stem.
 
 ## Managed Entry Safety
 

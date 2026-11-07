@@ -12,7 +12,16 @@ setup_file() {
 	return 0
 }
 
-# Create mock dependency files for testing
+# Write a mock pyproject.toml for penv dependency tests
+#
+# Inputs:
+# - $1 file_type, pyproject or invalid
+#
+# Side Effects:
+# - Writes pyproject.toml in the current directory
+#
+# Returns:
+# - 0 always
 create_mock_dependency_file() {
 	local file_type="$1"
 	case "$file_type" in
@@ -34,9 +43,17 @@ version = "0.1.0"
 EOF
 		;;
 	esac
+
+	return 0
 }
 
-# Stub python3 -m venv so tests do not pay real venv creation cost, which can be a lot on my lapto.
+# Stub python3 -m venv so tests skip real venv creation cost
+#
+# Side Effects:
+# - Exports a mock python3 function into the current shell
+#
+# Returns:
+# - 0 always
 mock_fast_venv() {
 	python3() {
 		if [[ "${1:-}" == "-m" && "${2:-}" == "venv" ]]; then
@@ -58,9 +75,10 @@ EOF
 	}
 
 	export -f python3
+
+	return 0
 }
 
-# Setup test environment for Python virtual environment testing
 setup() {
 	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
 
@@ -82,7 +100,6 @@ setup() {
 	return 0
 }
 
-# Clean up test environment
 teardown() {
 	rm -rf "$TEST_DIR"
 	return 0

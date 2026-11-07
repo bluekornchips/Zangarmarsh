@@ -15,10 +15,6 @@ CHECK_DEPS   := ./check_dependencies.sh
 .PHONY: ci format help install lint shellcheck syntax test test-serial \
         test-smoke uninstall
 
-#################################################
-# Help
-#################################################
-
 help:
 	@printf '%s\n' \
 		'Targets:' \
@@ -33,10 +29,6 @@ help:
 		'  test-serial  Run all bats tests serially' \
 		'  test-smoke   Run profile/tests/smoke-tests.sh' \
 		'  uninstall    Remove profile hooks, Cursor plugin, and managed rules via profile/install.sh --uninstall'
-
-#################################################
-# Lint & Format
-#################################################
 
 format:
 	@$(CHECK_DEPS)
@@ -64,10 +56,6 @@ shellcheck:
 	@shellcheck -x -s bash $(TEST_FILES)
 	@echo "shellcheck: ok"
 
-#################################################
-# Testing
-#################################################
-
 test:
 	@$(CHECK_DEPS)
 	@$(BATS) --jobs $(BATS_JOBS) --no-parallelize-within-files $(TEST_FILES)
@@ -79,10 +67,6 @@ test-serial:
 test-smoke:
 	@$(CHECK_DEPS)
 	@$(BATS) profile/tests/smoke-tests.sh
-
-#################################################
-# Install
-#################################################
 
 install:
 	@profile/install.sh

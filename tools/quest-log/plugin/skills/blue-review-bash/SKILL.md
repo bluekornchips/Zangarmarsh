@@ -8,31 +8,31 @@ disable-model-invocation: true
 
 ## Overview
 
-Pragmatic review criteria for bash/shell script repositories. Focus on security, correctness, and maintainability.
+Pragmatic review criteria for bash and shell script repositories. Focus on security, correctness, and maintainability.
 
 ---
 
-## Critical Security (Must Fix)
+## Critical Security Must Fix
 
-- [ ] _Unquoted variables_: All expansions quoted (`"$var"` not `$var`)
+- [ ] _Unquoted variables_: Quote every expansion as `"$var"`, never `$var`
 - [ ] _No `eval`/`exec`_: Use parameter expansion or functions instead
-- [ ] _No hardcoded secrets_: Use environment variables or config files
+- [ ] _No hardcoded secrets_: Read secrets from environment variables or config files
 - [ ] _Input validation_: Validate user inputs and external data before use
-- [ ] _Temporary file cleanup_: All `mktemp` files cleaned via traps
-- [ ] _Secure temp files_: Use `mktemp` with proper permissions (`chmod 0600`)
-- [ ] _Trap handlers_: `EXIT` and `ERR` traps configured for cleanup
-- [ ] _Explicit paths_: Use explicit paths for destructive ops (`rm -v ./*` not `rm *`)
+- [ ] _Temporary file cleanup_: Clean every `mktemp` file via traps
+- [ ] _Secure temp files_: Create temp files with `mktemp` and `chmod 0600`
+- [ ] _Trap handlers_: Configure `EXIT` and `ERR` traps for cleanup
+- [ ] _Explicit paths_: Use explicit paths for destructive ops, `rm -v ./*` not `rm *`
 - [ ] _Command validation_: Check external commands exist before use
 
 ---
 
-## Error Handling (Must Fix)
+## Error Handling Must Fix
 
-- [ ] _Explicit return codes_: Functions return 0 (success) or non-zero (failure)
-- [ ] _No `exit` in functions_: Use `return`, not `exit` (except in main) - allows sourcing
-- [ ] _Errors to stderr_: All error output uses `>&2`
-- [ ] _Return code checking_: Critical command invocations check return codes
-- [ ] _Meaningful errors_: Errors include context (function name, variable values)
+- [ ] _Explicit return codes_: Functions return 0 on success and non-zero on failure
+- [ ] _No `exit` in functions_: Use `return`, with `exit` only in main, so scripts stay sourceable
+- [ ] _Errors to stderr_: Send all error output to `>&2`
+- [ ] _Return code checking_: Check return codes of critical command invocations
+- [ ] _Meaningful errors_: Include function name and variable values in errors
 - [ ] _Dependency checking_: Check required external commands before execution
 
 ---
@@ -40,98 +40,107 @@ Pragmatic review criteria for bash/shell script repositories. Focus on security,
 ## Code Structure
 
 - [ ] _Shebang_: Executables use `#!/usr/bin/env bash`
-- [ ] _Function size_: Functions ideally < 80 lines, max ~150 lines
-- [ ] _Function headers_: Every function has a header comment that states the purpose and the signature. Include Inputs, Outputs, Side Effects, and Returns for each section that applies.
-- [ ] _Local variables_: Every function variable is `local`, declared once on the line that first assigns it. Literals and arrays are `local name=value` or `local name=(...)`. A bare `local name` is only the line immediately above a command substitution, a `for` or `while` that uses that name, or an `if` or `case` whose branches first assign it. A `local` block at the top of a function is a failure. Command substitutions are not assigned inside `local` or `export`. ShellCheck: SC2155.
-- [ ] _Final return spacing_: Every function, including `main`, ends with one empty line and then `return <code>`. An early `return` stays on the next line after its echo or command, including inside `if`, `case`, and `command || { }`. When that ending `return` already follows a multi-line block, one empty line is enough.
-- [ ] _Block spacing_: After a multi-line block (`}`, `fi`, `done`, `esac`), one empty line precedes the next statement in that scope. The closer of an enclosing block stays on the next line. Stacked `command || { }` blocks with no empty line between them are a failure. A whitespace-only line does not count.
-- [ ] _Sourcing support_: Scripts support both execution and sourcing (`BASH_SOURCE[0]` check)
-- [ ] _Organized sections_: Scripts maintain consistent section ordering: usage functions first, then validation/config initialization, helper utilities, core business logic, main entry point, and finally the source handler
+- [ ] _Function size_: Functions stay under 80 lines and never exceed about 150
+- [ ] _Function headers_: Every function except `main` has a header comment stating purpose and signature, plus Inputs, Outputs, Side Effects, and Returns where they apply
+- [ ] _Local variables_: Every function variable is `local`, declared once on the line that first assigns it
+- [ ] _Local literals_: Literals and arrays use `local name=value` or `local name=(...)`
+- [ ] _Bare local_: A bare `local name` appears only directly above a command substitution, a `for` or `while` using that name, or an `if` or `case` whose branches first assign it
+- [ ] _No local block_: A `local` block at the top of a function is a failure
+- [ ] _No substitution in local_: Command substitutions are never assigned inside `local` or `export`, per ShellCheck SC2155
+- [ ] _Final return spacing_: Every function, including `main`, ends with one empty line and then `return <code>`
+- [ ] _Early return spacing_: An early `return` stays on the next line after its echo or command, including inside `if`, `case`, and `command || { }`
+- [ ] _Return after block_: One empty line suffices when the ending `return` follows a multi-line block
+- [ ] _Block spacing_: One empty line follows each multi-line block closed by `}`, `fi`, `done`, or `esac` before the next statement in that scope
+- [ ] _Enclosing closer_: The closer of an enclosing block stays on the next line
+- [ ] _Stacked blocks_: Stacked `command || { }` blocks with no empty line between them are a failure
+- [ ] _Whitespace lines_: A whitespace-only line does not count as an empty line
+- [ ] _Sourcing support_: Scripts support execution and sourcing through a `BASH_SOURCE[0]` check
+- [ ] _Organized sections_: Order sections as usage functions, validation and config initialization, helper utilities, core business logic, main entry point, then the source handler
 
 ---
 
 ## Variables and Quoting
 
-- [ ] _Always quoted_: All expansions quoted (`"$var"`, `"${var}"`)
+- [ ] _Always quoted_: Quote all expansions as `"$var"` or `"${var}"`
 - [ ] _Array usage_: Lists use arrays, not space-separated strings
-- [ ] _Array expansion_: Proper expansion (`"${array[@]}"` for elements)
-- [ ] _Command substitution_: Uses `$(command)` not backticks
-- [ ] _Constants_: UPPER_CASE naming for constants
+- [ ] _Array expansion_: Expand elements with `"${array[@]}"`
+- [ ] _Command substitution_: Use `$(command)`, not backticks
+- [ ] _Constants_: Name constants in UPPER_CASE
 
 ---
 
 ## Control Flow
 
-- [ ] _`[[ ]]` usage_: Uses `[[ ]]` for string/file tests, not `[ ]`
-- [ ] _Arithmetic_: Uses `(( ))` for arithmetic comparisons
-- [ ] _Case statements_: Uses `case` for multiple string comparisons
-- [ ] _Array iteration_: Uses `for item in "${array[@]}"` for arrays
+- [ ] _`[[ ]]` usage_: Use `[[ ]]` for string and file tests, not `[ ]`
+- [ ] _Arithmetic_: Use `(( ))` for arithmetic comparisons
+- [ ] _Case statements_: Use `case` for multiple string comparisons
+- [ ] _Array iteration_: Use `for item in "${array[@]}"` for arrays
 
 ---
 
 ## Logging and Output
 
-- [ ] _Consistent format_: Log messages use consistent format (`function_name:: message`)
-- [ ] _Function prefix_: Log messages include function name prefix
-- [ ] _Error vs info_: Errors to stderr (`>&2`), info to stdout
-- [ ] _Heredocs_: Uses heredocs (`cat <<EOF`) for output >2 lines
-- [ ] _Line length_: Echo statements don't exceed 160 characters
-- [ ] _No debug output_: Debug statements removed
+- [ ] _Consistent format_: Log messages share one format such as `function_name:: message`
+- [ ] _Function prefix_: Log messages start with the function name
+- [ ] _Error vs info_: Send errors to stderr with `>&2` and info to stdout
+- [ ] _Heredocs_: Use heredocs such as `cat <<EOF` for output over 2 lines
+- [ ] _Line length_: Echo statements stay within 160 characters
+- [ ] _No debug output_: Remove debug statements
 
 ---
 
 ## Documentation
 
-- [ ] _README accuracy_: README matches actual implementation
+- [ ] _README accuracy_: README matches the actual implementation
 - [ ] _Usage examples_: README includes minimal working examples
-- [ ] _Prerequisites_: Dependencies clearly documented
-- [ ] _Minimal comments_: Inline comments explain why, not what. Do not narrate each line.
+- [ ] _Prerequisites_: Document dependencies clearly
+- [ ] _Minimal comments_: Inline comments explain why, not what, and never narrate each line
 
 ---
 
 ## Testing
 
-- [ ] _Bats framework_: Uses Bats for testing
-- [ ] _Test naming_: Tests use `function_name:: description` format
-- [ ] _Test organization_: Test files organized with setup hooks first, followed by mock definitions, helper utilities, function-specific test groups, and integration tests at the end
-- [ ] _Happy paths_: Happy path scenarios tested
-- [ ] _Error cases_: Error conditions tested
-- [ ] _Test isolation_: Tests don't depend on execution order
-- [ ] _Mocking_: External dependencies (APIs, files) properly mocked
+- [ ] _Bats framework_: Use Bats for testing
+- [ ] _Test naming_: Name tests `function_name:: description`
+- [ ] _Test organization_: Order test files as setup hooks, mock definitions, helper utilities, function-specific test groups, then integration tests
+- [ ] _Happy paths_: Test happy path scenarios
+- [ ] _Error cases_: Test error conditions
+- [ ] _Test isolation_: Tests never depend on execution order
+- [ ] _Mocking_: Mock external dependencies such as APIs and files
 - [ ] _Assertions_: Tests have clear, specific assertions
-- [ ] _Test data_: Test data realistic and covers edge cases
+- [ ] _Test data_: Test data is realistic and covers edge cases
 - [ ] _Makefile targets_: `make test` or equivalent runs all tests
-- [ ] _CI integration_: Tests run in CI/CD pipeline
+- [ ] _CI integration_: Tests run in the CI/CD pipeline
 - [ ] _Test documentation_: README includes test execution instructions
 
 ---
 
 ## Portability
 
-- [ ] _Version requirement_: Required bash version documented
-- [ ] _Dependency documentation_: All external commands documented
-- [ ] _Dependency checking_: Scripts check for required dependencies before execution
-- [ ] _Environment variables_: Required environment variables documented
+- [ ] _Version requirement_: Document the required bash version
+- [ ] _Dependency documentation_: Document all external commands
+- [ ] _Dependency checking_: Scripts check required dependencies before execution
+- [ ] _Environment variables_: Document required environment variables
 
 ---
 
 ## Code Quality
 
-- [ ] _Self-documenting_: Code readable without excessive comments
-- [ ] _Consistent style_: Consistent formatting throughout
-- [ ] _Formatting_: Code formatted consistently (shfmt or similar)
-- [ ] _Linting_: ShellCheck used, issues addressed
-- [ ] _Makefile_: Common tasks automated (test, lint, format)
+- [ ] _Self-documenting_: Code reads clearly without excessive comments
+- [ ] _Consistent style_: Formatting is consistent throughout
+- [ ] _Formatting_: Format code with shfmt or similar
+- [ ] _Linting_: Use ShellCheck and address its issues
+- [ ] _Makefile_: Automate common tasks such as test, lint, and format
 
 ---
 
 ## Repository Structure
 
-- [ ] _Logical structure_: Code organized into logical directories (`src/`, `tests/`)
-- [ ] _README_: README with usage, examples, requirements
-- [ ] _LICENSE_: License file present
-- [ ] _Makefile_: Common tasks automated
-- [ ] _.gitignore_: Appropriate entries for temp files, build artifacts
+- [ ] _Logical structure_: Organize code into logical directories such as `src/` and `tests/`
+- [ ] _README_: README covers usage, examples, and requirements
+- [ ] _LICENSE_: License file is present
+- [ ] _Makefile_: Common tasks are automated
+- [ ] _.gitignore_: Entries cover temp files and build artifacts
 
 ---
 
@@ -154,27 +163,15 @@ Pragmatic review criteria for bash/shell script repositories. Focus on security,
 ### Example Output
 
 ```markdown
-## Review: [Repository Name] - [Date]
-
-### Summary
-
-- Overall Assessment: [Good/Fair/Needs Work]
-- Critical Issues: [Count]
-- Important Issues: [Count]
+## Review: Repository Name - Date
 
 ### Critical Issues
 
 - [ ] Unquoted variable - File: `path/to/file.sh:123`
-- [ ] Missing error checking - File: `path/to/file.sh:45`
 
 ### Important Improvements
 
-- [ ] Script too large (150 lines) - Consider focused shell modules - File: `path/to/file.sh`
-
-### Recommendations
-
-1. Add explicit error checking for critical operations
-2. Consider splitting large scripts into focused shell modules
+- [ ] Missing error checking - File: `path/to/file.sh:45`
 ```
 
 ---

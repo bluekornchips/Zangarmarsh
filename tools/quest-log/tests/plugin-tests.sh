@@ -29,6 +29,15 @@ teardown() {
 	return 0
 }
 
+# Isolate HOME and source plugin and rules libraries for one plugin test
+#
+# Side Effects:
+# - Sets DRY_RUN and creates a temporary HOME via quest_log_test_home
+# - Sources plugin.sh and rules.sh
+#
+# Returns:
+# - 0 on success
+# - 1 when sourcing or directory change fails
 plugin_lib_test_setup() {
 	local return_dir="${PWD}"
 
@@ -47,10 +56,6 @@ plugin_lib_test_setup() {
 
 	return 0
 }
-
-########################################################
-# quest_log_plugin_dir
-########################################################
 
 @test 'quest_log_plugin_dir:: uses QUEST_LOG_PLUGIN_DIR when set' {
 	run quest_log_plugin_dir
@@ -73,10 +78,6 @@ plugin_lib_test_setup() {
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "HOME is required"
 }
-
-########################################################
-# validate_plugin_install_dir
-########################################################
 
 @test 'validate_plugin_install_dir:: accepts a child of the Cursor local plugin directory' {
 	run validate_plugin_install_dir "${HOME}/.cursor/plugins/local/quest-log"
@@ -130,10 +131,6 @@ plugin_lib_test_setup() {
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "refusing unsafe install path\|install path must be below"
 }
-
-########################################################
-# install_quest_plugin
-########################################################
 
 @test 'install_quest_plugin:: fails when plugin manifest is missing' {
 	command rm -f "${PLUGIN_SOURCE_DIR}/.cursor-plugin/plugin.json"
@@ -205,10 +202,6 @@ plugin_lib_test_setup() {
 	[[ -f "${QUEST_LOG_PLUGIN_DIR}/rules/always.mdc" ]]
 }
 
-########################################################
-# uninstall_quest_plugin
-########################################################
-
 @test 'uninstall_quest_plugin:: reports not installed when absent' {
 	run uninstall_quest_plugin
 	[[ "$status" -eq 0 ]]
@@ -276,10 +269,6 @@ plugin_lib_test_setup() {
 	[[ -d "${QUEST_LOG_PLUGIN_DIR}" ]]
 }
 
-########################################################
-# quest_log_rules_dir / validate_rules_install_dir
-########################################################
-
 @test 'quest_log_rules_dir:: uses QUEST_LOG_RULES_DIR when set' {
 	run quest_log_rules_dir
 	[[ "$status" -eq 0 ]]
@@ -333,10 +322,6 @@ plugin_lib_test_setup() {
 	[[ "$status" -eq 1 ]]
 	echo "$output" | grep -q "refusing symlink"
 }
-
-########################################################
-# install_quest_rules / uninstall_quest_rules
-########################################################
 
 @test 'install_quest_rules:: dry-run reports without writing' {
 	DRY_RUN=true

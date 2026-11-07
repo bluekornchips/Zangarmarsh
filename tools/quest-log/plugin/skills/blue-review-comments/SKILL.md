@@ -6,9 +6,7 @@ disable-model-invocation: true
 
 # Pull Request Comments
 
-Review the current diff with the blue-review bar. Leave the comments on the pull request in the reply. Post them only when the user asks.
-
-One comment per issue. Two sentences at most. Skip praise, summaries, and nits when a structural note is present.
+Review the current diff with the blue-review bar. Leave the comments in the reply. Post them only when the user asks.
 
 ## Bar
 
@@ -21,12 +19,9 @@ One comment per issue. Two sentences at most. Skip praise, summaries, and nits w
 
 ## Voice
 
-Speak as we. Stay polite. Name the code, not the author.
+Speak as we. Name the code, not the author. One comment per issue, two sentences at most: one fact, then the action. Use the words already in the code.
 
-- Use we.
-- Skip you, your, let's, can we, and question marks.
-- One fact, then the action.
-- Use the words already in the code.
+Skip you, your, let's, can we, question marks, praise, summaries, and nits when a structural note is present.
 
 Say it this way:
 
@@ -39,7 +34,7 @@ Say it this way:
 
 ## Output
 
-Leave a few high-conviction comments, in this order:
+Leave a few high-conviction comments, each standing alone on the line it concerns, in this order:
 
 1. Structural regressions and missed simplifications
 2. Extra branches and spaghetti
@@ -48,7 +43,7 @@ Leave a few high-conviction comments, in this order:
 5. Missing function headers and bad comments
 6. Legibility
 
-Each comment stands alone on the line it concerns. When the structure is clean, say `The structure is clean. We can merge this.`
+When the structure is clean, say `The structure is clean. We can merge this.`
 
 ## Approval
 

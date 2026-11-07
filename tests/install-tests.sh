@@ -38,9 +38,6 @@ teardown() {
 	return 0
 }
 
-########################################################
-# main, CLI option parsing
-########################################################
 @test "main:: --help exits 0 and prints usage" {
 	run "${SCRIPT}" --help
 	[[ "${status}" -eq 0 ]]
@@ -73,9 +70,6 @@ teardown() {
 	echo "${output}" | grep -Fvq "${other_root}/zangarmarsh.sh"
 }
 
-########################################################
-# validate_install_env, source helpers
-########################################################
 @test "validate_install_env:: fails when HOME is empty" {
 	HOME="" run validate_install_env
 	[[ "${status}" -eq 1 ]]
@@ -103,9 +97,6 @@ teardown() {
 	[[ ! -e "${marker}" ]]
 }
 
-########################################################
-# has_source_line
-########################################################
 @test "has_source_line:: returns 1 when RC_FILE is missing" {
 	run has_source_line "${RC_FILE}"
 	[[ "${status}" -eq 1 ]]
@@ -143,9 +134,6 @@ teardown() {
 	[[ "${status}" -eq 1 ]]
 }
 
-########################################################
-# install_zangarmarsh
-########################################################
 @test "install_zangarmarsh:: creates RC_FILE and appends the source line" {
 	run install_zangarmarsh "${RC_FILE}"
 	[[ "${status}" -eq 0 ]]
@@ -249,9 +237,6 @@ EOF
 	grep -q "failed to append" <<<"${output}"
 }
 
-########################################################
-# uninstall_zangarmarsh
-########################################################
 @test "uninstall_zangarmarsh:: reports not installed when RC_FILE is missing" {
 	run uninstall_zangarmarsh "${RC_FILE}"
 	[[ "${status}" -eq 0 ]]
@@ -321,9 +306,6 @@ EOF
 	grep -Fqx 'source "/other/root/zangarmarsh.sh"' "${RC_FILE}"
 }
 
-########################################################
-# install_cursor_plugin, uninstall_quest_plugin
-########################################################
 @test "quest_log_plugin_dir:: resolves under HOME" {
 	run quest_log_plugin_dir
 	[[ "${status}" -eq 0 ]]
@@ -388,9 +370,6 @@ EOF
 	[[ ! -f "$(quest_log_rules_dir)/.quest-log.manifest" ]]
 }
 
-########################################################
-# main, end to end via the CLI
-########################################################
 @test "integration:: install then uninstall via the CLI leaves no trace" {
 	run "${SCRIPT}"
 	[[ "${status}" -eq 0 ]]

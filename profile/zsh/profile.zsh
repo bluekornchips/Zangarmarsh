@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
 #
-# Zsh profile: our history and prompt on top of Oh My Zsh with
+# Zsh profile: history and prompt on top of Oh My Zsh with
 # plugins=(git zsh-autosuggestions).
 #
 
@@ -107,7 +107,7 @@ Install it, then add the zsh-autosuggestions plugin:
 	git clone https://github.com/zsh-users/zsh-autosuggestions \${ZSH}/plugins/zsh-autosuggestions
 EOF
 else
-	# Empty theme so Oh My Zsh skips its prompt; we load prompt.zsh below.
+	# Empty theme so Oh My Zsh skips its prompt; prompt.zsh loads below.
 	ZSH_THEME=""
 	plugins=(git zsh-autosuggestions)
 	source "${omz_init}" || {
@@ -115,7 +115,7 @@ else
 		return 1
 	}
 
-	# Oh My Zsh lib/history.zsh overwrites these; re-apply our values.
+	# Oh My Zsh lib/history.zsh overwrites these; re-apply Zangarmarsh values.
 	zangarmarsh_apply_zsh_history || return 1
 fi
 

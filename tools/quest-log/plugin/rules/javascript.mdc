@@ -18,12 +18,12 @@ Keep JavaScript boundaries explicit and keep async and error handling direct.
 
 - Use ECMAScript modules when the project supports them. Match the existing module system when it does not.
 - Prefer named exports for library code.
-- Prefer `const`. Use `let` only when reassignment is needed. Use `===` and `!==`.
+- Use `const`, or `let` only when reassignment is needed. Use `===` and `!==`.
 - Prefer `async` and `await` over raw `Promise` chains when both are available.
 - Validate untrusted input at module boundaries.
-- Read config from environment variables or injected config, not literals.
-- Throw or return errors with useful context. Preserve the original error with `cause` when the runtime supports it.
-- Every function has a JSDoc header in the form shown in the example. State the purpose, params, return, and thrown errors.
+- Read config from environment variables or injected config.
+- Throw or return errors with useful context. Set `cause` to preserve the original error when the runtime supports it.
+- Every function except `main` has a JSDoc header in the form shown in the example. State the purpose, params, return, and thrown errors.
 - Keep the formatter and linter clean on touched files when the repo defines them.
 
 ## Usage

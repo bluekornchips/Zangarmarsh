@@ -211,7 +211,6 @@ _auras_local_user_dir() {
 # - 1 if HOME is unset or empty
 applications_dir() {
 	_auras_local_user_dir ".local/share/applications" "applications_dir"
-
 	return $?
 }
 
@@ -225,7 +224,6 @@ applications_dir() {
 # - 1 if HOME is unset or empty
 bin_link_dir() {
 	_auras_local_user_dir ".local/bin" "bin_link_dir"
-
 	return $?
 }
 
@@ -254,15 +252,15 @@ resolve_symlink_path() {
 
 	local depth=0
 	local max_depth=32
-	local link_target
-	local link_dir
 	while [[ -L "${path}" ]] && ((depth < max_depth)); do
+		local link_target
 		link_target="$(readlink "${path}")" || {
 			echo "${ctx}:: failed to read symlink: ${path}" >&2
 			return 1
 		}
 
 		if [[ "${link_target}" != /* ]]; then
+			local link_dir
 			link_dir="$(cd "$(dirname "${path}")" && pwd)" || {
 				echo "${ctx}:: failed to resolve symlink directory: ${path}" >&2
 				return 1
@@ -361,7 +359,6 @@ bin_link_path() {
 	local app_stem="$1"
 
 	_auras_stem_path "${app_stem}" "bin" "bin_link_path"
-
 	return $?
 }
 
@@ -380,6 +377,5 @@ desktop_path_for_stem() {
 	local app_stem="$1"
 
 	_auras_stem_path "${app_stem}" "desktop" "desktop_path_for_stem"
-
 	return $?
 }

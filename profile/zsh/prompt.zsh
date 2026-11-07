@@ -10,17 +10,13 @@ BLUE='%{%F{blue}%}'
 CYAN='%{%F{cyan}%}'
 RESET='%{%f%}'
 
-# Prompt caching variables
 _prompt_cache=""
 _prompt_cache_time=0
 _prompt_pwd_cache=""
 _prompt_git_cache=""
 _prompt_kube_cache=""
 
-# Cache TTL from configuration, default 2 seconds
 PROMPT_CACHE_TTL="${ZANGARMARSH_PROMPT_CACHE_TTL:-2}"
-
-# Feature flags from configuration
 GIT_PROMPT_ENABLED="${ZANGARMARSH_GIT_PROMPT:-true}"
 KUBE_PROMPT_ENABLED="${ZANGARMARSH_KUBE_PROMPT:-true}"
 SHOW_USER="${ZANGARMARSH_SHOW_USER:-true}"
@@ -96,6 +92,7 @@ _prompt_git_from_head() {
 			print -r -- "${head_content[1,7]}"
 			return 0
 		fi
+
 		return 1
 	done
 
@@ -175,7 +172,6 @@ build_prompt() {
 		[[ -n "${kube_ctx}" ]] && prompt="${prompt}${CYAN}${kube_ctx}${RESET}"
 	fi
 
-	# username@hostname, with configuration options
 	if [[ "${SHOW_USER}" == "true" || "${SHOW_HOST}" == "true" ]]; then
 		if [[ "${SHOW_USER}" == "true" ]]; then
 			local username="${USER:-}"
@@ -208,7 +204,6 @@ build_prompt() {
 		fi
 	fi
 
-	# git branch on pwd change or cache expiry, only if enabled
 	if [[ "${GIT_PROMPT_ENABLED}" == "true" ]]; then
 		local git_info
 		if ((pwd_changed || cache_expired)); then

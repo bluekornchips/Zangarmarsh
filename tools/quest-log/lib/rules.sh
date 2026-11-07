@@ -5,7 +5,6 @@
 # Requires plugin.sh to be sourced first for _plugin_resolve_under_home.
 #
 
-# Manifest basename written beside managed rules under the rules directory
 QUEST_LOG_RULES_MANIFEST=".quest-log.manifest"
 
 # Resolve the Cursor user-rules install directory

@@ -19,19 +19,19 @@ This skill is review criteria only.
 - [ ] _No secrets in source_: API keys, tokens, passwords, and environment-specific values come from environment variables or injected config, never source literals
 - [ ] _No unsafe dynamic execution_: No `eval`, `exec`, `pickle.loads`, or dynamic imports on untrusted input
 - [ ] _Input validation_: Public entry points validate external input before doing work
-- [ ] _Path safety_: User-supplied paths are normalized, constrained to expected roots, and not used for arbitrary reads or writes
+- [ ] _Path safety_: Normalize user-supplied paths and constrain them to expected roots so they cannot drive arbitrary reads or writes
 - [ ] _Shell safety_: `subprocess` calls pass argument sequences with `shell=False`, never shell strings built from untrusted input
-- [ ] _Safe logging_: Logs do not emit secrets, credentials, or sensitive personal data
-- [ ] _Locked dependencies_: `uv.lock` is committed and install or CI paths use `--locked` when the project uses `uv`
+- [ ] _Safe logging_: Logs never emit secrets, credentials, or sensitive personal data
+- [ ] _Locked dependencies_: Commit `uv.lock` and use `--locked` in install or CI paths when the project uses `uv`
 
 ---
 
 ## Error Handling and Reliability Must Fix
 
-- [ ] _Specific exceptions_: `try` blocks wrap the smallest needed statement range and catch specific exception classes, never bare `except:` or broad `except Exception` on production paths
-- [ ] _Exception chaining_: Re-raised or wrapped errors preserve cause with `raise ValueError("...") from exc`
+- [ ] _Specific exceptions_: `try` blocks wrap the smallest needed statements and catch specific exception classes, never bare `except:` or broad `except Exception` on production paths
+- [ ] _Exception chaining_: Re-raised or wrapped errors preserve the cause with `raise ValueError("...") from exc`
 - [ ] _No swallowed errors_: Caught exceptions are re-raised, wrapped, or logged with operation context
-- [ ] _No assert for control flow_: `assert` is never used to validate runtime inputs or enforce production invariants
+- [ ] _No assert for control flow_: `assert` never validates runtime inputs or enforces production invariants
 - [ ] _Context managers_: Files, sockets, locks, database sessions, and temporary resources use `with` or `@contextmanager`
 - [ ] _Early validation_: Functions check preconditions up front and raise clear errors such as `ValueError("func_name: reason")`
 
@@ -39,14 +39,15 @@ This skill is review criteria only.
 
 ## Google Python Style and Language Rules
 
-- [ ] _Google docstrings_: Modules, classes, and every public function or method have `"""..."""` docstrings with a one-line summary, blank line, and `Args:`, `Returns:`, `Yields:`, `Raises:`, or `Attributes:` sections as applicable
+- [ ] _Google docstrings_: Modules, classes, and every public function or method except `main` have `"""..."""` docstrings with a one-line summary, a blank line, and the applicable `Args:`, `Returns:`, `Yields:`, `Raises:`, or `Attributes:` sections
 - [ ] _Naming conventions_: `module_name`, `package_name`, `ClassName`, `ExceptionName`, `function_name`, `method_name`, `local_var_name`, `GLOBAL_CONSTANT_NAME`, and `_internal_name` follow Google style
-- [ ] _Imports order and form_: Imports sit at the top of the file grouped as standard library, third-party, then repository packages, separated by blank lines and sorted lexicographically; no wildcard `from module import *`
-- [ ] _Absolute and package-relative imports_: Prefer absolute imports from the project root; single-dot relative imports stay inside one package only when they reduce cycles
-- [ ] _Immutable default arguments_: Function signatures use `None` instead of mutable defaults such as `[]` or `{}` and initialize inside the body
-- [ ] _Implicit truthiness and None checks_: Identity checks use `is None` or `is not None`; emptiness checks use `if not seq:` unless `0`, `False`, and `None` must be distinguished
-- [ ] _Simple comprehensions_: List, dict, and set comprehensions stay single-clause and readable without multiple `for` clauses or complex filters
-- [ ] _No global mutable state_: Module-level state is limited to constants and `logger = logging.getLogger(__name__)`; mutable globals are not used as application state
+- [ ] _Imports order and form_: Imports sit at the top of the file, grouped as standard library, third-party, then repository packages, separated by blank lines and sorted lexicographically
+- [ ] _No wildcard imports_: Never use `from module import *`
+- [ ] _Absolute and package-relative imports_: Prefer absolute imports from the project root, and use single-dot relative imports only inside one package to reduce cycles
+- [ ] _Immutable default arguments_: Signatures use `None` instead of mutable defaults such as `[]` or `{}` and initialize inside the body
+- [ ] _Implicit truthiness and None checks_: Identity checks use `is None` or `is not None`, and emptiness checks use `if not seq:` unless `0`, `False`, and `None` must be distinguished
+- [ ] _Simple comprehensions_: List, dict, and set comprehensions stay single-clause and readable, without multiple `for` clauses or complex filters
+- [ ] _No global mutable state_: Module-level state is limited to constants and `logger = logging.getLogger(__name__)`, never mutable application state
 - [ ] _Main guard_: Executable modules guard startup work behind `if __name__ == "__main__": main()` and avoid import-time side effects
 
 ---
@@ -54,8 +55,8 @@ This skill is review criteria only.
 ## Typing and Public Contracts
 
 - [ ] _Public signatures typed_: Public functions, methods, and class attributes declare parameter and return type annotations, including `-> None`
-- [ ] _Modern union and builtin generics_: Type annotations prefer builtin generics and `X | None` on Python 3.11 and newer when the target runtime supports them
-- [ ] _Narrow type ignores_: Any `# type: ignore[code]` names the specific error code and reason
+- [ ] _Modern union and builtin generics_: Prefer builtin generics and `X | None` on Python 3.11 and newer when the target runtime supports them
+- [ ] _Narrow type ignores_: Every `# type: ignore[code]` names the specific error code and a reason
 - [ ] _Strict typing compatibility_: When the repository defines `mypy src/ --strict` or equivalent, modules stay clean under that user-run check
 - [ ] _Lighter script typing_: Small standalone scripts may use lighter typing only when the repository does not require full package rigor
 
@@ -65,8 +66,8 @@ This skill is review criteria only.
 
 - [ ] _Module logger_: Runtime messages use `logging` with `logger = logging.getLogger(__name__)`, never `print`
 - [ ] _Structured log calls_: Log calls pass format strings and arguments or structured fields without leaking secrets
-- [ ] _Config isolation_: Environment reads and runtime configuration are centralized and validated at startup or boundary helpers
-- [ ] _Required environment documented_: Required environment variables fail with a clear error when unset and are listed in project docs
+- [ ] _Config isolation_: Centralize environment reads and runtime configuration and validate them at startup or boundary helpers
+- [ ] _Required environment documented_: Required environment variables fail with a clear error when unset and appear in project docs
 
 ---
 
@@ -75,16 +76,16 @@ This skill is review criteria only.
 - [ ] _Single responsibility_: Functions, classes, and modules have one clear job and stay under 1000 lines
 - [ ] _Less code_: No unneeded wrappers, pass-through helpers, feature flags, or extra layers when a direct change works
 - [ ] _Package layout_: Application and library packages follow `src/<package_name>/` and `tests/` when the repository uses the standard layout
-- [ ] _No stray `__init__.py`_: New `__init__.py` files are added only when the repository already documents that package layout
+- [ ] _No stray `__init__.py`_: Add new `__init__.py` files only when the repository already documents that package layout
 
 ---
 
 ## Linting, Formatting, and Static Analysis
 
-- [ ] _Line length and formatting_: Formatting is consistent with Ruff and the configured line length, 80 under strict Google style or up to 100 when configured in `pyproject.toml`
+- [ ] _Line length and formatting_: Formatting matches Ruff and the configured line length, 80 under strict Google style or up to 100 when `pyproject.toml` configures it
 - [ ] _Ruff lint rules_: Ruff checks cover `E`, `F`, `I`, `B`, `UP`, and `SIM` or the repository's documented rule set
 - [ ] _Scoped suppressions_: `# noqa: CODE` suppressions name the exact rule code and stay on the narrowest line
-- [ ] _uv workflow_: `pyproject.toml`, `uv.lock`, and thin `Makefile` targets (`install`, `format`, `lint`, `test`, `all`) match the repository workflow
+- [ ] _uv workflow_: `pyproject.toml`, `uv.lock`, and thin `Makefile` targets `install`, `format`, `lint`, `test`, and `all` match the repository workflow
 
 ---
 
@@ -92,15 +93,15 @@ This skill is review criteria only.
 
 - [ ] _pytest conventions_: Tests live under `tests/` with `test_*.py`, `Test*`, and `test_*` naming
 - [ ] _Happy and failure paths_: Unit tests cover expected inputs, boundary values, default arguments, and `pytest.raises(..., match=...)` error cases
-- [ ] _Isolated environment and mocks_: External state and environment variables are isolated with `unittest.mock.patch` or fixtures, with no live network calls
-- [ ] _Coverage configured_: Test runs report coverage against `src` when configured in `pyproject.toml`
+- [ ] _Isolated environment and mocks_: Isolate external state and environment variables with `unittest.mock.patch` or fixtures and make no live network calls
+- [ ] _Coverage configured_: Test runs report coverage against `src` when `pyproject.toml` configures it
 - [ ] _Documented verification_: `README.md` documents the user-run `uv` and `make` verification commands
 
 ---
 
 ## Repository Structure
 
-- [ ] _Logical layout_: Source under `src/`, tests under `tests/`, and config in `pyproject.toml`
+- [ ] _Logical layout_: Source lives under `src/`, tests under `tests/`, and config in `pyproject.toml`
 - [ ] _Python version declared_: `requires-python` in `pyproject.toml` matches `README.md` requirements
 - [ ] _Ignore rules_: `.gitignore` excludes `.venv/`, `__pycache__/`, `*.pyc`, `*.pyo`, `.mypy_cache/`, `.pytest_cache/`, `htmlcov/`, `.coverage`, `dist/`, and `*.egg-info/`
 - [ ] _README accuracy_: Setup, usage, and development commands match the actual project files
@@ -129,12 +130,6 @@ This skill is review criteria only.
 ```markdown
 ## Review: Repository Name - Date
 
-### Summary
-
-- Overall Assessment: Good, Fair, or Needs Work
-- Critical Issues: 1
-- Important Issues: 2
-
 ### Critical Issues
 
 - [ ] Hardcoded API token in source - File: `src/project_name/client.py:18`
@@ -142,13 +137,6 @@ This skill is review criteria only.
 ### Important Improvements
 
 - [ ] Broad `except Exception` without chaining - File: `src/project_name/store.py:64`
-- [ ] Public function missing Google `Args:` and `Raises:` docstring sections - File: `src/project_name/main.py:42`
-
-### Recommendations
-
-1. Read the token from `os.getenv` and raise `ValueError` when missing.
-2. Catch the specific exception class and re-raise with `from exc`.
-3. Add a Google-style docstring header and full parameter and return type annotations.
 ```
 
 ---

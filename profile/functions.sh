@@ -456,7 +456,6 @@ tfa() {
 	return $?
 }
 
-# Register NVM when enabled
 if [[ "${ZANGARMARSH_LAZY_LOADING:-true}" == "true" ]] && [[ "${ZANGARMARSH_ENABLE_NVM:-true}" == "true" ]]; then
 	# Lazy NVM shim that loads the real nvm on first call
 	#

@@ -46,12 +46,13 @@ Apply Altitude, Depth, and Range to the change itself. A tidy fix of the wrong p
    - Reuse the existing helper. Put the logic in the module that already owns the concept.
 
 5. Require function headers. Keep inline comments rare.
-   - Require the header the language rule for that file requires. When no language rule applies, require a header on every function.
+   - Require the header the language rule for that file requires. When no language rule applies, require a header on every function except `main`.
+   - `main` never needs a header comment.
    - The header states the purpose and the signature. Include inputs, outputs, side effects, returns, and thrown errors for each section that applies.
    - A short or obvious function still needs its required header.
    - An inline comment is allowed only when the next reader would misuse the code without it: a hidden constraint, a workaround, a unit, or a surprising invariant.
    - Say that in one or two plain sentences, using the words already in the code.
-   - Reject narration, file banners, section dividers, changelog comments, and stock wording such as robust, leverage, seamless, comprehensive, utilize, or "this function".
+   - Reject narration, edit-diary comments, conversation or prompt leakage, file banners, section dividers, changelog comments, and stock wording such as robust, leverage, seamless, comprehensive, utilize, or "this function".
 
 6. Flag avoidable orchestration.
    - Independent work serialized for no reason.

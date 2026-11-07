@@ -1,32 +1,17 @@
 # Quest Log
 
-## Overview
+Install the tracked plugin tree under `~/.cursor/plugins/local/quest-log`, sync rules into `~/.cursor/rules`, and overwrite host Cursor user settings from `tools/vscode/settings.json`. There is no generation step: `plugin/` is the plugin. Quest-log does not write project `.vscode/` files.
 
-Install the tracked plugin tree in this directory under
-`~/.cursor/plugins/local/quest-log`, sync rules into `~/.cursor/rules`, and
-overwrite host Cursor user settings from `tools/vscode/settings.json`. There is
-no generation step: `plugin/` is the plugin. Quest-log does not write project
-`.vscode/` files.
+`make install` installs the plugin and user rules. `questlog` installs the plugin, syncs user rules, and overwrites Cursor user settings. Both paths share `apply_quest_log`.
 
-`make install` installs the plugin and user rules. `questlog` installs the
-plugin, syncs user rules, and overwrites Cursor user settings. Both paths share
-`apply_quest_log`.
-
-User rules under `~/.cursor/rules` are the agent source of truth and apply in a
-new chat without Reload Window. The plugin path still carries skills and a copy
-of rules for the plugin layout. Skills discovery may still need a reload.
+User rules under `~/.cursor/rules` are the agent source of truth and apply in a new chat without Reload Window. The plugin path still carries skills and a copy of rules for the plugin layout. Skills discovery may still need a reload.
 
 ## Features
 
-- Replaces `~/.cursor/plugins/local/quest-log` with a fresh copy of
-  `tools/quest-log/plugin/` on every run, so stale files never survive
-- Syncs `plugin/rules/*.mdc` into `~/.cursor/rules`, tracked by
-  `.quest-log.manifest`, and prunes only previously managed rule files
+- Replaces `~/.cursor/plugins/local/quest-log` with a fresh copy of `tools/quest-log/plugin/` on every run
+- Syncs `plugin/rules/*.mdc` into `~/.cursor/rules`, tracked by `.quest-log.manifest`, and prunes only previously managed rule files
 - Overwrites host Cursor `User/settings.json` from `tools/vscode/settings.json`
-- In full apply mode, syncs settings first and installs rules and the plugin
-  only after settings succeed, so a settings failure never touches the plugin
-  or rules. Settings restore after a failed sync is best-effort. Plugin install
-  itself stays self-atomic.
+- In full apply mode, syncs settings first and installs rules and the plugin only after settings succeed. Settings restore after a failed sync is best-effort. Plugin install itself stays self-atomic.
 
 ## Usage
 
@@ -81,17 +66,17 @@ plugin/
 This tracked plugin is the canonical agent configuration for this repository.
 The plugin follows this repository's GPL-3.0-only license.
 
-| Rule             | Role                                                       |
-| ---------------- | ---------------------------------------------------------- |
-| `always.mdc`     | Universal assistant behavior, safety, and response quality |
-| `never.mdc`      | Agent prohibitions, including no Python generation or run  |
-| `shell.mdc`      | Shared shell quoting, status, and destructive-path rules   |
-| `bash.mdc`       | Bash 3.2, locals, source guards, arrays, and Bats          |
-| `zsh.mdc`        | Zsh 5 profile and Zsh-owned module rules                   |
-| `python.mdc`     | User-reference Python standards; does not authorize agents |
-| `lua.mdc`        | Lua and WoW addon guidance                                 |
-| `javascript.mdc` | JavaScript modules, async work, errors, and tests          |
-| `typescript.mdc` | TypeScript typing, modules, async work, errors, and tests  |
+| Rule             | Role                                                          |
+| ---------------- | ------------------------------------------------------------- |
+| `always.mdc`     | Universal assistant behavior, safety, and response quality    |
+| `never.mdc`      | Agent prohibitions: no legacy support, no prior-work records  |
+| `shell.mdc`      | Shared shell quoting, status, and destructive-path rules      |
+| `bash.mdc`       | Bash 3.2, locals, source guards, arrays, and Bats             |
+| `zsh.mdc`        | Zsh 5 profile and Zsh-owned module rules                      |
+| `python.mdc`     | Python standards; writing allowed, running needs approval     |
+| `lua.mdc`        | Lua and WoW addon guidance                                    |
+| `javascript.mdc` | JavaScript modules, async work, errors, and tests             |
+| `typescript.mdc` | TypeScript typing, modules, async work, errors, and tests     |
 
 ## Skills
 
@@ -108,8 +93,7 @@ The plugin follows this repository's GPL-3.0-only license.
 | `blue-review-typescript` | TypeScript review checklist                 |
 | `blueberry`              | Master pass over blue-review and penmanship |
 
-To add or change a rule or skill, edit the files under `plugin/` directly and
-run `questlog` to install the update.
+To add or change a rule or skill, edit the files under `plugin/` directly and run `questlog` to install the update.
 
 ## Install layout
 
@@ -117,20 +101,16 @@ run `questlog` to install the update.
 - `~/.cursor/plugins/local/quest-log/`: live local plugin install refreshed every run
 - `~/.cursor/rules/`: live user-rules sync from `plugin/rules/`, agent source of truth
 
-The live installs are disposable. Edit the tracked source, then run `questlog`
-to refresh the local copies. Start a new Agent chat to pick up updated rules.
-Reload Window is not required for user rules.
+The live installs are disposable. Edit the tracked source, then run `questlog` to refresh the local copies. Start a new Agent chat to pick up updated rules. Reload Window is not required for user rules.
 
 ## Cursor user settings
 
-Canonical host Cursor settings live in `tools/vscode/settings.json`. Each
-`questlog` run copies that file over the host Cursor user settings:
+Canonical host Cursor settings live in `tools/vscode/settings.json`. Each `questlog` run copies that file over the host Cursor user settings:
 
 - Linux: `~/.config/Cursor/User/settings.json`
 - macOS: `~/Library/Application Support/Cursor/User/settings.json`
 
-There is no project `.vscode/` sync. `tools/vscode/extensions.json` is a
-recommended extensions list only.
+There is no project `.vscode/` sync. `tools/vscode/extensions.json` is a recommended extensions list only.
 
 Edit `tools/vscode/settings.json`, then run `questlog` to apply.
 
@@ -143,5 +123,4 @@ bats tools/quest-log/tests/quest-log-cli-tests.sh
 bats tools/quest-log/tests/plugin-tests.sh
 ```
 
-You can also run `bash -n tools/quest-log/quest-log.sh` for a quick syntax check
-without Bats.
+You can also run `bash -n tools/quest-log/quest-log.sh` for a quick syntax check without Bats.

@@ -25,9 +25,6 @@ teardown() {
 	return 0
 }
 
-########################################################
-# debuff_appimage
-########################################################
 @test "debuff_appimage:: removes an Auras-managed desktop file" {
 	if ! make_managed_desktop "demoapp"; then
 		return 1
@@ -99,9 +96,6 @@ teardown() {
 	grep -q "debuff_appimage:: no desktop file" <<<"$output"
 }
 
-########################################################
-# main
-########################################################
 @test "main:: debuff rejects --appimage" {
 	run bash "$SCRIPT" --debuff demoapp --appimage /tmp/x.AppImage
 	[[ "$status" -eq 1 ]]

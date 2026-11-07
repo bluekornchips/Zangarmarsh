@@ -96,11 +96,12 @@ validate_targets() {
 	local requested_targets
 	IFS=',' read -ra requested_targets <<<"${targets_string}"
 
-	local matched known target
+	local target
 	for target in "${requested_targets[@]}"; do
 		target="${target#"${target%%[![:space:]]*}"}"
 		target="${target%"${target##*[![:space:]]}"}"
-		matched=false
+		local matched=false
+		local known
 		for known in "${ALL_TARGETS[@]}"; do
 			if [[ "${target}" == "${known}" ]]; then
 				ENABLED_TARGETS+=("${target}")

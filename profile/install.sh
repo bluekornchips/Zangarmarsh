@@ -65,7 +65,6 @@ _canonical_source_command() {
 	local quoted
 	quoted="$(printf '%q' "${ZANGARMARSH_ROOT}/zangarmarsh.sh")"
 	printf 'source %s' "${quoted}"
-
 	return 0
 }
 
@@ -101,7 +100,6 @@ _zangarmarsh_loader_path() {
 _trim_leading_ws() {
 	local text="${1:-}"
 	printf '%s\n' "${text#"${text%%[![:space:]]*}"}"
-
 	return 0
 }
 
@@ -118,7 +116,6 @@ _trim_leading_ws() {
 _trim_trailing_ws() {
 	local text="${1:-}"
 	printf '%s\n' "${text%"${text##*[![:space:]]}"}"
-
 	return 0
 }
 
@@ -494,7 +491,6 @@ uninstall_zangarmarsh() {
 install_cursor_plugin() {
 	validate_install_env || return 1
 	apply_quest_log --plugin-only
-
 	return $?
 }
 

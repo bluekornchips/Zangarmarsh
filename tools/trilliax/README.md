@@ -1,7 +1,5 @@
 # Trilliax Cleanup Tool
 
-## Overview
-
 Trilliax removes generated files and directories from development environments: temporary files, cache directories, and build artifacts selected by target.
 
 The name [Trilliax](https://www.wowhead.com/npc=104288/trilliax) comes from a World of Warcraft raid boss that was once a proud cleaner servant that now has multiple personalities, all of which are related to cleaning. "Filthy, filthy, FILTHY!" is one my friends and I quote often.
@@ -42,17 +40,17 @@ A positional `DIRECTORY` is the same as `--dir`. Either `--all` or `--targets` i
 
 ### Cursor Target
 
-- `.cursor/` directories (recursively)
+- `.cursor/` directories, recursively
 
 ### Python Target
 
-- Virtual environments (`venv/`, `.venv/`)
-- Python cache files (`__pycache__/`, `*.pyc`, `*.pyo`)
+- Virtual environments: `venv/`, `.venv/`
+- Python cache files: `__pycache__/`, `*.pyc`, `*.pyo`
 
 ### Node Target
 
 - `node_modules/` directories
-- NPM cache directories (`.npm/`)
+- NPM cache directories: `.npm/`
 - NPM and Yarn debug logs
 
 ### Filesystem Target

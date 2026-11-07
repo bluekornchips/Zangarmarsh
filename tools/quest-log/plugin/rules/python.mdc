@@ -9,11 +9,11 @@ alwaysApply: false
 
 ## Purpose
 
-Keep Python types honest, failures specific, and resources scoped. Writing and editing Python are allowed. These standards do not authorize the agent to run any Python command.
+Keep Python types honest, failures specific, and resources scoped. Writing and editing Python are allowed. Nothing here authorizes running Python.
 
 ## Python execution prohibition
 
-- Never run Python directly or indirectly without explicit user approval for the named command or bounded operation.
+- Never run any Python command, directly or indirectly, without explicit user approval for that exact command or bounded operation.
 - Block `python`, `python3`, `py`, `pip`, `pip3`, `pipx`, `pytest`, `mypy`, `tox`, `nox`, `poetry`, `hatch`, `pdm`, `virtualenv`, and Python execution through `uv`.
 - Block shell scripts, Make targets, package scripts, hooks, test suites, and other commands when they may invoke Python or Python tooling transitively.
 - When approval is absent or unclear, refuse execution and offer a non-Python path.
@@ -23,7 +23,7 @@ Keep Python types honest, failures specific, and resources scoped. Writing and e
 - Catch specific exception types. Re-raise or wrap when callers need a useful error.
 - Use `logging` with `logger = logging.getLogger(__name__)` instead of `print` for runtime messages.
 - Use context managers for files, sockets, locks, and other scoped resources.
-- Every public function has a docstring header in the form shown in the example. State the purpose, arguments, return, and raised errors.
+- Every public function except `main` has a docstring header in the form shown in the example. State the purpose, arguments, return, and raised errors.
 - Read secrets and environment-specific values from environment variables or injected config, not literals in source.
 
 ## Usage
@@ -31,12 +31,12 @@ Keep Python types honest, failures specific, and resources scoped. Writing and e
 ### Allowed
 
 - Absolute imports from the project root when the tree supports them. Relative imports inside one package when they reduce cycles.
-- Existing projects may define `mypy src/ --strict` as a user-run check. Its presence is not authorization for the agent to execute it.
+- Existing projects may define `mypy src/ --strict` as a user-run check. Defining it does not authorize executing it.
 - Lighter typing on small scripts when the repo does not require full package rigor.
 
 ### Denied
 
-- Running any Python command without explicit user approval for that exact command or bounded operation.
+- Any Python execution that the execution prohibition above does not permit.
 - Broad `except Exception`, bare `except:`, or `assert` for control flow in production paths.
 - `eval` or `exec` on untrusted input.
 - Wildcard imports such as `from module import *`.

@@ -10,24 +10,22 @@ alwaysApply: false
 
 ## Purpose
 
-Keep executable Bash scripts compatible with Bash 3.2+ and consistent with this repo's test style.
+Keep Bash scripts compatible and consistent with this repo's test style.
 
 ## Standards
 
-- Use `#!/usr/bin/env bash` for Bash executables.
-- Stay compatible with Bash 3.2+.
+- Use `#!/usr/bin/env bash` for Bash executables and stay compatible with Bash 3.2+.
 - In the direct-run entry block only, enable strict mode when it fits, for example `set -euo pipefail` or `set -eo pipefail`. Set `umask 077` when the script handles sensitive files.
 - Prefer `[[ ... ]]` for string and file tests. Use `(( ... ))` for integers.
 - Use array literals for lists, for example `flags=(--foo --bar='baz')`, and expand with `"${name[@]}"`.
-- Declare each `local` on the line that first gives it a value. A literal, default, or array is `local name=value` or `local name=(...)` on that line.
+- Declare each `local` on the line that first gives it a value, as `local name=value` or `local name=(...)`. Leave the name undeclared until that statement.
 - A bare `local name` is allowed only as the next line's preface, with no blank line between them, and only for one of these:
   - the next line assigns a command substitution, so the command status is not masked. ShellCheck: SC2155
   - the next line is the `for` or `while` that uses that name
   - the next line is the `if` or `case` whose branches first assign that name
-- Leave a name undeclared until that statement. Do not gather `local` lines at the top of a function and assign them later.
 - Split assign and `export` onto separate lines when export intent should stand out. Export stays next to that assignment.
-- Every function has a header comment in the form shown in the example. State the purpose, then Inputs, Outputs, Side Effects, and Returns for each section that applies.
-- Follow `shell.mdc` for quoting, status codes, guard clauses, function-ending returns, block spacing, and destructive-path safety. Do not copy those rules into Bash-only guidance.
+- Every function except `main` has a header comment in the form shown in the example. State the purpose, then Inputs, Outputs, Side Effects, and Returns for each section that applies.
+- Follow `shell.mdc` for quoting, status codes, guard clauses, function-ending returns, block spacing, and destructive-path safety.
 - Support execution and sourcing with a `BASH_SOURCE[0]` source guard when the script exposes helper functions.
 - Use Bats for non-trivial shell. Use `@test "name:: description" {` for direct function tests.
 - Use `setup_file` and `setup` as the project already does.
@@ -42,9 +40,9 @@ Keep executable Bash scripts compatible with Bash 3.2+ and consistent with this 
 
 ### Denied
 
-- `declare -a` for simple array assignment. Use `name=(a b)` and `"${name[@]}"`.
-- A block of `local` declarations at the top of a function, or any bare `local name` that is not the line immediately above one of the three cases in Standards.
-- A later literal or array assignment after a bare `local name`. Write `local name=value` or `local name=(...)` instead.
+- `declare -a` for simple array assignment.
+- A block of `local` declarations at the top of a function, or a bare `local name` outside the three cases in Standards.
+- A later literal or array assignment after a bare `local name`.
 - Declaring the same `local` name more than once in a function.
 - `local name=$(cmd)`, `local name="$(cmd)"`, `export name=$(cmd)`, or `export name="$(cmd)"`.
 - Applying Bash-only constructs to Zsh profile files.

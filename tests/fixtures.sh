@@ -172,20 +172,18 @@ zangarmarsh_bats_setup_file() {
 	return 0
 }
 
-# Source a library during setup without leaving Bats traps disabled
+# Source a library during setup without leaving Bats errexit disabled
 #
 # Inputs:
 # - $1, path to source
 #
 # Side Effects:
-# - Sources the file with errexit and the EXIT/ERR traps suspended
-# - Restores those traps and errexit afterwards
+# - Sources the file with errexit suspended
+# - Restores errexit afterwards
 #
 # Returns:
 # - The sourced file's status
 source_for_test() {
-	# Suspend errexit only. Sourced libraries under test do not install EXIT/ERR
-	# traps at source time, so clearing and restoring those traps is unnecessary.
 	set +e
 	# shellcheck disable=SC1090
 	source "$1"

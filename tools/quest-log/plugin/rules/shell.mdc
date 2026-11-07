@@ -29,13 +29,12 @@ Keep bash and zsh scripts safe, readable, and honest about errors and cleanup.
   - `command args || return 1`
 - Keep `if` blocks when the branch logs, cleans up, assigns state, runs more than one command, or returns a computed status.
 - Group scripts as usage, validation and config, helpers, core logic, `main`, then the source guard when applicable.
-- End every function, including `main`, with `return <code>`. When the function body has 4 or more lines between the braces, put one empty line before that final `return`. That empty line belongs only to the function-ending return. Bodies with fewer than 4 lines omit the empty line.
-- An early `return` stays on the next line after the statement it belongs to. No empty line before it. This includes `return` after an `echo` or command inside `if`, `case`, and `command || { }`.
-- After a multi-line block, leave one empty line before the next statement in the same scope. The block closes with `}`, `fi`, `done`, or `esac`. That includes a later `return` that follows the whole block.
-- When that next line closes the enclosing block, keep it flush. No empty line before the `done`, `fi`, `esac`, `else`, `elif`, or `}` that ends or continues the `for`, `if`, `case`, or group you are inside.
-- One empty line does both jobs when a `return` is the next statement after a multi-line block. Do not insert a second empty line.
+- End every function, including `main`, with `return <code>`. A body of 4 or more lines between the braces gets one empty line before that final `return`. A shorter body gets none. That empty line belongs only to the function-ending return.
+- An early `return` stays on the line right after the statement it belongs to, with no empty line before it. This includes `return` after an `echo` or command inside `if`, `case`, and `command || { }`.
+- After a multi-line block closed by `}`, `fi`, `done`, or `esac`, leave one empty line before the next statement in the same scope, including a later `return`. Do not stack another command or block on the line right after the closer. When that next statement is the function-ending `return`, the one empty line serves both jobs. Never leave two.
+- When the next line closes or continues the enclosing block, keep it flush. No empty line before the `done`, `fi`, `esac`, `else`, `elif`, or `}` of the `for`, `if`, `case`, or group you are inside.
 - The separator is an empty line. A line that contains only spaces or tabs does not count.
-- Bash `local` placement is owned by `bash.mdc`: declare each local on the line that first assigns it. A bare `local` block at the top of a function is invalid.
+- Bash `local` placement is owned by `bash.mdc`.
 
 ## Usage
 
@@ -44,24 +43,19 @@ Keep bash and zsh scripts safe, readable, and honest about errors and cleanup.
 - Explicit paths for destructive commands, for example `rm -v ./*`.
 - `trap` to remove temp dirs the script created. Short-lived temp files may use `rm` in the same scope.
 - `mktemp` or `mktemp -d` with a template. `chmod 0600` on temp files that may hold secrets.
-- Cleanup tools listed below may delete named paths they manage outside the current temp-dir pattern.
+- Cleanup tools listed below deleting the named paths they manage.
 
 ### Denied
 
 - `echo` lines longer than 160 characters. Use a heredoc or a loop instead.
-- Removing paths the script did not create, except for the cleanup tools listed below.
+- Removing paths the script did not create, except by the cleanup tools listed below.
 - `rm -rf /`, `eval`, `exec`, or `sudo`.
-- Multi-line `if` blocks whose only body is a plain `return` with no other commands.
-- An empty line before an early `return`.
-- A function body of 4 or more lines whose last `return` is not preceded by an empty line.
-- An empty line before the final `return` in a function body with fewer than 4 lines.
-- Another command or block on the line immediately after a closing `}`, `fi`, `done`, or `esac`. The closer of the enclosing block is not that next command.
-- An empty line before the `done`, `fi`, `esac`, or `}` that closes the enclosing block.
-- Two empty lines between a multi-line block and the function-ending `return`.
+- Multi-line `if` blocks whose only body is a plain `return`.
+- Any spacing or `return` placement that breaks the Standards above.
 
 ### Cleanup tool exception
 
-These named tools may delete paths they did not create in the current run. All other scripts must still use `trap` for script-created temp dirs only.
+These tools may delete paths they did not create in the current run. All other scripts use `trap` for script-created temp dirs only.
 
 - `tools/trilliax/trilliax.sh` may remove dev artifacts such as `.cursor`, caches, `node_modules`, and Python virtual environments.
 - `penv()` in `profile/functions.sh` may remove Python caches and `.venv` when recreating an environment.
@@ -70,7 +64,7 @@ These named tools may delete paths they did not create in the current run. All o
 
 ## Example
 
-Required. Early `return` stays tight. One empty line sits after each multi-line block. The function ends with one empty line and `return 0`. The `done` that closes the loop stays flush.
+Required. Early `return` stays tight, one empty line follows each multi-line block, the `done` stays flush, and the function ends with one empty line and `return 0`.
 
 ```bash
 load_plugins() {

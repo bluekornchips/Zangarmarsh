@@ -16,10 +16,11 @@ Keep TypeScript strict at boundaries so mistakes surface early and types stay ho
 
 - Enable `"strict": true` and `noUncheckedIndexedAccess` in `tsconfig.json`.
 - Named exports for library code. Explicit return types on exported functions, public class methods, and shared types when they clarify contracts.
-- Prefer `const`. Use `let` only when reassignment is needed. Use `===` and `!==`.
+- Use `const`, or `let` only when reassignment is needed. Use `===` and `!==`.
 - Prefer `async` and `await` over raw `Promise` chains when both are available.
 - In `catch`, use `unknown` and narrow before use. Set `cause` on re-throw when the runtime supports it.
-- Validate untrusted input at module boundaries. Read config from environment variables or injected config, not literals.
+- Validate untrusted input at module boundaries. Read config from environment variables or injected config.
+- Every function except `main` has a JSDoc or TSDoc header in the form shown in the example. State the purpose, params, return, and thrown errors.
 - Run `tsc --noEmit` with zero errors before merge.
 - Keep the formatter and linter clean on touched files when the repo defines them.
 
@@ -31,7 +32,6 @@ Keep TypeScript strict at boundaries so mistakes surface early and types stay ho
 - `readonly` on fields that must not change after construction.
 - Discriminated unions instead of large optional bags for mutually exclusive states.
 - `satisfies` and `as const` when they tighten inference without widening.
-- Every function has a JSDoc or TSDoc header in the form shown in the example. State the purpose, params, return, and thrown errors.
 - `Promise.all` for independent concurrent work with rejection handling on work you start.
 
 ### Denied

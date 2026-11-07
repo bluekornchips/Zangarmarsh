@@ -25,9 +25,6 @@ teardown() {
 	return 0
 }
 
-########################################################
-# appimage_version_from_name
-########################################################
 @test "appimage_version_from_name:: extracts dotted version from basename" {
 	run appimage_version_from_name "DemoApp-1.2.3.AppImage"
 	[[ "$status" -eq 0 ]]
@@ -52,9 +49,6 @@ teardown() {
 	[[ -z "$output" ]]
 }
 
-########################################################
-# pick_latest_appimage
-########################################################
 @test "pick_latest_appimage:: prefers higher version over newer mtime" {
 	local appdir="${AURAS_TEST_HOME}/Apps/DemoApp"
 	if ! make_appimage "${appdir}" "DemoApp-1.0.0.AppImage"; then
@@ -113,9 +107,6 @@ teardown() {
 	grep -q "pick_latest_appimage:: no AppImage files" <<<"$output"
 }
 
-########################################################
-# ready_check_main
-########################################################
 @test "ready_check_main:: buffs multiple child apps" {
 	local root="${AURAS_TEST_HOME}/Apps"
 	if ! make_appimage "${root}/DemoApp" "DemoApp-1.0.0.AppImage"; then
@@ -170,9 +161,6 @@ teardown() {
 	grep -q "ready_check_main:: packages directory does not exist" <<<"$output"
 }
 
-########################################################
-# main CLI
-########################################################
 @test "main:: --ready-check installs latest AppImages under DIR" {
 	local root="${AURAS_TEST_HOME}/Apps"
 	if ! make_appimage "${root}/DemoApp" "DemoApp-1.0.0.AppImage"; then

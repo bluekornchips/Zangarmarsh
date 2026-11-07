@@ -57,7 +57,6 @@ if ! apply_platform_env; then
 	return 1
 fi
 
-# Common configuration files to load
 COMMON_FILES=(
 	"config.sh"
 	"aliases.sh"

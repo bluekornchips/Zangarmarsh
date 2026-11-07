@@ -33,7 +33,6 @@ EOF
 	return 0
 }
 
-# Statistics tracking, updated by sync_cursor_user_settings during apply
 STATS_CREATED=0
 STATS_UPDATED=0
 STATS_UNCHANGED=0

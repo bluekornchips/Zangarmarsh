@@ -107,21 +107,20 @@ pick_latest_appimage() {
 	fi
 
 	local paths=()
-	local path
-	local base
 	local has_versioned=0
-	local ver
 	# One walk so case-insensitive filesystems do not double-count via
 	# separate *.AppImage and *.appimage globs.
+	local path
 	for path in "${app_dir}"/*; do
 		[[ -f "${path}" ]] || continue
-		base="${path##*/}"
+		local base="${path##*/}"
 		case "${base}" in
 		*.AppImage | *.appimage) ;;
 		*) continue ;;
 		esac
 
 		paths+=("${path}")
+		local ver
 		ver="$(appimage_version_from_name "${base}")"
 		if [[ -n "${ver}" ]]; then
 			has_versioned=1
@@ -198,14 +197,13 @@ ready_check_main() {
 
 	local child_count=0
 	local fail_count=0
-	local stem
-	local winner
 	local child
 	for child in "${resolved_root}"/*; do
 		[[ -d "${child}" ]] || continue
 		child_count=$((child_count + 1))
-		stem="${child##*/}"
+		local stem="${child##*/}"
 
+		local winner
 		if ! winner="$(pick_latest_appimage "${child}")"; then
 			echo "ready_check_main:: no AppImage found for ${stem} in ${child}" >&2
 			fail_count=$((fail_count + 1))

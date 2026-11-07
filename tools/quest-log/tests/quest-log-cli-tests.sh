@@ -29,6 +29,16 @@ teardown() {
 	return 0
 }
 
+# Isolate HOME and source quest-log CLI and apply libraries for one test
+#
+# Side Effects:
+# - Creates a temporary HOME via quest_log_test_home
+# - Sources quest-log.sh and apply.sh
+# - Resets STATS_* and action counters
+#
+# Returns:
+# - 0 on success
+# - 1 when sourcing or directory change fails
 quest_log_test_setup() {
 	local return_dir="${PWD}"
 
@@ -55,10 +65,6 @@ quest_log_test_setup() {
 
 	return 0
 }
-
-########################################################
-# print_summary
-########################################################
 
 @test 'print_summary:: displays summary with all statistics' {
 	STATS_CREATED=2
@@ -101,10 +107,6 @@ quest_log_test_setup() {
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q "cursor: no files synced"
 }
-
-########################################################
-# sync_cursor_user_settings / run_quest_log
-########################################################
 
 @test 'integration:: run_quest_log overwrites Cursor user settings from template' {
 	local settings_file
@@ -334,9 +336,6 @@ EOF
 	[[ -f "${backup_root}/settings.json" ]]
 }
 
-########################################################
-# Tracked plugin coherence
-########################################################
 @test 'integration:: tracked plugin ships the declared rules and skills' {
 	local tracked_plugin="${ZANGARMARSH_ROOT}/tools/quest-log/plugin"
 
