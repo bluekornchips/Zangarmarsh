@@ -22,6 +22,7 @@ setup() {
 		unset ZANGARMARSH_HISTSIZE ZANGARMARSH_HIST_IGNORE
 		unset ZANGARMARSH_BASH_HISTFILE ZANGARMARSH_ZSH_HISTFILE
 		unset ZANGARMARSH_LAZY_LOADING ZANGARMARSH_ENABLE_NVM
+		unset ZANGARMARSH_ZSH_AUTOSUGGESTIONS
 		source '${SCRIPT}' || exit 1
 		printf 'HISTSIZE=%s\n' \"\$ZANGARMARSH_HISTSIZE\"
 		printf 'IGNORE=%s\n' \"\$ZANGARMARSH_HIST_IGNORE\"
@@ -29,6 +30,7 @@ setup() {
 		printf 'ZSH_HIST=%s\n' \"\$ZANGARMARSH_ZSH_HISTFILE\"
 		printf 'LAZY=%s\n' \"\$ZANGARMARSH_LAZY_LOADING\"
 		printf 'NVM=%s\n' \"\$ZANGARMARSH_ENABLE_NVM\"
+		printf 'SUGGEST=%s\n' \"\$ZANGARMARSH_ZSH_AUTOSUGGESTIONS\"
 	"
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -q '^HISTSIZE=100000$'
@@ -37,6 +39,7 @@ setup() {
 	echo "$output" | grep -q "^ZSH_HIST=${HOME}/.zsh_history$"
 	echo "$output" | grep -q '^LAZY=true$'
 	echo "$output" | grep -q '^NVM=true$'
+	echo "$output" | grep -q "^SUGGEST=${HOME}/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh$"
 }
 
 @test "config:: preserves existing overrides" {

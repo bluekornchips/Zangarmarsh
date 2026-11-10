@@ -15,7 +15,7 @@ usage() {
 Usage: $(basename "$0") [OPTIONS]
 
 Add or remove Zangarmarsh from ~/.zshrc and/or ~/.bashrc and install its
-local Cursor plugin and user rules.
+local Cursor plugin, user rules, Cursor settings, and DejaVu Sans Mono font.
 
 Options:
   -h, --help       Show this help
@@ -25,6 +25,7 @@ Options:
       --bash       Target ~/.bashrc only, or with --zsh both files
 
 When neither --zsh nor --bash is given, both ~/.zshrc and ~/.bashrc are used.
+Uninstall leaves Cursor user settings and the installed font in place.
 EOF
 
 	return 0
@@ -483,15 +484,105 @@ uninstall_zangarmarsh() {
 	return 0
 }
 
-# Install the local Cursor quest-log plugin and user rules
+# Resolve the user fonts directory for this host
+#
+# Reads environment:
+# - HOME
+#
+# Outputs:
+# - Absolute fonts directory path on stdout
+#
+# Returns:
+# - 0 on success
+# - 1 when HOME is empty or platform detection fails
+user_fonts_dir() {
+	if [[ -z "${HOME:-}" ]]; then
+		echo "user_fonts_dir:: HOME is required" >&2
+		return 1
+	fi
+
+	local platform_id
+	platform_id="$(_detect_platform)" || return 1
+	local platform_os
+	platform_os="$(platform_os_from_id "${platform_id}")" || return 1
+
+	if [[ "${platform_os}" == "macos" ]]; then
+		printf '%s\n' "${HOME}/Library/Fonts"
+	else
+		printf '%s\n' "${HOME}/.local/share/fonts"
+	fi
+
+	return 0
+}
+
+# Install DejaVu Sans Mono from the bundled profile font
+#
+# Reads environment:
+# - ZANGARMARSH_ROOT, HOME, DRY_RUN
+#
+# Side Effects:
+# - Copies DejaVuSansMono.ttf into the user fonts directory
+# - May refresh the font cache on Linux
+#
+# Returns:
+# - 0 on success or when already installed
+# - 1 on validation or write failure
+install_dejavu_font() {
+	validate_install_env || return 1
+
+	local src="${ZANGARMARSH_ROOT}/profile/fonts/dejavu-fonts-ttf-2.37/ttf/DejaVuSansMono.ttf"
+	if [[ ! -f "${src}" ]]; then
+		echo "install_dejavu_font:: font not found: ${src}" >&2
+		return 1
+	fi
+
+	local fonts_dir
+	fonts_dir="$(user_fonts_dir)" || return 1
+	local dest="${fonts_dir}/DejaVuSansMono.ttf"
+
+	if [[ "${DRY_RUN:-}" == true ]]; then
+		echo "install_dejavu_font:: would install ${dest}"
+		return 0
+	fi
+
+	if [[ -f "${dest}" ]] && cmp -s "${src}" "${dest}"; then
+		echo "install_dejavu_font:: already installed in ${dest}"
+		return 0
+	fi
+
+	mkdir -p "${fonts_dir}" || {
+		echo "install_dejavu_font:: Failed to create ${fonts_dir}" >&2
+		return 1
+	}
+
+	cp "${src}" "${dest}" || {
+		echo "install_dejavu_font:: Failed to copy font to ${dest}" >&2
+		return 1
+	}
+
+	# Avoid fc-cache -f: force rescans cost seconds and stall make test.
+	if command -v fc-cache >/dev/null 2>&1; then
+		fc-cache "${fonts_dir}" >/dev/null 2>&1 || {
+			echo "install_dejavu_font:: fc-cache failed for ${fonts_dir}; font is installed" >&2
+		}
+	fi
+
+	echo "install_dejavu_font:: installed ${dest}"
+
+	return 0
+}
+
+# Install the local Cursor quest-log plugin, user rules, and Cursor settings
 #
 # Returns:
 # - apply_quest_log exit status
 # - 1 when validation fails
-install_cursor_plugin() {
+install_quest_log() {
 	validate_install_env || return 1
-	apply_quest_log --plugin-only
-	return $?
+	# shellcheck disable=SC2119
+	apply_quest_log || return 1
+
+	return 0
 }
 
 main() {
@@ -555,8 +646,10 @@ main() {
 		return 1
 	fi
 
-	# Plugin and rules first; roll them back if an rc update fails.
-	install_cursor_plugin || return 1
+	# Font, plugin, rules, and settings first; roll plugin and rules back if an
+	# rc update fails. Cursor settings and the font stay in place on rollback.
+	install_dejavu_font || return 1
+	install_quest_log || return 1
 	for rc_file in "${rc_files[@]}"; do
 		if ! install_zangarmarsh "${rc_file}"; then
 			uninstall_quest_plugin || true

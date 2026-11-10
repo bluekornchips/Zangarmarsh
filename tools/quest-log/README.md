@@ -2,7 +2,7 @@
 
 Install the tracked plugin tree under `~/.cursor/plugins/local/quest-log`, sync rules into `~/.cursor/rules`, and overwrite host Cursor user settings from `tools/vscode/settings.json`. There is no generation step: `plugin/` is the plugin. Quest-log does not write project `.vscode/` files.
 
-`make install` installs the plugin and user rules. `questlog` installs the plugin, syncs user rules, and overwrites Cursor user settings. Both paths share `apply_quest_log`.
+`make install` and `questlog` both install the plugin, sync user rules, and overwrite Cursor user settings through `apply_quest_log`. `make install` also installs the bundled DejaVu Sans Mono font.
 
 User rules under `~/.cursor/rules` are the agent source of truth and apply in a new chat without Reload Window. The plugin path still carries skills and a copy of rules for the plugin layout. Skills discovery may still need a reload.
 

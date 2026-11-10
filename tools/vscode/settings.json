@@ -12,6 +12,8 @@
     "**/__pycache__": true,
     "**/*.pyc": true,
     "**/*.pyo": true,
+    "**/.venv": true,
+    "**/.pytest_cache": true,
     "**/.mypy_cache": true,
     "**/node_modules": true,
     "**/dist": true,
@@ -21,7 +23,14 @@
   "files.watcherExclude": {
     "**/__pycache__": true,
     "**/*.pyc": true,
-    "**/*.pyo": true
+    "**/*.pyo": true,
+    "**/.venv": true,
+    "**/.pytest_cache": true,
+    "**/.mypy_cache": true,
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/build": true,
+    "**/htmlcov": true
   },
   "workbench.colorTheme": "Default Dark+",
   "workbench.preferredDarkColorTheme": "Default Dark+",
@@ -41,6 +50,8 @@
   "terminal.integrated.fontSize": 14,
   "terminal.integrated.gpuAcceleration": "auto",
   "files.autoSave": "onFocusChange",
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
   "git.autofetch": true,
   "diffEditor.hideUnchangedRegions.enabled": true,
   "redhat.telemetry.enabled": false,
@@ -69,13 +80,9 @@
     "editor.tabSize": 2,
     "editor.insertSpaces": true
   },
-  "[bash]": {
-    "editor.tabSize": 2,
-    "editor.insertSpaces": true
-  },
   "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
   "shellcheck.customArgs": [
-    "${workspaceFolder}/.shellcheckrc"
+    "--rcfile=${workspaceFolder}/.shellcheckrc"
   ],
   "makefile.configureOnOpen": false
 }

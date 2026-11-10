@@ -27,8 +27,6 @@ setup() {
 	export HOME
 	ZDOTDIR="${TEST_DIR}"
 	export ZDOTDIR
-	ZSH="${TEST_DIR}/.oh-my-zsh"
-	export ZSH
 	ZANGARMARSH_VERBOSE=false
 	export ZANGARMARSH_VERBOSE
 	unset ZANGARMARSH_ROOT
@@ -153,7 +151,8 @@ measure_warm_zsh_load_ms() {
 	if ! seed_zcompdump; then
 		return 1
 	fi
-	if ! seed_omz_stub; then
+	unset ZANGARMARSH_ZSH_AUTOSUGGESTIONS
+	if ! seed_zsh_autosuggestions_stub; then
 		return 1
 	fi
 
@@ -166,7 +165,7 @@ measure_warm_zsh_load_ms() {
 	bare_ms="$(measure_warm_zsh_load_ms)" || return 1
 
 	cat <<EOF >&3
-zangarmarsh with oh-my-zsh: ${zm_ms}ms
+zangarmarsh warm boot: ${zm_ms}ms
 bare zsh: ${bare_ms}ms
 EOF
 

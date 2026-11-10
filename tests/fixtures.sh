@@ -101,52 +101,34 @@ create_mock_worktree() {
 	return 0
 }
 
-# Seed a minimal Oh My Zsh tree for zsh profile and smoke tests
+# Seed a stub zsh-autosuggestions install under HOME
 #
-# Inputs:
-# - $1 zsh_home, optional install root, defaults to ZSH
+# Reads environment:
+# - HOME
+# - ZANGARMARSH_ZSH_AUTOSUGGESTIONS, optional override path
 #
 # Side Effects:
-# - Creates oh-my-zsh.sh, lib stubs, and git and zsh-autosuggestions plugin stubs
+# - Creates the autosuggestions script at the configured path
 #
 # Returns:
 # - 0 on success
-# - 1 when no install root is available
-seed_omz_stub() {
-	local zsh_home="${1:-${ZSH:-}}"
-
-	if [[ -z "${zsh_home}" ]]; then
-		echo "seed_omz_stub:: zsh_home or ZSH is required" >&2
+# - 1 when HOME is unset or the parent directory cannot be created
+seed_zsh_autosuggestions_stub() {
+	if [[ -z "${HOME:-}" ]]; then
+		echo "seed_zsh_autosuggestions_stub:: HOME is required" >&2
 		return 1
 	fi
 
-	mkdir -p "${zsh_home}/lib" "${zsh_home}/plugins/git" "${zsh_home}/plugins/zsh-autosuggestions"
-	cat >"${zsh_home}/oh-my-zsh.sh" <<'EOF'
-for _zangarmarsh_lib in "${ZSH}"/lib/*.zsh(N); do
-	source "${_zangarmarsh_lib}"
-done
-unset _zangarmarsh_lib
-for _zangarmarsh_plugin in ${plugins}; do
-	_zangarmarsh_plugin_file="${ZSH}/plugins/${_zangarmarsh_plugin}/${_zangarmarsh_plugin}.plugin.zsh"
-	[[ -f "${_zangarmarsh_plugin_file}" ]] && source "${_zangarmarsh_plugin_file}"
-done
-unset _zangarmarsh_plugin _zangarmarsh_plugin_file
-EOF
-	printf 'zstyle ":completion:*:*:*:*:*" menu select\nsetopt auto_menu\n' >"${zsh_home}/lib/completion.zsh"
-	cat >"${zsh_home}/lib/key-bindings.zsh" <<'EOF'
-autoload -U up-line-or-beginning-search
-zle -N up-line-or-beginning-search
-bindkey "^[[A" up-line-or-beginning-search
-EOF
-	# Mimic Oh My Zsh lib/history.zsh overwriting caller history knobs.
-	cat >"${zsh_home}/lib/history.zsh" <<'EOF'
-HISTFILE="${HOME}/.zsh_history"
-HISTSIZE=50000
-SAVEHIST=10000
-EOF
-	printf 'git_current_branch() { echo main; }\n' >"${zsh_home}/lib/git.zsh"
-	printf 'alias ga="git add"\n' >"${zsh_home}/plugins/git/git.plugin.zsh"
-	printf '# autosuggestions stub\n' >"${zsh_home}/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh"
+	local suggest_path="${ZANGARMARSH_ZSH_AUTOSUGGESTIONS:-${HOME}/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh}"
+	local suggest_dir
+	suggest_dir="$(dirname "${suggest_path}")"
+
+	mkdir -p "${suggest_dir}" || {
+		echo "seed_zsh_autosuggestions_stub:: cannot create ${suggest_dir}" >&2
+		return 1
+	}
+
+	printf '# autosuggestions stub\n' >"${suggest_path}"
 
 	return 0
 }

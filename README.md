@@ -24,7 +24,7 @@ After you `source zangarmarsh.sh`, both shells load shared files under `profile/
 - `aliases.sh`: short command aliases
 - `functions.sh`: `penv`, `gw`, `drun`, `tfp`, `tfa`, plus the `nvm` lazy loader when enabled
 
-Both shells load `tools/lib/platform.sh` so `PLATFORM` and `PLATFORM_OS` are set, and `tools/tools.sh` for `questlog`, `trilliax`, and `auras`. Zsh also loads `profile/zsh/profile.zsh`, which sets PATH and display aliases, and in interactive shells loads Oh My Zsh with `plugins=(git zsh-autosuggestions)`, then `profile/zsh/prompt.zsh` for the customizable prompt with Git branch and kubectl context.
+Both shells load `tools/lib/platform.sh` so `PLATFORM` and `PLATFORM_OS` are set, and `tools/tools.sh` for `questlog`, `trilliax`, and `auras`. Zsh also loads `profile/zsh/profile.zsh`, which sets PATH and display aliases, and in interactive shells loads owned completion, zsh-autosuggestions, and `profile/zsh/prompt.zsh` for the customizable prompt with Git branch and kubectl context.
 
 Bash loads `profile/bash/profile.sh` for history and readline options only. It does not load the Zsh prompt. A second `source` of the same checkout is a no-op.
 
@@ -36,7 +36,7 @@ cd Zangarmarsh
 make install
 ```
 
-`make install` writes one canonical source line into `~/.zshrc` and `~/.bashrc`, collapses duplicate or alternate source forms for this checkout, removes the official eager NVM block from `~/.bashrc`, and installs the tracked quest-log plugin plus user rules under `~/.cursor/rules`. Pass `--zsh` or `--bash` to `profile/install.sh` to target only one shell rc file.
+`make install` writes one canonical source line into `~/.zshrc` and `~/.bashrc`, collapses duplicate or alternate source forms for this checkout, removes the official eager NVM block from `~/.bashrc`, installs the tracked quest-log plugin plus user rules under `~/.cursor/rules`, overwrites host Cursor user settings from `tools/vscode/settings.json`, and installs the bundled DejaVu Sans Mono font. Pass `--zsh` or `--bash` to `profile/install.sh` to target only one shell rc file.
 
 Dry-run first with:
 
@@ -50,7 +50,7 @@ Manual source without the installer:
 source /path/to/zangarmarsh/zangarmarsh.sh
 ```
 
-`make install` installs profile hooks, the local Cursor plugin, and user rules. For `questlog` usage, settings paths, rules sync, and plugin layout, see [tools/quest-log/README.md](tools/quest-log/README.md).
+`make install` installs profile hooks, the local Cursor plugin, user rules, Cursor settings, and the bundled font. For `questlog` usage, settings paths, rules sync, and plugin layout, see [tools/quest-log/README.md](tools/quest-log/README.md).
 
 Trilliax can delete generated trees and caches.
 
@@ -61,7 +61,7 @@ Zangarmarsh loads configuration from:
 - `profile/`: Shared env defaults, aliases, and functions for Bash and Zsh
 - `profile/config.sh`: Shared profile defaults for history, NVM, and prompt
 - `profile/bash/`: Bash-only history wiring and options
-- `profile/zsh/`: Zsh-only platform PATH, Oh My Zsh load with git and zsh-autosuggestions, and prompt
+- `profile/zsh/`: Zsh-only platform PATH, completion, zsh-autosuggestions, and prompt
 - `tools/`: Optional CLI utilities documented in the per-tool READMEs under `tools/`
 
 ### Environment Variables
@@ -92,6 +92,7 @@ These apply when `profile/zsh/prompt.zsh` runs:
 - `ZANGARMARSH_SHORTEN_NAMES=true`: Shorten user and host to one character, default `true`
 - `ZANGARMARSH_PROMPT_SYMBOL=❯`: Trailing symbol, default `❯`
 - `ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE`: Ghost-text style for zsh-autosuggestions, default `fg=8`
+- `ZANGARMARSH_ZSH_AUTOSUGGESTIONS`: Path to `zsh-autosuggestions.zsh`, default `${HOME}/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh`
 
 ## Tools
 
@@ -122,7 +123,7 @@ These functions come from `profile/functions.sh` and are defined in both shells:
 - Bash 3.2+ or Zsh 5.0+
 - Git for helpers that inspect the repository
 - Standard Unix tools such as grep, sed, and awk
-- Optional for interactive Zsh: [Oh My Zsh](https://ohmyz.sh/) under `~/.oh-my-zsh`, plus [zsh-autosuggestions](https://github.com/zsh-users/zsh-autosuggestions) at `$ZSH/plugins/zsh-autosuggestions`
+- Optional for interactive Zsh: [zsh-autosuggestions](https://github.com/zsh-users/zsh-autosuggestions) at `~/.zsh/zsh-autosuggestions` (`git clone https://github.com/zsh-users/zsh-autosuggestions ~/.zsh/zsh-autosuggestions`)
 
 ## License
 

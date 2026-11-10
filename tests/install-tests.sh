@@ -312,23 +312,27 @@ EOF
 	[[ "${output}" == "${HOME}/.cursor/plugins/local/quest-log" ]]
 }
 
-@test "install_cursor_plugin:: dry-run makes no changes" {
+@test "install_quest_log:: dry-run makes no changes" {
 	DRY_RUN=true
 
-	run install_cursor_plugin
+	run install_quest_log
 	[[ "${status}" -eq 0 ]]
 	grep -q "would replace" <<<"${output}"
 	grep -q "would sync" <<<"${output}"
+	grep -q "would overwrite" <<<"${output}"
 	[[ ! -e "$(quest_log_plugin_dir)" ]]
 	[[ ! -e "$(quest_log_rules_dir)" ]]
+	[[ ! -e "$(cursor_user_settings_path)" ]]
 }
 
-@test "install_cursor_plugin:: installs the plugin manifest and user rules under HOME" {
-	run install_cursor_plugin
+@test "install_quest_log:: installs the plugin manifest and user rules under HOME" {
+	run install_quest_log
 	[[ "${status}" -eq 0 ]]
 	[[ -f "$(quest_log_plugin_dir)/.cursor-plugin/plugin.json" ]]
 	[[ -f "$(quest_log_rules_dir)/always.mdc" ]]
 	[[ -f "$(quest_log_rules_dir)/.quest-log.manifest" ]]
+	[[ -f "$(cursor_user_settings_path)" ]]
+	grep -q "DejaVu Sans Mono" "$(cursor_user_settings_path)"
 }
 
 @test "uninstall_quest_plugin:: reports not installed when the directory is absent" {
@@ -338,7 +342,7 @@ EOF
 }
 
 @test "uninstall_quest_plugin:: removes an installed plugin directory" {
-	if ! install_cursor_plugin >/dev/null; then
+	if ! install_quest_log >/dev/null; then
 		return 1
 	fi
 
@@ -348,7 +352,7 @@ EOF
 }
 
 @test "uninstall_quest_plugin:: dry-run makes no changes" {
-	if ! install_cursor_plugin >/dev/null; then
+	if ! install_quest_log >/dev/null; then
 		return 1
 	fi
 	DRY_RUN=true
@@ -359,8 +363,8 @@ EOF
 	[[ -e "$(quest_log_plugin_dir)" ]]
 }
 
-@test "uninstall_quest_rules:: removes managed rules installed by install_cursor_plugin" {
-	if ! install_cursor_plugin >/dev/null; then
+@test "uninstall_quest_rules:: removes managed rules installed by install_quest_log" {
+	if ! install_quest_log >/dev/null; then
 		return 1
 	fi
 
@@ -378,6 +382,8 @@ EOF
 	[[ -f "${TEST_HOME}/.cursor/plugins/local/quest-log/.cursor-plugin/plugin.json" ]]
 	[[ -f "${TEST_HOME}/.cursor/rules/always.mdc" ]]
 	[[ -f "${TEST_HOME}/.cursor/rules/.quest-log.manifest" ]]
+	[[ -f "${TEST_HOME}/.config/Cursor/User/settings.json" ]]
+	[[ -f "${TEST_HOME}/.local/share/fonts/DejaVuSansMono.ttf" ]]
 	local expected
 	expected="$(printf 'source %q' "${ZANGARMARSH_ROOT}/zangarmarsh.sh")"
 	grep -Fqx "${expected}" "${TEST_HOME}/.zshrc"
@@ -395,6 +401,8 @@ EOF
 	[[ ! -e "${TEST_HOME}/.cursor/plugins/local/quest-log" ]]
 	[[ ! -f "${TEST_HOME}/.cursor/rules/always.mdc" ]]
 	[[ ! -f "${TEST_HOME}/.cursor/rules/.quest-log.manifest" ]]
+	[[ -f "${TEST_HOME}/.config/Cursor/User/settings.json" ]]
+	[[ -f "${TEST_HOME}/.local/share/fonts/DejaVuSansMono.ttf" ]]
 }
 
 @test "integration:: --zsh installs only into ~/.zshrc" {

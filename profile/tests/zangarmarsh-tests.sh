@@ -139,12 +139,9 @@ teardown() {
 	home="$(mktemp -d "${base}/zsh-from-bash.XXXXXX")" || return 1
 	printf 'source "%s"\n' "${SCRIPT}" >"${home}/.zshrc"
 	touch "${home}/.zcompdump"
-	local zsh_home="${home}/.oh-my-zsh"
-	if ! seed_omz_stub "${zsh_home}"; then
-		return 1
-	fi
+	HOME="${home}" seed_zsh_autosuggestions_stub || return 1
 
-	run env HOME="${home}" ZDOTDIR="${home}" ZSH="${zsh_home}" zsh -c "
+	run env HOME="${home}" ZDOTDIR="${home}" zsh -c "
 		source '${home}/.zshrc' || exit 1
 		print -r -- \"\${PROMPT}\"
 		type build_prompt

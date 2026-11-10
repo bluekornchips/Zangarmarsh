@@ -1,7 +1,6 @@
 #!/usr/bin/env zsh
 #
-# Zsh profile: history and prompt on top of Oh My Zsh with
-# plugins=(git zsh-autosuggestions).
+# Zsh profile: history, platform PATH, completion, autosuggestions, and prompt.
 #
 
 if [[ -z "${ZANGARMARSH_ROOT:-}" ]]; then
@@ -31,9 +30,6 @@ source "${ZANGARMARSH_ROOT}/profile/zsh/platform.zsh" || {
 }
 
 # Apply Zangarmarsh zsh history file, size, and ignore patterns.
-#
-# Call once for all shells, then again after Oh My Zsh so lib/history.zsh
-# cannot leave its defaults in place.
 #
 # Side Effects:
 # - Sets and exports HISTFILE, HISTSIZE, SAVEHIST, HISTORY_IGNORE
@@ -69,6 +65,99 @@ zangarmarsh_apply_zsh_history() {
 	return 0
 }
 
+# Load zsh completion; use a cached dump when it is fresher than 24 hours.
+#
+# Side Effects:
+# - Runs compinit -C against a fresh ${HOME}/.zcompdump, otherwise full compinit
+# - Sets completion menu select and auto_menu
+#
+# Returns:
+# - 0 on success
+# - 1 when compinit fails
+zangarmarsh_init_completions() {
+	local zcompdump="${HOME}/.zcompdump"
+
+	# LOCAL_OPTIONS keeps EXTENDED_GLOB from leaking into the caller shell.
+	setopt LOCAL_OPTIONS EXTENDED_GLOB
+
+	autoload -Uz compinit || {
+		echo "zangarmarsh_init_completions:: failed to autoload compinit" >&2
+		return 1
+	}
+
+	# Unquoted path so the mh+24 glob qualifier can match an aged dump.
+	if [[ -f "${zcompdump}" && -z ${zcompdump}(#qN.mh+24) ]]; then
+		compinit -C -d "${zcompdump}" || {
+			echo "zangarmarsh_init_completions:: compinit -C failed" >&2
+			return 1
+		}
+	else
+		compinit -d "${zcompdump}" || {
+			echo "zangarmarsh_init_completions:: compinit failed" >&2
+			return 1
+		}
+	fi
+
+	zstyle ':completion:*:*:*:*:*' menu select
+	setopt auto_menu
+
+	return 0
+}
+
+# Bind up-arrow to up-line-or-beginning-search for prefix history search.
+#
+# Side Effects:
+# - Registers up-line-or-beginning-search and binds ^[[A and ^[OA
+#
+# Returns:
+# - 0 on success
+# - 1 when the widget cannot be loaded
+zangarmarsh_bind_history_search() {
+	autoload -Uz up-line-or-beginning-search || {
+		echo "zangarmarsh_bind_history_search:: failed to autoload up-line-or-beginning-search" >&2
+		return 1
+	}
+
+	zle -N up-line-or-beginning-search
+	bindkey '^[[A' up-line-or-beginning-search
+	bindkey '^[OA' up-line-or-beginning-search
+
+	return 0
+}
+
+# Source zsh-autosuggestions when the configured path exists.
+#
+# Side Effects:
+# - Sources ZANGARMARSH_ZSH_AUTOSUGGESTIONS
+# - Writes an install hint to stderr when the file is missing
+#
+# Returns:
+# - 0 always; missing autosuggestions is non-fatal
+zangarmarsh_load_autosuggestions() {
+	local suggest_path="${ZANGARMARSH_ZSH_AUTOSUGGESTIONS:-}"
+
+	if [[ -z "${suggest_path}" ]]; then
+		echo "zangarmarsh_load_autosuggestions:: ZANGARMARSH_ZSH_AUTOSUGGESTIONS is required" >&2
+		return 0
+	fi
+
+	if [[ ! -f "${suggest_path}" ]]; then
+		cat <<EOF >&2
+profile.zsh:: zsh-autosuggestions not found at ${suggest_path}.
+Install it:
+	git clone https://github.com/zsh-users/zsh-autosuggestions \${HOME}/.zsh/zsh-autosuggestions
+EOF
+		return 0
+	fi
+
+	source "${suggest_path}" || {
+		echo "zangarmarsh_load_autosuggestions:: Failed to source ${suggest_path}" >&2
+		return 0
+	}
+
+	return 0
+}
+
 # Configure zsh history for interactive and non-interactive shells.
 # Unset first so an inherited bash HISTFILE cannot stick.
 unset HISTFILE HISTSIZE HISTFILESIZE HISTCONTROL HISTIGNORE HISTORY_IGNORE
@@ -89,35 +178,15 @@ setopt \
 	share_history \
 	extended_history
 
-# Oh My Zsh and the custom prompt are interactive-only.
+# Completion, autosuggestions, and the custom prompt are interactive-only.
 # ZANGARMARSH_TEST=1 lets bats exercise this path under zsh -c.
 if [[ ! -o interactive && -z "${ZANGARMARSH_TEST:-}" ]]; then
 	return 0
 fi
 
-ZSH="${ZSH:-${HOME}/.oh-my-zsh}"
-export ZSH
-omz_init="${ZSH}/oh-my-zsh.sh"
-
-if [[ ! -f "${omz_init}" ]]; then
-	cat <<EOF >&2
-profile.zsh:: Oh My Zsh is not installed at ${ZSH}.
-Install it, then add the zsh-autosuggestions plugin:
-	sh -c "\$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
-	git clone https://github.com/zsh-users/zsh-autosuggestions \${ZSH}/plugins/zsh-autosuggestions
-EOF
-else
-	# Empty theme so Oh My Zsh skips its prompt; prompt.zsh loads below.
-	ZSH_THEME=""
-	plugins=(git zsh-autosuggestions)
-	source "${omz_init}" || {
-		echo "profile.zsh:: Failed to source ${omz_init}" >&2
-		return 1
-	}
-
-	# Oh My Zsh lib/history.zsh overwrites these; re-apply Zangarmarsh values.
-	zangarmarsh_apply_zsh_history || return 1
-fi
+zangarmarsh_init_completions || return 1
+zangarmarsh_bind_history_search || return 1
+zangarmarsh_load_autosuggestions
 
 if [[ ! -f "${ZANGARMARSH_ROOT}/profile/zsh/prompt.zsh" ]]; then
 	echo "profile.zsh:: Required file not found: ${ZANGARMARSH_ROOT}/profile/zsh/prompt.zsh" >&2
