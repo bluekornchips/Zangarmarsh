@@ -71,42 +71,6 @@ _penv_install_dependencies() {
 	return 1
 }
 
-# Remove Python cache directories and compiled files under the current directory
-#
-# Side Effects:
-# - Deletes matching cache directories and .pyc files
-#
-# Returns:
-# - 0 on success
-# - 1 when the current directory is invalid
-_penv_clean_caches() {
-	local current_dir
-	current_dir="$(pwd)"
-	if [[ -z "${current_dir}" ]] || [[ ! -d "${current_dir}" ]]; then
-		echo "_penv_clean_caches:: Invalid current directory" >&2
-		return 1
-	fi
-
-	local cache_dirs=(
-		"__pycache__"
-		".mypy_cache"
-		".pytest_cache"
-	)
-
-	local cache_files=("*.pyc")
-	local cache_dir
-	for cache_dir in "${cache_dirs[@]}"; do
-		find "${current_dir}" -type d -name "${cache_dir}" -prune -exec rm -rf {} + 2>/dev/null || true
-	done
-
-	local cache_file
-	for cache_file in "${cache_files[@]}"; do
-		find "${current_dir}" -type f -name "${cache_file}" -exec rm -f {} + 2>/dev/null || true
-	done
-
-	return 0
-}
-
 # Refuse to source a missing or symlinked activate script
 #
 # Inputs:
@@ -261,8 +225,8 @@ gw() {
 #
 # Side Effects:
 # - Creates and activates .venv when creating or recreating
-# - Removes existing .venv when -d is passed or .venv/bin/python is missing
-# - Cleans __pycache__, .mypy_cache, .pytest_cache, and .pyc files
+# - Replaces .venv when -d is passed or .venv/bin/python is missing
+# - Restores the previous .venv if creating the new one fails
 # - Installs dependencies from pyproject.toml with uv when creating or recreating .venv
 # - Leaves an existing usable .venv alone when -d is absent; does not source activate
 #
@@ -341,18 +305,29 @@ EOF
 		return 0
 	fi
 
-	if [[ -d "${env_name}" ]]; then
-		echo "Removing existing virtual environment: ${env_name}"
-		rm -rf "${env_name}" 2>/dev/null || {
-			echo "penv:: Failed to remove existing environment" >&2
+	# The live environment stays under a unique name until its replacement exists.
+	local old_env=""
+	if [[ -e "${env_name}" ]]; then
+		echo "Replacing existing virtual environment: ${env_name}"
+		old_env="$(mktemp -u "${env_name}.old.XXXXXX")"
+		mv "${env_name}" "${old_env}" || {
+			echo "penv:: Failed to move existing environment" >&2
 			return 1
 		}
 	fi
 
-	echo "Cleaning up cache files."
-	_penv_clean_caches || return 1
+	if ! _penv_create_and_activate "${python_version}" "${env_name}"; then
+		rm -rf "${env_name}"
+		if [[ -n "${old_env}" ]] && ! mv "${old_env}" "${env_name}"; then
+			echo "penv:: Previous environment kept at ${old_env}" >&2
+		fi
 
-	_penv_create_and_activate "${python_version}" "${env_name}" || return 1
+		return 1
+	fi
+
+	if [[ -n "${old_env}" ]]; then
+		rm -rf "${old_env}"
+	fi
 
 	_penv_install_dependencies || return 1
 
@@ -373,7 +348,7 @@ EOF
 #
 # Inputs:
 # - $1 image, Docker image name
-# - $@ remaining args forwarded to docker run after the image
+# - $@ remaining args passed to bash inside the container
 #
 # Side Effects:
 # - Invokes docker run when docker is available
@@ -386,7 +361,7 @@ drun() {
 
 	if [[ -z "${image}" ]]; then
 		echo "drun:: image is required" >&2
-		echo "drun:: usage: drun IMAGE [docker run args...]" >&2
+		echo "drun:: usage: drun IMAGE [bash args...]" >&2
 		return 1
 	fi
 
@@ -430,16 +405,23 @@ tfp() {
 	return $?
 }
 
-# Apply .terraform/zangarmarsh.tfplan from tfp
+# Apply a terraform plan file, such as the one tfp writes
 #
 # Inputs:
-# - $@ forwarded to terraform apply
+# - $1 plan_path, plan file to apply
+# - $@ after plan_path forwarded to terraform apply
 #
 # Returns:
 # - Terraform exit status
-# - 1 when terraform is missing or the plan file is absent
+# - 1 when the plan path is missing, terraform is missing, or the plan file is absent
 tfa() {
-	local plan_path=".terraform/zangarmarsh.tfplan"
+	local plan_path="${1:-}"
+
+	if [[ -z "${plan_path}" ]]; then
+		echo "tfa:: plan path is required" >&2
+		echo "tfa:: usage: tfa PLAN_PATH [terraform apply args...]" >&2
+		return 1
+	fi
 
 	if ! command -v terraform >/dev/null 2>&1; then
 		echo "tfa:: terraform is not installed" >&2
@@ -451,6 +433,7 @@ tfa() {
 		return 1
 	fi
 
+	shift
 	terraform apply "${plan_path}" "$@"
 
 	return $?

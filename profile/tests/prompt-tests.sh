@@ -15,10 +15,19 @@ setup_file() {
 	return 0
 }
 
+# Create a temp HOME and TEST_DIR for each prompt test
+#
+# Side Effects:
+# - Sources tests/fixtures.sh and exports HOME and TEST_DIR
+#
+# Returns:
+# - 0 on success
+# - 1 when HOME or TEST_DIR cannot be created
 setup() {
 	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
 
 	source "${GIT_ROOT}/tests/fixtures.sh" || return 1
+	use_temp_home || return 1
 
 	TEST_DIR="$(mktemp -d "${base}/prompt-test.XXXXXX")"
 	export TEST_DIR
@@ -49,7 +58,7 @@ teardown() {
 	echo "${output}" | grep -q '_zangarmarsh_precmd_prompt'
 }
 
-@test "build_prompt:: second call within TTL reuses the kubectl cache" {
+@test "build_prompt:: queries kubectl on every call" {
 	local mock_bin="${TEST_DIR}/bin"
 	local call_log="${TEST_DIR}/kubectl-calls"
 	mkdir -p "${mock_bin}"
@@ -61,14 +70,14 @@ echo "mock-context"
 EOF
 	chmod +x "${mock_bin}/kubectl"
 
-	run env PATH="${mock_bin}:${PATH}" ZANGARMARSH_PROMPT_CACHE_TTL=60 zsh -c "
+	run env PATH="${mock_bin}:${PATH}" zsh -c "
 		source '${SCRIPT}' || exit 1
 		build_prompt >/dev/null
 		build_prompt >/dev/null
 		wc -l <'${call_log}'
 	"
 	[[ "${status}" -eq 0 ]]
-	[[ "$(echo "${output}" | tr -d '[:space:]')" == "1" ]]
+	[[ "$(echo "${output}" | tr -d '[:space:]')" == "2" ]]
 }
 
 @test "_prompt_git_from_head:: nested cwd does not leak git_dir= into stdout" {

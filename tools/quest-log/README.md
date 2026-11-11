@@ -9,9 +9,9 @@ User rules under `~/.cursor/rules` are the agent source of truth and apply in a 
 ## Features
 
 - Replaces `~/.cursor/plugins/local/quest-log` with a fresh copy of `tools/quest-log/plugin/` on every run
-- Syncs `plugin/rules/*.mdc` into `~/.cursor/rules`, tracked by `.quest-log.manifest`, and prunes only previously managed rule files
+- Syncs `plugin/rules/*.mdc` into `~/.cursor/rules` as `zangarmarsh-*.mdc` files and deletes only managed files whose source rule is gone
 - Overwrites host Cursor `User/settings.json` from `tools/vscode/settings.json`
-- In full apply mode, syncs settings first and installs rules and the plugin only after settings succeed. Settings restore after a failed sync is best-effort. Plugin install itself stays self-atomic.
+- Writes settings first, then rules, then the plugin, and checks the plugin and rules destinations before the first write
 
 ## Usage
 
@@ -29,28 +29,21 @@ questlog --dry-run
 
 ## Options and environment
 
-| Flag              | Meaning                                  |
-| ----------------- | ---------------------------------------- |
-| `-r`, `--dry-run` | Report planned writes without making any |
-| `-h`, `--help`    | Show usage                               |
+Run `questlog --help` for the flags.
 
-- `DRY_RUN=true`: Same as `--dry-run`
-- `QUEST_LOG_PLUGIN_DIR`: Override the plugin install path. It must still sit below `~/.cursor/plugins/local`
-- `QUEST_LOG_RULES_DIR`: Override the user-rules install path. It must still be exactly `~/.cursor/rules`
-- `PLUGIN_SOURCE_DIR`: Override the plugin source tree, default `tools/quest-log/plugin`
+- `DRY_RUN`: `true` or `false`. Any other value stops the run before any write.
+- `PLUGIN_SOURCE_DIR`: Plugin source tree, default `tools/quest-log/plugin`
 - `HOME`: Required; selects the plugin, rules, and Cursor settings destinations
-
-Unknown flags and positional arguments fail with exit status 1. `--force` and `-f` are not supported.
 
 ## Behavior
 
 - Always binds to the checkout that holds the script, ignoring an inherited `ZANGARMARSH_ROOT`.
-- The plugin install path must be an absolute child of `~/.cursor/plugins/local` with no `..`, `.`, trailing slash, or symlink component below `HOME`; otherwise nothing is deleted or written.
-- The rules install path must be exactly `~/.cursor/rules` with the same path-safety checks.
-- The plugin is copied to a staging directory beside the install path and swapped in, so a failed copy leaves the previous install untouched.
-- Rules sync copies each tracked `*.mdc` into `~/.cursor/rules`, prunes previously managed basenames that are no longer in source, then writes `.quest-log.manifest`. Other files in that directory stay put.
-- If settings sync fails, previous Cursor settings are restored when a backup exists, or the incomplete file is removed when there were none. Restore is best-effort. Rules then the plugin are installed only after settings succeed.
-- The summary reports plugin action, rules action, and counts of created, updated, and unchanged settings files. Any settings error makes the run exit with status 1.
+- The plugin and rules install paths pass `owned_path` before the first write. A symlink in either path stops the run before anything is written.
+- Dry run writes nothing, including directories, and prints what it would change.
+- The plugin is copied to `quest-log.staging` beside its install path. The live install moves to `quest-log.removing`, the staged copy moves into place, and `quest-log.removing` is deleted. A failed copy leaves the live install untouched. A run that stops between the two moves leaves the plugin missing until the next run, which clears leftover staging and removing paths and copies again.
+- Each tracked rule is written as `zangarmarsh-<name>.mdc` through `write_atomic`. Managed `zangarmarsh-*.mdc` files with no source rule are deleted. Files without the `zangarmarsh-` prefix are never touched.
+- Settings are written first. A failed settings write stops the run before any rule or plugin change.
+- Rules and settings print `Created`, `Updated`, `No changes`, or `Would write` for each file.
 
 ## Plugin source layout
 
@@ -99,13 +92,13 @@ To add or change a rule or skill, edit the files under `plugin/` directly and ru
 
 - `tools/quest-log/plugin/`: tracked plugin source, installed as-is
 - `~/.cursor/plugins/local/quest-log/`: live local plugin install refreshed every run
-- `~/.cursor/rules/`: live user-rules sync from `plugin/rules/`, agent source of truth
+- `~/.cursor/rules/zangarmarsh-*.mdc`: live user-rules sync from `plugin/rules/`, agent source of truth
 
 The live installs are disposable. Edit the tracked source, then run `questlog` to refresh the local copies. Start a new Agent chat to pick up updated rules. Reload Window is not required for user rules.
 
 ## Cursor user settings
 
-Canonical host Cursor settings live in `tools/vscode/settings.json`. Each `questlog` run copies that file over the host Cursor user settings:
+Canonical host Cursor settings live in `tools/vscode/settings.json`. Each `questlog` run writes that file over the host Cursor user settings when the content differs:
 
 - Linux: `~/.config/Cursor/User/settings.json`
 - macOS: `~/Library/Application Support/Cursor/User/settings.json`

@@ -101,25 +101,47 @@ create_mock_worktree() {
 	return 0
 }
 
-# Seed a stub zsh-autosuggestions install under HOME
-#
-# Reads environment:
-# - HOME
-# - ZANGARMARSH_ZSH_AUTOSUGGESTIONS, optional override path
+# Point HOME at a new directory for the current test
 #
 # Side Effects:
-# - Creates the autosuggestions script at the configured path
+# - Creates a directory under BATS_TEST_TMPDIR and exports HOME to it
+# - Unsets ZANGARMARSH_ZSH_AUTOSUGGESTIONS so a host export cannot point
+#   stubs at the real install
 #
 # Returns:
 # - 0 on success
-# - 1 when HOME is unset or the parent directory cannot be created
+# - 1 when the directory cannot be created
+use_temp_home() {
+	HOME="$(mktemp -d "${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}/home.XXXXXX")" || {
+		echo "use_temp_home:: cannot create HOME directory" >&2
+		return 1
+	}
+
+	export HOME
+	unset ZANGARMARSH_ZSH_AUTOSUGGESTIONS
+
+	return 0
+}
+
+# Seed a stub zsh-autosuggestions install under the current HOME
+#
+# Reads environment:
+# - HOME, required; the stub always lands under this directory
+#
+# Side Effects:
+# - Creates ${HOME}/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh
+# - Exports ZANGARMARSH_ZSH_AUTOSUGGESTIONS to that path
+#
+# Returns:
+# - 0 on success
+# - 1 when HOME is unset, empty, or the parent directory cannot be created
 seed_zsh_autosuggestions_stub() {
 	if [[ -z "${HOME:-}" ]]; then
 		echo "seed_zsh_autosuggestions_stub:: HOME is required" >&2
 		return 1
 	fi
 
-	local suggest_path="${ZANGARMARSH_ZSH_AUTOSUGGESTIONS:-${HOME}/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh}"
+	local suggest_path="${HOME}/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh"
 	local suggest_dir
 	suggest_dir="$(dirname "${suggest_path}")"
 
@@ -129,6 +151,8 @@ seed_zsh_autosuggestions_stub() {
 	}
 
 	printf '# autosuggestions stub\n' >"${suggest_path}"
+	ZANGARMARSH_ZSH_AUTOSUGGESTIONS="${suggest_path}"
+	export ZANGARMARSH_ZSH_AUTOSUGGESTIONS
 
 	return 0
 }

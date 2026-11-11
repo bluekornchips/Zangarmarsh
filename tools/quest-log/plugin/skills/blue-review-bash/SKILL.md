@@ -47,9 +47,9 @@ Pragmatic review criteria for bash and shell script repositories. Focus on secur
 - [ ] _Bare local_: A bare `local name` appears only directly above a command substitution, a `for` or `while` using that name, or an `if` or `case` whose branches first assign it
 - [ ] _No local block_: A `local` block at the top of a function is a failure
 - [ ] _No substitution in local_: Command substitutions are never assigned inside `local` or `export`, per ShellCheck SC2155
-- [ ] _Final return spacing_: Every function, including `main`, ends with one empty line and then `return <code>`
+- [ ] _Final return spacing_: End every function, including `main`, with `return <code>`. A body of 4 or more lines between the braces gets one empty line before that final `return`. A shorter body gets none.
 - [ ] _Early return spacing_: An early `return` stays on the next line after its echo or command, including inside `if`, `case`, and `command || { }`
-- [ ] _Return after block_: One empty line suffices when the ending `return` follows a multi-line block
+- [ ] _Return after block_: After a multi-line block closed by `}`, `fi`, `done`, or `esac`, leave one empty line before the next statement in the same scope, including a later `return`. When that next statement is the function-ending `return`, the one empty line serves both jobs.
 - [ ] _Block spacing_: One empty line follows each multi-line block closed by `}`, `fi`, `done`, or `esac` before the next statement in that scope
 - [ ] _Enclosing closer_: The closer of an enclosing block stays on the next line
 - [ ] _Stacked blocks_: Stacked `command || { }` blocks with no empty line between them are a failure

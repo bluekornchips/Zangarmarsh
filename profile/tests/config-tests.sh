@@ -13,7 +13,17 @@ setup_file() {
 	return 0
 }
 
+# Point HOME at a temp directory for each config test
+#
+# Side Effects:
+# - Exports HOME to a new directory under BATS_TEST_TMPDIR
+#
+# Returns:
+# - 0 on success
+# - 1 when the temp HOME cannot be created
 setup() {
+	source "${GIT_ROOT}/tests/fixtures.sh" || return 1
+	use_temp_home || return 1
 	return 0
 }
 

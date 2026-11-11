@@ -46,25 +46,19 @@ EOF
 	return 0
 }
 
-# Load shared Auras helpers after the repository root is known
+# Load the Auras library from the checkout that holds this script
 #
 # Side Effects:
-# - Clears any inherited ZANGARMARSH_ROOT and rebinds to this checkout
-# - Sources tools/auras/lib/auras.sh once per shell
+# - Exports ZANGARMARSH_ROOT for this checkout
+# - Sources tools/auras/lib/auras.sh and its helpers
 #
 # Returns:
 # - 0 on success
 # - 1 when repository resolution or sourcing fails
 _auras_load_lib() {
-	[[ -n "${_AURAS_LIBS_LOADED:-}" ]] && return 0
-
-	# Always bind to this checkout. An inherited ZANGARMARSH_ROOT from another
-	# tree would source the wrong tools/auras/lib/auras.sh.
-	unset ZANGARMARSH_ROOT
 	source "${_AURAS_DIR}/../lib/repo.sh" || return 1
 	ensure_zangarmarsh_repo "${_AURAS_DIR}" || return 1
 	source "${ZANGARMARSH_ROOT}/tools/auras/lib/auras.sh" || return 1
-	_AURAS_LIBS_LOADED=1
 
 	return 0
 }
@@ -94,12 +88,18 @@ main() {
 		return 0
 	fi
 
+	if [[ "$(uname -s)" != "Linux" ]]; then
+		echo "main:: auras requires Linux" >&2
+		return 1
+	fi
+
+	# Auras has no dry-run flag, so an inherited DRY_RUN must not skip its writes.
+	DRY_RUN=false
+
 	local mode=""
 	local appimage_path=""
 	local app_stem=""
 	local packages_dir=""
-
-	_auras_load_lib || return 1
 
 	while (($# > 0)); do
 		case "$1" in
@@ -190,8 +190,9 @@ main() {
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
 	set -eo pipefail
 	umask 077
+	_auras_load_lib || exit 1
 	main "$@"
 	exit $?
-elif [[ -n "${ZANGARMARSH_ROOT:-}" ]]; then
-	_auras_load_lib || return 1
 fi
+
+_auras_load_lib || return 1

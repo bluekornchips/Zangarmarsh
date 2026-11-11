@@ -124,8 +124,8 @@ teardown() {
 	run ready_check_main "${root}"
 	[[ "$status" -eq 0 ]]
 
-	[[ "$(resolve_symlink_path "${HOME}/.local/bin/DemoApp")" == "${demo_winner}" ]]
-	[[ "$(resolve_symlink_path "${HOME}/.local/bin/SampleApp")" == "${sample_winner}" ]]
+	[[ "$(readlink "${HOME}/.local/bin/DemoApp")" == "${demo_winner}" ]]
+	[[ "$(readlink "${HOME}/.local/bin/SampleApp")" == "${sample_winner}" ]]
 	grep -q "Exec=\"${demo_winner}\" %u" "${HOME}/.local/share/applications/DemoApp.desktop"
 	grep -q "Exec=\"${sample_winner}\" %u" "${HOME}/.local/share/applications/SampleApp.desktop"
 }
@@ -174,7 +174,7 @@ teardown() {
 	run bash "$SCRIPT" --ready-check "${root}"
 	[[ "$status" -eq 0 ]]
 
-	[[ "$(resolve_symlink_path "${HOME}/.local/bin/DemoApp")" == "${winner}" ]]
+	[[ "$(readlink "${HOME}/.local/bin/DemoApp")" == "${winner}" ]]
 }
 
 @test "main:: --ready-check rejects --appimage" {

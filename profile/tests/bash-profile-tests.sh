@@ -13,7 +13,17 @@ setup_file() {
 	return 0
 }
 
+# Point HOME at a temp directory for each bash profile test
+#
+# Side Effects:
+# - Exports HOME to a new directory under BATS_TEST_TMPDIR
+#
+# Returns:
+# - 0 on success
+# - 1 when the temp HOME cannot be created
 setup() {
+	source "${GIT_ROOT}/tests/fixtures.sh" || return 1
+	use_temp_home || return 1
 	return 0
 }
 
@@ -59,30 +69,4 @@ setup() {
 	[[ "$status" -eq 0 ]]
 	echo "$output" | grep -Fq "HISTIGNORE=${shared}"
 	echo "$output" | grep -q "^HISTFILE=${HOME}/.bash_history$"
-}
-
-@test "bash_profile:: fails when required history config is empty" {
-	local stub_root
-	stub_root="$(mktemp -d "${TMPDIR:-/tmp}/zangarmarsh-bash-profile.XXXXXX")" || return 1
-	mkdir -p "${stub_root}/profile" || return 1
-	cat >"${stub_root}/profile/config.sh" <<'EOF'
-ZANGARMARSH_BASH_HISTFILE=""
-export ZANGARMARSH_BASH_HISTFILE
-ZANGARMARSH_HISTSIZE=""
-export ZANGARMARSH_HISTSIZE
-ZANGARMARSH_HISTCONTROL=""
-export ZANGARMARSH_HISTCONTROL
-ZANGARMARSH_HIST_IGNORE=""
-export ZANGARMARSH_HIST_IGNORE
-EOF
-
-	run bash -c "
-		ZANGARMARSH_ROOT='${stub_root}'
-		export ZANGARMARSH_ROOT
-		source '${SCRIPT}'
-	"
-	rm -rf "${stub_root}"
-
-	[[ "$status" -eq 1 ]]
-	echo "$output" | grep -q "ZANGARMARSH_BASH_HISTFILE is required"
 }

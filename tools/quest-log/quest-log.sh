@@ -3,8 +3,7 @@
 # Install the quest-log Cursor plugin and overwrite host Cursor user settings
 #
 
-_QUEST_LOG_SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
-_QUEST_LOG_DIR="$(cd "$(dirname "${_QUEST_LOG_SCRIPT_PATH}")" && pwd)"
+_QUEST_LOG_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 
 # Display usage information
 #
@@ -33,122 +32,26 @@ EOF
 	return 0
 }
 
-STATS_CREATED=0
-STATS_UPDATED=0
-STATS_UNCHANGED=0
-STATS_ERRORS=0
-PLUGIN_ACTION=""
-RULES_ACTION=""
-
-# Load quest-log libraries after ZANGARMARSH_ROOT is known
-#
-# Side Effects:
-# - Sources apply.sh and its plugin/settings helpers
-#
-# Returns:
-# - 0 on success
-# - 1 when ZANGARMARSH_ROOT is unset or sourcing fails
-_quest_log_load_libs() {
-	[[ -n "${_QUEST_LOG_LIBS_LOADED:-}" ]] && return 0
-
-	if [[ -z "${ZANGARMARSH_ROOT:-}" ]]; then
-		echo "_quest_log_load_libs:: ZANGARMARSH_ROOT is required" >&2
-		return 1
-	fi
-
-	source "${ZANGARMARSH_ROOT}/tools/quest-log/lib/apply.sh" || return 1
-	_QUEST_LOG_LIBS_LOADED=1
-
-	return 0
-}
-
-# Print summary of quest-log work
-#
-# Side Effects:
-# - Displays summary report to stdout
-#
-# Returns:
-# - 0 when STATS_ERRORS is 0
-# - 1 when STATS_ERRORS is greater than 0
-print_summary() {
-	local total_processed=$((STATS_CREATED + STATS_UPDATED + STATS_UNCHANGED))
-
-	printf '\nquest-log summary\n'
-
-	case "${PLUGIN_ACTION:-}" in
-	install)
-		printf '  plugin: install\n'
-		;;
-	dry-run)
-		printf '  plugin: dry-run\n'
-		;;
-	skipped)
-		printf '  plugin: skipped\n'
-		;;
-	esac
-
-	case "${RULES_ACTION:-}" in
-	sync)
-		printf '  rules: sync\n'
-		;;
-	dry-run)
-		printf '  rules: dry-run\n'
-		;;
-	skipped)
-		printf '  rules: skipped\n'
-		;;
-	esac
-
-	if ((STATS_ERRORS > 0)); then
-		printf '  cursor: %s error(s)\n' "${STATS_ERRORS}"
-	elif ((total_processed == 0)); then
-		printf '  cursor: no files synced\n'
-	else
-		printf '  cursor total: %s\n' "${total_processed}"
-	fi
-
-	((STATS_CREATED > 0)) && printf '  cursor created: %s\n' "${STATS_CREATED}"
-	((STATS_UPDATED > 0)) && printf '  cursor updated: %s\n' "${STATS_UPDATED}"
-	((STATS_UNCHANGED > 0)) && printf '  cursor unchanged: %s\n' "${STATS_UNCHANGED}"
-
-	if ((STATS_ERRORS > 0)); then
-		printf 'print_summary:: cursor settings sync failed\n' >&2
-		return 1
-	fi
-
-	return 0
-}
-
 # Main entry point for quest-log
 #
 # Inputs:
 # - All command line arguments
 #
+# Reads environment:
+# - DRY_RUN, must be exactly true or false when set
+#
 # Side Effects:
-# - Installs the plugin and user rules, overwrites host Cursor settings, prints summary
+# - Installs the plugin and user rules, overwrites host Cursor settings
 #
 # Returns:
 # - 0 on success
 # - 1 on validation or apply failure
 run_quest_log() {
-	if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
-		usage
-		return 0
+	local DRY_RUN="${DRY_RUN:-false}"
+	if [[ "${DRY_RUN}" != "true" && "${DRY_RUN}" != "false" ]]; then
+		echo "run_quest_log:: DRY_RUN must be true or false" >&2
+		return 1
 	fi
-
-	# Always bind to this checkout. An inherited root from another tree would
-	# load the wrong libraries.
-	unset ZANGARMARSH_ROOT
-	source "${_QUEST_LOG_DIR}/../lib/repo.sh" || return 1
-	ensure_zangarmarsh_repo "${_QUEST_LOG_DIR}" || return 1
-
-	_quest_log_load_libs || return 1
-
-	echo "quest-log: running"
-
-	DRY_RUN="${DRY_RUN:-false}"
-	PLUGIN_ACTION=""
-	RULES_ACTION=""
 
 	while (($# > 0)); do
 		case "$1" in
@@ -174,26 +77,21 @@ run_quest_log() {
 		esac
 	done
 
-	export DRY_RUN
+	echo "quest-log: running"
 
-	# CLI flags are already consumed; apply reads DRY_RUN and PLUGIN_SOURCE_DIR.
-	# shellcheck disable=SC2119
 	apply_quest_log || return 1
 
-	local summary_exit_code=0
-	print_summary
-	summary_exit_code=$?
+	echo "quest-log: complete"
 
-	if ((summary_exit_code == 0)); then
-		echo "quest-log: complete"
-	fi
-
-	return "${summary_exit_code}"
+	return 0
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
 	set -eo pipefail
 	umask 077
+	source "${_QUEST_LOG_DIR}/../lib/repo.sh"
+	ensure_zangarmarsh_repo "${_QUEST_LOG_DIR}" || exit 1
+	source "${_QUEST_LOG_DIR}/lib/apply.sh"
 	run_quest_log "$@"
 	exit $?
 fi

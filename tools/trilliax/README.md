@@ -59,7 +59,7 @@ A positional `DIRECTORY` is the same as `--dir`. Either `--all` or `--targets` i
 
 ## Environment Variables
 
-- `DRY_RUN=true`: Enable dry-run mode, same as `--dry-run`. Any other value means a live run
+- `DRY_RUN`: `true` or `false`, default `false`. `true` is the same as `--dry-run`. Any other value fails before anything is deleted
 - `MAX_DEPTH`: Maximum `find` depth, default `10`. Must be a non-negative integer or the run fails
 
 ## Behavior
@@ -67,6 +67,7 @@ A positional `DIRECTORY` is the same as `--dir`. Either `--all` or `--targets` i
 - Targets run in the order given. A failing target is counted and the remaining targets still run, then the exit status is 1.
 - Only paths below the directory being cleaned are removed. The directory itself is never removed, even when it matches a target name such as `.cursor`.
 - Unknown flags, a missing value for `--dir` or `--targets`, an unknown target name, a missing directory, or no targets at all fail with exit status 1 before anything is deleted.
+- A `--dir` that resolves to `HOME` or an ancestor of `HOME`, including through a symlink, fails with exit status 1 before anything is deleted.
 - Dry-run lists nested empty directories for the filesystem target even though the parent only becomes empty after its children go.
 - `--dir` is resolved to an absolute path before cleaning, so directory names with spaces work.
 

@@ -3,20 +3,12 @@
 # Zsh prompt configuration with git branch, kubectl context, and custom formatting
 
 setopt PROMPT_SUBST
-zmodload zsh/datetime 2>/dev/null || true
 
 GREEN='%{%F{green}%}'
 BLUE='%{%F{blue}%}'
 CYAN='%{%F{cyan}%}'
 RESET='%{%f%}'
 
-_prompt_cache=""
-_prompt_cache_time=0
-_prompt_pwd_cache=""
-_prompt_git_cache=""
-_prompt_kube_cache=""
-
-PROMPT_CACHE_TTL="${ZANGARMARSH_PROMPT_CACHE_TTL:-2}"
 GIT_PROMPT_ENABLED="${ZANGARMARSH_GIT_PROMPT:-true}"
 KUBE_PROMPT_ENABLED="${ZANGARMARSH_KUBE_PROMPT:-true}"
 SHOW_USER="${ZANGARMARSH_SHOW_USER:-true}"
@@ -121,7 +113,7 @@ _prompt_git_info() {
 	return 0
 }
 
-# Build the complete prompt string with caching
+# Build the complete prompt string
 #
 # Outputs:
 # - Prompt text on stdout
@@ -129,44 +121,12 @@ _prompt_git_info() {
 # Returns:
 # - 0 always
 build_prompt() {
-	local current_pwd="${PWD}"
-
-	local current_time
-	if [[ -n "${EPOCHSECONDS:-}" ]]; then
-		current_time="${EPOCHSECONDS}"
-	else
-		current_time="$(date +%s)"
-	fi
-
-	local cache_expired=0
-	local pwd_changed=0
-
-	if ((current_time - _prompt_cache_time > PROMPT_CACHE_TTL)); then
-		cache_expired=1
-	fi
-
-	if [[ "${current_pwd}" != "${_prompt_pwd_cache}" ]]; then
-		pwd_changed=1
-	fi
-
-	if ((cache_expired == 0 && pwd_changed == 0)) && [[ -n "${_prompt_cache}" ]]; then
-		print -r -- "${_prompt_cache}"
-		return 0
-	fi
-
 	local prompt=""
 
 	if [[ "${KUBE_PROMPT_ENABLED}" == "true" ]]; then
-		local kube_ctx
-		if ((cache_expired)); then
-			kube_ctx=""
-			if [[ -n "${_prompt_kubectl}" ]]; then
-				kube_ctx="$("${_prompt_kubectl}" config current-context 2>/dev/null)"
-			fi
-
-			_prompt_kube_cache="${kube_ctx}"
-		else
-			kube_ctx="${_prompt_kube_cache}"
+		local kube_ctx=""
+		if [[ -n "${_prompt_kubectl}" ]]; then
+			kube_ctx="$("${_prompt_kubectl}" config current-context 2>/dev/null)"
 		fi
 
 		[[ -n "${kube_ctx}" ]] && prompt="${prompt}${CYAN}${kube_ctx}${RESET}"
@@ -205,31 +165,17 @@ build_prompt() {
 	fi
 
 	if [[ "${GIT_PROMPT_ENABLED}" == "true" ]]; then
-		local git_info
-		if ((pwd_changed || cache_expired)); then
-			git_info="$(_prompt_git_info)"
-			_prompt_git_cache="${git_info}"
-		else
-			git_info="${_prompt_git_cache}"
-		fi
-
-		prompt="${prompt}${GREEN}${git_info}${RESET}"
+		prompt="${prompt}${GREEN}$(_prompt_git_info)${RESET}"
 	fi
 
 	prompt="${prompt} ${BLUE}${PWD/#${HOME}/~}${RESET}"
 	prompt="${prompt} ${PROMPT_SYMBOL} "
-
-	_prompt_cache="${prompt}"
-	_prompt_cache_time="${current_time}"
-	_prompt_pwd_cache="${current_pwd}"
 
 	print -r -- "${prompt}"
 
 	return 0
 }
 
-# build_prompt mutates cache globals. A command-substitution PROMPT would
-# run it in a subshell, so the cache never persists. Use a precmd hook.
 autoload -Uz add-zsh-hook
 
 # Refresh the rendered prompt string in the current shell before each prompt

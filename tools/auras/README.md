@@ -26,7 +26,7 @@ If a target `.desktop` file already exists, Auras overwrites it only when both c
 
 ## Usage
 
-The CLI can run standalone and resolves `ZANGARMARSH_ROOT` from its location.
+The CLI runs standalone. It loads its libraries from the checkout that holds the script and ignores any inherited `ZANGARMARSH_ROOT`.
 
 ```bash
 # Create or refresh one managed launcher and shell command
@@ -56,15 +56,9 @@ update-desktop-database "$HOME/.local/share/applications"
 
 ## Options
 
-| Flag                  | Meaning                                                 |
-| --------------------- | ------------------------------------------------------- |
-| `-b`, `--buff NAME`   | Install a managed launcher and bin symlink for NAME     |
-| `-a`, `--appimage P`  | AppImage path, required with `--buff`                   |
-| `--ready-check DIR`   | Buff the latest AppImage in each immediate child of DIR |
-| `-d`, `--debuff NAME` | Remove the managed launcher and matching bin symlink    |
-| `-h`, `--help`        | Show usage                                              |
+Run `./tools/auras/auras.sh --help` for the flag list.
 
-Exactly one of `--buff`, `--ready-check`, or `--debuff` is allowed per run; giving more than one fails with `use only one of --buff, --ready-check, or --debuff`. Running with none of them prints usage and exits with status 1. The required user environment input is `HOME`, which must be set because both outputs live under `~/.local`. `ZANGARMARSH_ROOT` is rebound from the script location when auras runs.
+Exactly one of `--buff`, `--ready-check`, or `--debuff` is allowed per run; giving more than one fails with `use only one of --buff, --ready-check, or --debuff`. Running with none of them prints usage and exits with status 1. The required user environment input is `HOME`, which must be set because both outputs live under `~/.local`.
 
 ## Ready-check layout
 
@@ -104,17 +98,18 @@ The `.desktop` file is for application menus and desktop environments. The bin s
 
 - Relative AppImage directories are resolved before writing `Exec=` and the bin symlink.
 - The AppImage must exist, be readable, and be executable.
-- Existing unmarked `.desktop` files are not overwritten. Unmanaged bin paths are refused unless the matching desktop is Auras-managed.
+- Existing unmarked `.desktop` files are not overwritten. Unmanaged bin paths are refused unless the matching desktop is Auras-managed. A bin symlink that already points at the same AppImage is accepted as is.
 - App and desktop names must be a single path segment, with no slashes.
 - The AppImage path must be absolute after resolution, end in `.AppImage` or `.appimage`, and must not contain control characters, quotes, `%`, `$`, backticks, or backslashes.
-- If creating the bin symlink fails, a desktop file written during the same run is rolled back, and an existing managed desktop file is restored from a backup.
+- If creating the bin symlink fails, the desktop file stays in place. Run the same command again to repair the link.
 - Name validation runs before any file is touched.
 - Auras does not manage `Icon=` entries.
 
 ## Requirements
 
+- Linux. Auras exits with status 1 on other hosts.
 - Bash
-- A Linux desktop environment that reads Freedesktop `.desktop` launchers
+- A desktop environment that reads Freedesktop `.desktop` launchers
 
 ## Testing
 

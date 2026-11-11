@@ -3,6 +3,14 @@
 # Unit and integration tests for profile/zsh/profile.zsh
 #
 
+# Prepare shared paths for profile.zsh tests
+#
+# Side Effects:
+# - Exports SCRIPT
+#
+# Returns:
+# - 0 on success
+# - skips when zsh is missing
 setup_file() {
 	command -v zsh >/dev/null 2>&1 || skip "zsh not available"
 
@@ -15,55 +23,34 @@ setup_file() {
 	return 0
 }
 
+# Isolate HOME and seed autosuggestions for one profile test
+#
+# Side Effects:
+# - Exports HOME, ZDOTDIR, USER, HOSTNAME, and PWD under a temp HOME
+#
+# Returns:
+# - 0 on success
 setup() {
-	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
-
 	source "${GIT_ROOT}/tests/fixtures.sh" || return 1
 
-	TEST_DIR="$(mktemp -d "${base}/profile-test.XXXXXX")"
-	cd "${TEST_DIR}" || return 1
+	use_temp_home || return 1
+	cd "${HOME}" || return 1
 
-	export TEST_DIR
 	USER="testuser"
 	export USER
 	HOSTNAME="testhost"
 	export HOSTNAME
-	HOME="${TEST_DIR}"
-	export HOME
-	ZDOTDIR="${TEST_DIR}"
+	ZDOTDIR="${HOME}"
 	export ZDOTDIR
-	PWD="${TEST_DIR}"
+	PWD="${HOME}"
 	export PWD
 	printf '\n' >"${ZDOTDIR}/.zshrc"
 	touch "${ZDOTDIR}/.zcompdump"
 	export ZANGARMARSH_ROOT
-	ZANGARMARSH_VERBOSE=false
-	export ZANGARMARSH_VERBOSE
-	# Drop a host override so the stub lands under this test HOME.
-	unset ZANGARMARSH_ZSH_AUTOSUGGESTIONS
 
-	seed_zsh_autosuggestions_stub
+	seed_zsh_autosuggestions_stub || return 1
 
 	return 0
-}
-
-teardown() {
-	rm -rf "${TEST_DIR}"
-	return 0
-}
-
-@test "profile:: non-interactive zsh sets history and skips interactive extras" {
-	run env -u ZANGARMARSH_TEST HOME="${HOME}" ZDOTDIR="${ZDOTDIR}" ZANGARMARSH_ROOT="${ZANGARMARSH_ROOT}" \
-		zsh -c "
-		source '${SCRIPT}' || exit 1
-		printf 'HISTSIZE=%s\n' \"\$HISTSIZE\"
-		type build_prompt >/dev/null 2>&1 && printf 'PROMPT_FN=1\n' || printf 'PROMPT_FN=0\n'
-		zstyle -t ':completion:*:*:*:*:*' menu select && printf 'MENU=1\n' || printf 'MENU=0\n'
-	"
-	[[ "${status}" -eq 0 ]]
-	echo "${output}" | grep -q "^HISTSIZE=100000$"
-	echo "${output}" | grep -q "^PROMPT_FN=0$"
-	echo "${output}" | grep -q "^MENU=0$"
 }
 
 @test "profile:: forces HISTFILE over an inherited bash path and sets HISTORY_IGNORE" {
@@ -83,7 +70,7 @@ teardown() {
 	echo "${output}" | grep -Fq "HISTORY_IGNORE=${shared}"
 }
 
-@test "platform.zsh:: nested source does not duplicate /usr/local/bin" {
+@test "platform.zsh:: nested source does not duplicate PATH entries" {
 	# Controlled PATH so host duplicates do not mask prepend-once behavior.
 	run env HOME="${HOME}" ZDOTDIR="${ZDOTDIR}" ZANGARMARSH_ROOT="${ZANGARMARSH_ROOT}" \
 		PATH="/usr/bin:/bin" \
@@ -100,9 +87,9 @@ teardown() {
 	first="$(echo "${output}" | sed -n 's/^FIRST=//p')"
 	second="$(echo "${output}" | sed -n 's/^SECOND=//p')"
 	[[ "${first}" == "${second}" ]]
-	local count
-	count="$(echo ":${first}:" | tr ':' '\n' | grep -cx '/usr/local/bin')"
-	[[ "${count}" -eq 1 ]]
+	local duplicates
+	duplicates="$(echo "${second}" | tr ':' '\n' | sort | uniq -d)"
+	[[ -z "${duplicates}" ]]
 }
 
 @test "integration:: profile loads completion, autosuggestions, and prompt" {

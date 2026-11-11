@@ -26,7 +26,7 @@ After you `source zangarmarsh.sh`, both shells load shared files under `profile/
 
 Both shells load `tools/lib/platform.sh` so `PLATFORM` and `PLATFORM_OS` are set, and `tools/tools.sh` for `questlog`, `trilliax`, and `auras`. Zsh also loads `profile/zsh/profile.zsh`, which sets PATH and display aliases, and in interactive shells loads owned completion, zsh-autosuggestions, and `profile/zsh/prompt.zsh` for the customizable prompt with Git branch and kubectl context.
 
-Bash loads `profile/bash/profile.sh` for history and readline options only. It does not load the Zsh prompt. A second `source` of the same checkout is a no-op.
+Bash loads `profile/bash/profile.sh` for history and readline options only. It does not load the Zsh prompt. Sourcing the same checkout twice is safe.
 
 ## Install
 
@@ -36,7 +36,7 @@ cd Zangarmarsh
 make install
 ```
 
-`make install` writes one canonical source line into `~/.zshrc` and `~/.bashrc`, collapses duplicate or alternate source forms for this checkout, removes the official eager NVM block from `~/.bashrc`, installs the tracked quest-log plugin plus user rules under `~/.cursor/rules`, overwrites host Cursor user settings from `tools/vscode/settings.json`, and installs the bundled DejaVu Sans Mono font. Pass `--zsh` or `--bash` to `profile/install.sh` to target only one shell rc file.
+`make install` writes one marked Zangarmarsh block into `~/.zshrc` and the bash rc file (`~/.bash_profile` on macOS, `~/.bashrc` on Linux), installs the tracked quest-log plugin plus prefixed user rules under `~/.cursor/rules` as `zangarmarsh-*.mdc`, overwrites host Cursor user settings from `tools/vscode/settings.json`, and installs the bundled DejaVu Sans Mono font. Pass `--zsh` or `--bash` to `profile/install.sh` to target only one shell rc file.
 
 Dry-run first with:
 
@@ -71,7 +71,6 @@ Defaults live in `profile/config.sh`. Set a variable before sourcing `zangarmars
 #### Core
 
 - `ZANGARMARSH_ROOT`: Project root directory, set by `zangarmarsh.sh`, usually not set by hand
-- `ZANGARMARSH_VERBOSE=true`: Print loader and platform debug lines to stderr
 - `ZANGARMARSH_LAZY_LOADING=true`: Lazy-load NVM on first `nvm` call when NVM is enabled, default `true`
 - `ZANGARMARSH_ENABLE_NVM=true`: Register NVM loader, default `true`
 - `ZANGARMARSH_HISTSIZE=100000`: History size for bash and zsh
@@ -84,7 +83,6 @@ Defaults live in `profile/config.sh`. Set a variable before sourcing `zangarmars
 
 These apply when `profile/zsh/prompt.zsh` runs:
 
-- `ZANGARMARSH_PROMPT_CACHE_TTL=2`: Prompt cache TTL in seconds, default `2`
 - `ZANGARMARSH_GIT_PROMPT=true`: Show git branch in prompt, default `true`
 - `ZANGARMARSH_KUBE_PROMPT=true`: Show kubectl context in prompt, default `true`
 - `ZANGARMARSH_SHOW_USER=true`: Show username in prompt, default `true`
@@ -114,9 +112,9 @@ These functions come from `profile/functions.sh` and are defined in both shells:
 | -------- | --------------------------------------------------------------------------------------------------------------- |
 | `gw`     | `gw add\|remove ...` passes through to `git worktree`; `gw NAME [BASE]` adds a sibling worktree on branch NAME  |
 | `penv`   | Create and activate `.venv` in the current directory with `uv`; leaves an existing `.venv` alone                |
-| `drun`   | Run `docker run -it --rm` on an image with `bash` as the entry command, usage `drun IMAGE [docker run args...]` |
+| `drun`   | Run `docker run -it --rm` on an image with `bash` as the entry command, usage `drun IMAGE [bash args...]`       |
 | `tfp`    | Run `terraform plan` and write `.terraform/zangarmarsh.tfplan`                                                  |
-| `tfa`    | Apply `.terraform/zangarmarsh.tfplan` from `tfp`                                                                |
+| `tfa`    | Apply a plan file: `tfa PLAN_PATH`, such as `.terraform/zangarmarsh.tfplan` from `tfp`                          |
 
 ## Requirements
 

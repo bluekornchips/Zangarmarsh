@@ -79,8 +79,20 @@ EOF
 	return 0
 }
 
+# Create a temp HOME and project directory, then source penv with a python3 mock
+#
+# Side Effects:
+# - Changes the working directory to TEST_DIR and exports HOME, TEST_DIR, PLATFORM, and PLATFORM_OS
+# - Sources SCRIPT and exports the python3 mock
+#
+# Returns:
+# - 0 on success
+# - 1 when HOME, TEST_DIR, or the cd fails
 setup() {
 	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
+
+	source "${GIT_ROOT}/tests/fixtures.sh" || return 1
+	use_temp_home || return 1
 
 	TEST_DIR="$(mktemp -d "${base}/penv-test.XXXXXX")"
 	cd "${TEST_DIR}" || return 1
@@ -90,12 +102,10 @@ setup() {
 
 	PLATFORM="linux"
 	PLATFORM_OS="linux"
-	ZANGARMARSH_VERBOSE=true
 
 	export TEST_DIR
 	export PLATFORM
 	export PLATFORM_OS
-	export ZANGARMARSH_VERBOSE
 
 	return 0
 }
@@ -135,7 +145,7 @@ teardown() {
 
 	run penv
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Removing existing virtual environment"
+	echo "$output" | grep -q "Replacing existing virtual environment"
 	echo "$output" | grep -q "Creating virtual environment"
 	[[ -x ".venv/bin/python" ]]
 }
@@ -159,14 +169,6 @@ teardown() {
 	[[ -d ".venv" ]]
 	[[ -f ".venv/bin/activate" ]]
 	echo "$output" | grep -q "Virtual environment setup complete"
-}
-
-@test "integration:: penv cleans up cache files during creation" {
-	mkdir -p __pycache__ .mypy_cache .pytest_cache
-	touch test.pyc
-
-	run penv
-	[[ "$status" -eq 0 ]]
 }
 
 @test "penv:: leaves existing virtual environment alone without activating" {
@@ -201,7 +203,7 @@ teardown() {
 
 	run penv -d
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Removing existing virtual environment"
+	echo "$output" | grep -q "Replacing existing virtual environment"
 	[[ ! -f ".venv/test_file" ]]
 }
 
@@ -211,7 +213,7 @@ teardown() {
 
 	run penv --delete
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Removing existing virtual environment"
+	echo "$output" | grep -q "Replacing existing virtual environment"
 	[[ ! -f ".venv/test_file" ]]
 }
 
@@ -271,7 +273,7 @@ teardown() {
 
 	run penv
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Removing existing virtual environment"
+	echo "$output" | grep -q "Replacing existing virtual environment"
 	echo "$output" | grep -q "Creating virtual environment"
 }
 
@@ -293,7 +295,7 @@ teardown() {
 
 	run penv -d --delete
 	[[ "$status" -eq 0 ]]
-	echo "$output" | grep -q "Removing existing virtual environment"
+	echo "$output" | grep -q "Replacing existing virtual environment"
 }
 
 @test "penv:: handles platform-specific behavior" {

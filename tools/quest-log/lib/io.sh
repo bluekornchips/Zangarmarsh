@@ -3,6 +3,8 @@
 # File and directory I/O helpers for quest-log
 #
 
+source "${ZANGARMARSH_ROOT}/tools/lib/fs.sh"
+
 # Show diff between current file and incoming changes
 #
 # Inputs:
@@ -20,13 +22,12 @@ show_diff() {
 	local file_path="$1"
 	local new_content="$2"
 	local temp_file
-	temp_file=$(mktemp) || {
+	temp_file="$(mktemp "${TMPDIR:-/tmp}/zangarmarsh-diff.XXXXXX")" || {
 		echo "show_diff:: Failed to create temporary file" >&2
 		return 1
 	}
 
 	chmod 0600 "${temp_file}"
-	trap 'rm -f -- "${temp_file}"; trap - RETURN' RETURN
 	printf '%s' "${new_content}" >"${temp_file}"
 
 	if [[ -f "${file_path}" ]]; then
@@ -40,49 +41,7 @@ show_diff() {
 		fi
 	fi
 
-	rm -f "${temp_file}"
-	trap - RETURN
-
-	return 0
-}
-
-# Ensure a directory exists
-#
-# Inputs:
-# - $1, dir_path, directory to create
-# - $2, label, prefix for error messages
-#
-# Returns:
-# - 0 on success
-# - 1 on failure
-ensure_dir() {
-	local dir_path="$1"
-	local label="${2:-ensure_dir}"
-
-	if [[ ! -d "${dir_path}" ]] && ! mkdir -p "${dir_path}"; then
-		echo "${label}:: Failed to create directory: ${dir_path}" >&2
-		return 1
-	fi
-
-	return 0
-}
-
-# Read file contents or empty string
-#
-# Inputs:
-# - $1, file_path, path to read
-#
-# Outputs:
-# - file contents to stdout
-#
-# Returns:
-# - 0 always
-read_file_or_empty() {
-	local file_path="$1"
-
-	if [[ -f "${file_path}" ]]; then
-		cat "${file_path}" 2>/dev/null
-	fi
+	rm -f -- "${temp_file}"
 
 	return 0
 }
@@ -95,7 +54,7 @@ read_file_or_empty() {
 # - $3, error_label, prefix for write failure messages
 #
 # Side Effects:
-# - Sets WRITE_IF_CHANGED_OUTCOME to unchanged, created, updated, or error
+# - Sets WRITE_IF_CHANGED_OUTCOME from WRITE_ATOMIC_OUTCOME
 # - Writes file_path when content differs
 #
 # Returns:
@@ -106,40 +65,45 @@ write_if_changed() {
 	local new_content="$2"
 	local error_label="${3:-write_if_changed}"
 
-	WRITE_IF_CHANGED_OUTCOME="error"
-
-	local existing_content
-	existing_content="$(
-		read_file_or_empty "${file_path}"
-		printf x
-	)"
-	existing_content="${existing_content%x}"
-
-	local display_path="${file_path}"
-	local display_dir
-	if display_dir="$(cd "$(dirname "${file_path}")" 2>/dev/null && pwd -P)"; then
-		display_path="${display_dir}/$(basename "${file_path}")"
+	if [[ "${DRY_RUN:-false}" != "true" ]]; then
+		show_diff "${file_path}" "${new_content}"
 	fi
 
-	if [[ "${existing_content}" == "${new_content}" ]]; then
-		echo "No changes: ${display_path}"
-		WRITE_IF_CHANGED_OUTCOME="unchanged"
+	if [[ "${DRY_RUN:-false}" == "true" ]]; then
+		write_atomic "${file_path}" "" "${error_label}" || {
+			WRITE_IF_CHANGED_OUTCOME="error"
+			return 1
+		}
+		WRITE_IF_CHANGED_OUTCOME="${WRITE_ATOMIC_OUTCOME}"
 		return 0
 	fi
 
-	show_diff "${file_path}" "${new_content}"
-	if ! printf '%s' "${new_content}" >"${file_path}"; then
-		echo "${error_label}:: Failed to write file: ${display_path}" >&2
+	local parent
+	parent="$(dirname "${file_path}")"
+	ensure_dir "${parent}" "${error_label}" || return 1
+
+	local stage
+	stage="$(mktemp "${parent}/.zangarmarsh.XXXXXX")" || {
+		echo "${error_label}:: Failed to create staging file" >&2
+		WRITE_IF_CHANGED_OUTCOME="error"
+		return 1
+	}
+
+	if ! printf '%s' "${new_content}" >"${stage}"; then
+		rm -f -- "${stage}"
+		echo "${error_label}:: Failed to stage content" >&2
+		WRITE_IF_CHANGED_OUTCOME="error"
 		return 1
 	fi
 
-	if [[ -n "${existing_content}" ]]; then
-		WRITE_IF_CHANGED_OUTCOME="updated"
-		echo "Updated: ${display_path}"
-	else
-		WRITE_IF_CHANGED_OUTCOME="created"
-		echo "Created: ${display_path}"
-	fi
+	write_atomic "${file_path}" "${stage}" "${error_label}" || {
+		rm -f -- "${stage}"
+		WRITE_IF_CHANGED_OUTCOME="error"
+		return 1
+	}
+
+	rm -f -- "${stage}"
+	WRITE_IF_CHANGED_OUTCOME="${WRITE_ATOMIC_OUTCOME}"
 
 	return 0
 }

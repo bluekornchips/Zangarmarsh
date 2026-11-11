@@ -32,7 +32,7 @@ ensure_bin_link_removable() {
 	fi
 
 	local current_target
-	current_target="$(resolve_symlink_path "${link_path}" "ensure_bin_link_removable")" || return 1
+	current_target="$(readlink "${link_path}")" || return 1
 
 	if [[ "${current_target}" != "${expected_target}" ]]; then
 		echo "ensure_bin_link_removable:: refusing to remove bin symlink with unexpected target: ${link_path}" >&2

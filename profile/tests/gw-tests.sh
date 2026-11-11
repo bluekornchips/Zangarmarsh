@@ -13,10 +13,21 @@ setup_file() {
 	return 0
 }
 
+# Create a temp HOME and TEST_DIR, then source gw from inside TEST_DIR
+#
+# Side Effects:
+# - Changes the working directory to TEST_DIR
+# - Exports HOME and TEST_DIR
+# - Sources tests/fixtures.sh and SCRIPT
+#
+# Returns:
+# - 0 on success
+# - 1 when HOME, TEST_DIR, or the cd fails
 setup() {
 	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
 
 	source "${GIT_ROOT}/tests/fixtures.sh"
+	use_temp_home || return 1
 
 	TEST_DIR="$(mktemp -d "${base}/gw-test.XXXXXX")"
 	cd "${TEST_DIR}" || return 1

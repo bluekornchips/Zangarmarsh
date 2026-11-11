@@ -1,26 +1,20 @@
 #!/usr/bin/env zsh
 #
 # Zsh-only PATH and display aliases. Detection lives in tools/lib/platform.sh.
-# zangarmarsh.sh normally exports PLATFORM_OS first; fall back when profile.zsh
-# is sourced on its own.
+#
 
 if [[ -z "${PLATFORM_OS:-}" ]]; then
-	if [[ -z "${ZANGARMARSH_ROOT:-}" ]]; then
-		echo "platform.zsh:: PLATFORM_OS or ZANGARMARSH_ROOT is required" >&2
-		return 1
-	fi
-
-	source "${ZANGARMARSH_ROOT}/tools/lib/platform.sh"
+	source "${ZANGARMARSH_ROOT}/tools/lib/platform.sh" || return 1
 	apply_platform_env || return 1
 fi
 
-# Prepend once. Nested interactive shells must not stack duplicates.
-case ":${PATH}:" in
-*:/usr/local/bin:*) ;;
-*)
-	PATH="/usr/local/bin:/usr/local/sbin:${PATH}"
-	;;
-esac
+# Prepend each existing bin directory that is not already on PATH. The last
+# directory in the list ends up first, so Homebrew wins over /usr/local.
+for path_dir in /usr/local/sbin /usr/local/bin /opt/homebrew/bin; do
+	if [[ -d "${path_dir}" && ":${PATH}:" != *":${path_dir}:"* ]]; then
+		PATH="${path_dir}:${PATH}"
+	fi
+done
 
 case "${PLATFORM_OS}" in
 macos)
@@ -35,9 +29,5 @@ linux)
 	fi
 	;;
 esac
-
-if [[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]]; then
-	echo "Platform detected: ${PLATFORM} os=${PLATFORM_OS}" >&2
-fi
 
 return 0

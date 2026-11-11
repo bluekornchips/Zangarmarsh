@@ -50,10 +50,15 @@ validate_app_name_segment() {
 #
 # Returns:
 # - 0 when the directory can be resolved
-# - 1 when the path is empty, unsafe, or has an unavailable directory
+# - 1 when the path is empty or its directory does not exist
 resolve_appimage_path() {
 	local appimage_path="$1"
 	local ctx="${2:-resolve_appimage_path}"
+
+	if [[ -z "${appimage_path}" ]]; then
+		echo "${ctx}:: AppImage path is required" >&2
+		return 1
+	fi
 
 	local appimage_dir="${appimage_path%/*}"
 	local appimage_name="${appimage_path##*/}"
@@ -225,83 +230,6 @@ applications_dir() {
 bin_link_dir() {
 	_auras_local_user_dir ".local/bin" "bin_link_dir"
 	return $?
-}
-
-# Resolve a symlink or path to a canonical absolute path
-#
-# Works on Bash 3.2 with BSD and GNU userland. Avoids GNU-only readlink -f.
-#
-# Inputs:
-# - $1 path, symlink or ordinary path to resolve
-# - $2 context label for error messages
-#
-# Outputs:
-# - Canonical absolute path on stdout
-#
-# Returns:
-# - 0 on success
-# - 1 when the path is empty, unreadable, or cannot be canonicalized
-resolve_symlink_path() {
-	local path="$1"
-	local ctx="${2:-resolve_symlink_path}"
-
-	if [[ -z "${path}" ]]; then
-		echo "${ctx}:: path is required" >&2
-		return 1
-	fi
-
-	local depth=0
-	local max_depth=32
-	while [[ -L "${path}" ]] && ((depth < max_depth)); do
-		local link_target
-		link_target="$(readlink "${path}")" || {
-			echo "${ctx}:: failed to read symlink: ${path}" >&2
-			return 1
-		}
-
-		if [[ "${link_target}" != /* ]]; then
-			local link_dir
-			link_dir="$(cd "$(dirname "${path}")" && pwd)" || {
-				echo "${ctx}:: failed to resolve symlink directory: ${path}" >&2
-				return 1
-			}
-
-			link_target="${link_dir}/${link_target}"
-		fi
-
-		path="${link_target}"
-		depth=$((depth + 1))
-	done
-
-	if [[ -L "${path}" ]]; then
-		echo "${ctx}:: symlink loop or depth exceeded: ${path}" >&2
-		return 1
-	fi
-
-	local parent
-	parent="$(dirname "${path}")"
-	local base
-	base="$(basename "${path}")"
-
-	if [[ ! -d "${parent}" ]]; then
-		if [[ "${path}" == /* ]]; then
-			echo "${path}"
-			return 0
-		fi
-
-		echo "${ctx}:: directory does not exist: ${parent}" >&2
-		return 1
-	fi
-
-	local parent_abs
-	parent_abs="$(cd "${parent}" && pwd -P)" || {
-		echo "${ctx}:: failed to canonicalize directory: ${parent}" >&2
-		return 1
-	}
-
-	echo "${parent_abs}/${base}"
-
-	return 0
 }
 
 # Build a desktop or bin path for one application stem

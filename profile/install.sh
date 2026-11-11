@@ -3,6 +3,9 @@
 # Install Zangarmarsh and its local Cursor plugin.
 #
 
+RC_BLOCK_START="# >>> zangarmarsh >>>"
+RC_BLOCK_END="# <<< zangarmarsh <<<"
+
 # Display usage information
 #
 # Side Effects:
@@ -14,17 +17,18 @@ usage() {
 	cat <<EOF
 Usage: $(basename "$0") [OPTIONS]
 
-Add or remove Zangarmarsh from ~/.zshrc and/or ~/.bashrc and install its
+Manage the Zangarmarsh block in ~/.zshrc and the bash rc file, and install the
 local Cursor plugin, user rules, Cursor settings, and DejaVu Sans Mono font.
 
 Options:
   -h, --help       Show this help
   -r, --dry-run    Show changes without modifying user files
-  -u, --uninstall  Remove Zangarmarsh, its local Cursor plugin, and managed rules
-      --zsh        Target ~/.zshrc only, or with --bash both files
-      --bash       Target ~/.bashrc only, or with --zsh both files
+  -u, --uninstall  Remove the Zangarmarsh block, local Cursor plugin, and managed rules
+      --zsh        Update ~/.zshrc only, or both rc files with --bash
+      --bash       Update the bash rc file only, or both rc files with --zsh
 
-When neither --zsh nor --bash is given, both ~/.zshrc and ~/.bashrc are used.
+The bash rc file is ~/.bash_profile on macOS and ~/.bashrc on Linux.
+When neither --zsh nor --bash is given, both rc files are updated.
 Uninstall leaves Cursor user settings and the installed font in place.
 EOF
 
@@ -55,431 +59,42 @@ validate_install_env() {
 	return 0
 }
 
-# Build the canonical source command for this checkout
+# Print the profile family for this host
 #
 # Outputs:
-# - source line without a trailing newline
-#
-# Returns:
-# - 0 always
-_canonical_source_command() {
-	local quoted
-	quoted="$(printf '%q' "${ZANGARMARSH_ROOT}/zangarmarsh.sh")"
-	printf 'source %s' "${quoted}"
-	return 0
-}
-
-# Resolve the absolute path of zangarmarsh.sh for this checkout
-#
-# Outputs:
-# - Absolute loader path on stdout
+# - macos or linux on stdout
 #
 # Returns:
 # - 0 on success
-# - 1 when ZANGARMARSH_ROOT is unset
-_zangarmarsh_loader_path() {
-	if [[ -z "${ZANGARMARSH_ROOT:-}" ]]; then
-		printf '_zangarmarsh_loader_path:: ZANGARMARSH_ROOT is required\n' >&2
-		return 1
-	fi
-
-	printf '%s\n' "${ZANGARMARSH_ROOT}/zangarmarsh.sh"
-
-	return 0
-}
-
-# Strip leading whitespace from one string
-#
-# Inputs:
-# - $1 text, input string
-#
-# Outputs:
-# - Trimmed string on stdout
-#
-# Returns:
-# - 0 always
-_trim_leading_ws() {
-	local text="${1:-}"
-	printf '%s\n' "${text#"${text%%[![:space:]]*}"}"
-	return 0
-}
-
-# Strip trailing whitespace from one string
-#
-# Inputs:
-# - $1 text, input string
-#
-# Outputs:
-# - Trimmed string on stdout
-#
-# Returns:
-# - 0 always
-_trim_trailing_ws() {
-	local text="${1:-}"
-	printf '%s\n' "${text%"${text##*[![:space:]]}"}"
-	return 0
-}
-
-# Normalize a source target path from an rc line
-#
-# Inputs:
-# - $1 target, raw path token after source
-#
-# Outputs:
-# - Normalized absolute or expanded path on stdout
-#
-# Returns:
-# - 0 always
-_normalize_source_target() {
-	local target="${1:-}"
-
-	if [[ "${target}" == \"*\" ]]; then
-		target="${target#\"}"
-		target="${target%\"}"
-	elif [[ "${target}" == \'*\' ]]; then
-		target="${target#\'}"
-		target="${target%\'}"
-	fi
-
-	if [[ "${target}" == \$HOME/* ]]; then
-		target="${HOME}/${target#\$HOME/}"
-	fi
-
-	printf '%s\n' "${target}"
-
-	return 0
-}
-
-# Return whether an rc line sources this checkout's zangarmarsh.sh
-#
-# Inputs:
-# - $1 line, one rc file line
-#
-# Returns:
-# - 0 when the line sources this root
-# - 1 otherwise
-_line_sources_this_root() {
-	local line="${1:-}"
-	local trimmed
-	trimmed="$(_trim_leading_ws "${line}")"
-	[[ "${trimmed}" == source[[:space:]]* ]] || return 1
-
-	local target="${trimmed#source}"
-	target="$(_trim_leading_ws "${target}")"
-	target="${target%%#*}"
-	target="$(_trim_trailing_ws "${target}")"
-	[[ -n "${target}" ]] || return 1
-
-	local expected
-	expected="$(_zangarmarsh_loader_path)" || return 1
-	target="$(_normalize_source_target "${target}")"
-
-	if [[ "${target}" == "${expected}" ]]; then
-		return 0
-	fi
-
-	return 1
-}
-
-# Return whether an rc line is an eager NVM install snippet
-#
-# Inputs:
-# - $1 line, one rc file line
-#
-# Returns:
-# - 0 when the line matches a known eager NVM form
-# - 1 otherwise
-_line_is_eager_nvm() {
-	local line="${1:-}"
-	local trimmed
-	trimmed="$(_trim_leading_ws "${line}")"
-	[[ -n "${trimmed}" ]] || return 1
-
-	local body="${trimmed%%#*}"
-	body="$(_trim_trailing_ws "${body}")"
-	body="${body//\\./.}"
-
-	# shellcheck disable=SC2016
-	case "${body}" in
-	'export NVM_DIR="$HOME/.nvm"' | "export NVM_DIR='$HOME/.nvm'" | 'export NVM_DIR=$HOME/.nvm')
-		return 0
-		;;
-	'[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"')
-		return 0
-		;;
-	'[ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"')
-		return 0
-		;;
-	esac
-
-	return 1
-}
-
-# Return whether an rc path is a bashrc path
-#
-# Inputs:
-# - $1 rc_file, path under inspection
-#
-# Returns:
-# - 0 when the basename is .bashrc or bashrc
-# - 1 otherwise
-_rc_is_bashrc() {
-	local rc_file="$1"
-	local basename_rc
-	basename_rc="$(basename "${rc_file}")"
-	[[ "${basename_rc}" == ".bashrc" || "${basename_rc}" == "bashrc" ]] && return 0
-
-	return 1
-}
-
-# Return whether an rc line should be kept during rewrite
-#
-# Inputs:
-# - $1 line, one rc file line
-# - $2 strip_nvm, true to drop eager NVM lines
-#
-# Returns:
-# - 0 when the line should be kept
-# - 1 when the line should be removed
-_should_keep_rc_line() {
-	local line="${1:-}"
-	local strip_nvm="${2:-false}"
-
-	if _line_sources_this_root "${line}"; then
-		return 1
-	fi
-
-	if [[ "${strip_nvm}" == true ]] && _line_is_eager_nvm "${line}"; then
-		return 1
-	fi
-
-	return 0
-}
-
-# Return whether an rc file already sources this checkout
-#
-# Inputs:
-# - $1 rc_file, path under inspection
-#
-# Returns:
-# - 0 when a matching source line is present
-# - 1 when the file is missing or has no matching line
-has_source_line() {
-	local rc_file="$1"
-
-	[[ -f "${rc_file}" ]] || return 1
-
-	local line
-	while IFS= read -r line || [[ -n "${line}" ]]; do
-		if _line_sources_this_root "${line}"; then
-			return 0
-		fi
-	done <"${rc_file}"
-
-	return 1
-}
-
-# Return whether an rc file needs rewrite for install
-#
-# Inputs:
-# - $1 rc_file, path under inspection
-#
-# Returns:
-# - 0 when the file needs rewrite
-# - 1 when the canonical source line is already present alone
-_rc_install_needs_rewrite() {
-	local rc_file="$1"
-	local match_count=0
-	local has_canonical=false
-	local needs_rewrite=false
-	local strip_nvm=false
-
-	if _rc_is_bashrc "${rc_file}"; then
-		strip_nvm=true
-	fi
-
-	[[ -f "${rc_file}" ]] || return 0
-
-	local canonical
-	canonical="$(_canonical_source_command)"
-
-	local line
-	while IFS= read -r line || [[ -n "${line}" ]]; do
-		if _line_sources_this_root "${line}"; then
-			match_count=$((match_count + 1))
-			if [[ "${line}" == "${canonical}" ]]; then
-				has_canonical=true
-			else
-				needs_rewrite=true
-			fi
-		elif [[ "${strip_nvm}" == true ]] && _line_is_eager_nvm "${line}"; then
-			needs_rewrite=true
-		fi
-	done <"${rc_file}"
-
-	if ((match_count == 0)) || ((match_count > 1)) || [[ "${has_canonical}" != true ]]; then
-		needs_rewrite=true
-	fi
-
-	[[ "${needs_rewrite}" == true ]]
+# - 1 when platform detection fails
+_host_os() {
+	local platform_id
+	platform_id="$(_detect_platform)" || return 1
+	platform_os_from_id "${platform_id}"
 
 	return $?
 }
 
-# Rewrite an rc file, optionally appending the canonical source line
+# Resolve the bash rc file for this host
 #
-# Inputs:
-# - $1 rc_file, path to rewrite
-# - $2 append_source, true to append the source line
-# - $3 strip_nvm, true to drop eager NVM lines
-# - $4 caller_name, prefix for error messages
+# Reads environment:
+# - HOME
 #
-# Side Effects:
-# - Replaces rc_file contents via a temporary file
+# Outputs:
+# - ~/.bash_profile on macOS or ~/.bashrc on Linux, on stdout
 #
 # Returns:
 # - 0 on success
-# - 1 on write failure
-_rewrite_rc_file() {
-	local rc_file="$1"
-	local append_source="${2:-false}"
-	local strip_nvm="${3:-false}"
-	local caller_name="${4:-_rewrite_rc_file}"
+# - 1 when platform detection fails
+bash_rc_path() {
+	local host_os
+	host_os="$(_host_os)" || return 1
 
-	local temporary_file
-	temporary_file="$(mktemp "${TMPDIR:-/tmp}/zangarmarsh-rc.XXXXXX")" || {
-		printf '%s:: failed to create temporary file\n' "${caller_name}" >&2
-		return 1
-	}
-
-	chmod 0600 "${temporary_file}" || {
-		rm -f "${temporary_file}"
-		printf '%s:: failed to harden temporary file permissions\n' "${caller_name}" >&2
-		return 1
-	}
-
-	trap 'rm -f -- "${temporary_file}"; trap - RETURN' RETURN
-
-	if [[ -f "${rc_file}" ]]; then
-		local line
-		while IFS= read -r line || [[ -n "${line}" ]]; do
-			if ! _should_keep_rc_line "${line}" "${strip_nvm}"; then
-				continue
-			fi
-
-			printf '%s\n' "${line}" >>"${temporary_file}" || {
-				printf '%s:: failed to write %s\n' "${caller_name}" "${rc_file}" >&2
-				return 1
-			}
-		done <"${rc_file}"
+	if [[ "${host_os}" == "macos" ]]; then
+		printf '%s\n' "${HOME}/.bash_profile"
+	else
+		printf '%s\n' "${HOME}/.bashrc"
 	fi
-
-	if [[ "${append_source}" == true ]]; then
-		if ! printf '%s\n' "$(_canonical_source_command)" >>"${temporary_file}"; then
-			printf '%s:: failed to append source line to %s\n' "${caller_name}" "${rc_file}" >&2
-			return 1
-		fi
-	fi
-
-	if [[ -e "${rc_file}" && ! -f "${rc_file}" ]]; then
-		printf '%s:: failed to append source line to %s\n' "${caller_name}" "${rc_file}" >&2
-		return 1
-	fi
-
-	if ! cat "${temporary_file}" >"${rc_file}"; then
-		if [[ ! -e "${rc_file}" ]]; then
-			printf '%s:: failed to append source line to %s\n' "${caller_name}" "${rc_file}" >&2
-		else
-			printf '%s:: failed to replace %s\n' "${caller_name}" "${rc_file}" >&2
-		fi
-		return 1
-	fi
-
-	rm -f "${temporary_file}"
-	trap - RETURN
-
-	return 0
-}
-
-# Install the Zangarmarsh source line into one rc file
-#
-# Inputs:
-# - $1 rc_file, destination shell rc path
-#
-# Reads environment:
-# - DRY_RUN, ZANGARMARSH_ROOT, HOME
-#
-# Side Effects:
-# - May rewrite rc_file and strip eager NVM lines from bashrc
-#
-# Returns:
-# - 0 on success or when already installed
-# - 1 on validation or write failure
-install_zangarmarsh() {
-	local rc_file="$1"
-
-	validate_install_env || return 1
-
-	if [[ -z "${rc_file}" ]]; then
-		printf 'install_zangarmarsh:: rc_file is required\n' >&2
-		return 1
-	fi
-
-	if ! _rc_install_needs_rewrite "${rc_file}"; then
-		printf 'Already installed in %s\n' "${rc_file}"
-		return 0
-	fi
-
-	printf 'Would install into %s:\n' "${rc_file}"
-	printf '%s\n' "$(_canonical_source_command)"
-	[[ "${DRY_RUN}" == true ]] && return 0
-
-	local strip_nvm=false
-	if _rc_is_bashrc "${rc_file}"; then
-		strip_nvm=true
-	fi
-
-	_rewrite_rc_file "${rc_file}" true "${strip_nvm}" "install_zangarmarsh" || return 1
-	printf 'Installed in %s\n' "${rc_file}"
-
-	return 0
-}
-
-# Remove the Zangarmarsh source line from one rc file
-#
-# Inputs:
-# - $1 rc_file, shell rc path to clean
-#
-# Reads environment:
-# - DRY_RUN, ZANGARMARSH_ROOT, HOME
-#
-# Side Effects:
-# - May rewrite rc_file
-#
-# Returns:
-# - 0 on success or when not installed
-# - 1 on validation or write failure
-uninstall_zangarmarsh() {
-	local rc_file="$1"
-
-	validate_install_env || return 1
-
-	if [[ -z "${rc_file}" ]]; then
-		printf 'uninstall_zangarmarsh:: rc_file is required\n' >&2
-		return 1
-	fi
-
-	if ! has_source_line "${rc_file}"; then
-		printf 'Not installed in %s\n' "${rc_file}"
-		return 0
-	fi
-
-	printf 'Would remove from %s:\n' "${rc_file}"
-	printf '%s\n' "$(_canonical_source_command)"
-	[[ "${DRY_RUN}" == true ]] && return 0
-
-	_rewrite_rc_file "${rc_file}" false false "uninstall_zangarmarsh" || return 1
-	printf 'Uninstalled from %s\n' "${rc_file}"
 
 	return 0
 }
@@ -501,16 +116,229 @@ user_fonts_dir() {
 		return 1
 	fi
 
-	local platform_id
-	platform_id="$(_detect_platform)" || return 1
-	local platform_os
-	platform_os="$(platform_os_from_id "${platform_id}")" || return 1
+	local host_os
+	host_os="$(_host_os)" || return 1
 
-	if [[ "${platform_os}" == "macos" ]]; then
+	if [[ "${host_os}" == "macos" ]]; then
 		printf '%s\n' "${HOME}/Library/Fonts"
 	else
 		printf '%s\n' "${HOME}/.local/share/fonts"
 	fi
+
+	return 0
+}
+
+# Build the marked Zangarmarsh block for this checkout
+#
+# Reads environment:
+# - ZANGARMARSH_ROOT
+#
+# Outputs:
+# - Start marker, source line, and end marker on stdout, with no trailing newline
+#
+# Returns:
+# - 0 always
+_rc_block() {
+	local quoted
+	quoted="$(printf '%q' "${ZANGARMARSH_ROOT}/zangarmarsh.sh")"
+	printf '%s\nsource %s\n%s' "${RC_BLOCK_START}" "${quoted}" "${RC_BLOCK_END}"
+
+	return 0
+}
+
+# Resolve an rc path to the file that holds its content
+#
+# Inputs:
+# - $1 rc_file, rc path that may be a symlink chain
+#
+# Outputs:
+# - Target file path on stdout, which may not exist yet
+#
+# Returns:
+# - 0 on success
+# - 1 when the path is a directory or the symlink chain is too deep
+_rc_target_file() {
+	local rc_file="$1"
+	local path="${rc_file}"
+	local hops=0
+
+	while [[ -L "${path}" ]]; do
+		if ((hops == 32)); then
+			echo "_rc_target_file:: symlink chain is too deep: ${rc_file}" >&2
+			return 1
+		fi
+
+		local link
+		link="$(readlink "${path}")" || return 1
+		[[ "${link}" == /* ]] || link="$(dirname "${path}")/${link}"
+		path="${link}"
+		hops=$((hops + 1))
+	done
+
+	if [[ -d "${path}" ]]; then
+		echo "_rc_target_file:: rc path is a directory: ${rc_file}" >&2
+		return 1
+	fi
+
+	printf '%s\n' "${path}"
+
+	return 0
+}
+
+# Rewrite rc content with the marked block set to block, or without it when block is empty
+#
+# Inputs:
+# - $1 rc_file, rc path to read, may be missing
+# - $2 block, marked block text, or empty to remove every marked block
+#
+# Outputs:
+# - Rewritten content on stdout, with each line ending in a newline
+#
+# Returns:
+# - 0 on success
+# - 1 when a start marker has no matching end marker
+_rc_with_block() {
+	local rc_file="$1"
+	local block="$2"
+
+	local source_file="${rc_file}"
+	[[ -f "${rc_file}" ]] || source_file=/dev/null
+
+	ZANGARMARSH_BLOCK="${block}" awk -v open_mark="${RC_BLOCK_START}" -v close_mark="${RC_BLOCK_END}" '
+		BEGIN { block = ENVIRON["ZANGARMARSH_BLOCK"]; placed = 0; inside = 0 }
+		$0 == open_mark {
+			if (inside) exit 1
+			if (!placed && block != "") print block
+			placed = 1
+			inside = 1
+			next
+		}
+		inside {
+			if ($0 == close_mark) inside = 0
+			next
+		}
+		{ print }
+		END {
+			if (inside) exit 1
+			if (!placed && block != "") print block
+		}
+	' "${source_file}" || {
+		echo "_rc_with_block:: unmatched Zangarmarsh markers in ${rc_file}" >&2
+		return 1
+	}
+
+	return 0
+}
+
+# Install the marked Zangarmarsh block into one rc file
+#
+# Inputs:
+# - $1 rc_file, shell rc path to update
+#
+# Reads environment:
+# - DRY_RUN, ZANGARMARSH_ROOT, HOME
+#
+# Side Effects:
+# - Replaces an existing marked block in place, or appends one, through write_atomic
+#
+# Returns:
+# - 0 on success, when already installed, or in dry run
+# - 1 on validation, rc resolution, or write failure
+install_zangarmarsh() {
+	local rc_file="$1"
+
+	validate_install_env || return 1
+
+	local target
+	target="$(_rc_target_file "${rc_file}")" || return 1
+
+	local block
+	block="$(_rc_block)"
+
+	local content
+	content="$(_rc_with_block "${target}" "${block}" && printf x)" || return 1
+	content="${content%x}"
+
+	if [[ -f "${target}" ]] && cmp -s "${target}" <(printf '%s' "${content}"); then
+		printf 'Already installed in %s\n' "${rc_file}"
+		return 0
+	fi
+
+	if [[ "${DRY_RUN:-false}" == "true" ]]; then
+		printf 'Would install into %s:\n%s\n' "${rc_file}" "${block}"
+		return 0
+	fi
+
+	printf 'Installing into %s\n' "${rc_file}"
+	local parent stage
+	parent="$(dirname "${target}")"
+	ensure_dir "${parent}" "install_zangarmarsh" || return 1
+	stage="$(mktemp "${parent}/.zangarmarsh.XXXXXX")" || return 1
+	if ! printf '%s' "${content}" >"${stage}"; then
+		rm -f -- "${stage}"
+		return 1
+	fi
+
+	write_atomic "${target}" "${stage}" "install_zangarmarsh" || {
+		rm -f -- "${stage}"
+		return 1
+	}
+	rm -f -- "${stage}"
+
+	return 0
+}
+
+# Remove every marked Zangarmarsh block from one rc file
+#
+# Inputs:
+# - $1 rc_file, shell rc path to clean
+#
+# Reads environment:
+# - DRY_RUN, ZANGARMARSH_ROOT, HOME
+#
+# Side Effects:
+# - Rewrites the rc file without the marked block, through write_atomic
+#
+# Returns:
+# - 0 on success, when not installed, or in dry run
+# - 1 on validation, rc resolution, or write failure
+uninstall_zangarmarsh() {
+	local rc_file="$1"
+
+	validate_install_env || return 1
+
+	local target
+	target="$(_rc_target_file "${rc_file}")" || return 1
+
+	if ! grep -qsxF "${RC_BLOCK_START}" "${target}"; then
+		printf 'Not installed in %s\n' "${rc_file}"
+		return 0
+	fi
+
+	local content
+	content="$(_rc_with_block "${target}" "" && printf x)" || return 1
+	content="${content%x}"
+
+	if [[ "${DRY_RUN:-false}" == "true" ]]; then
+		printf 'Would remove from %s\n' "${rc_file}"
+		return 0
+	fi
+
+	printf 'Removing from %s\n' "${rc_file}"
+	local parent stage
+	parent="$(dirname "${target}")"
+	ensure_dir "${parent}" "uninstall_zangarmarsh" || return 1
+	stage="$(mktemp "${parent}/.zangarmarsh.XXXXXX")" || return 1
+	if ! printf '%s' "${content}" >"${stage}"; then
+		rm -f -- "${stage}"
+		return 1
+	fi
+
+	write_atomic "${target}" "${stage}" "uninstall_zangarmarsh" || {
+		rm -f -- "${stage}"
+		return 1
+	}
+	rm -f -- "${stage}"
 
 	return 0
 }
@@ -521,11 +349,11 @@ user_fonts_dir() {
 # - ZANGARMARSH_ROOT, HOME, DRY_RUN
 #
 # Side Effects:
-# - Copies DejaVuSansMono.ttf into the user fonts directory
-# - May refresh the font cache on Linux
+# - Writes DejaVuSansMono.ttf into the user fonts directory through write_atomic
+# - Refreshes the font cache on Linux when the font was created or updated
 #
 # Returns:
-# - 0 on success or when already installed
+# - 0 on success, when unchanged, or in dry run
 # - 1 on validation or write failure
 install_dejavu_font() {
 	validate_install_env || return 1
@@ -538,36 +366,16 @@ install_dejavu_font() {
 
 	local fonts_dir
 	fonts_dir="$(user_fonts_dir)" || return 1
-	local dest="${fonts_dir}/DejaVuSansMono.ttf"
 
-	if [[ "${DRY_RUN:-}" == true ]]; then
-		echo "install_dejavu_font:: would install ${dest}"
-		return 0
-	fi
+	write_atomic "${fonts_dir}/DejaVuSansMono.ttf" "${src}" "install_dejavu_font" || return 1
+	[[ "${WRITE_ATOMIC_OUTCOME}" == unchanged || "${WRITE_ATOMIC_OUTCOME}" == dry-run ]] && return 0
 
-	if [[ -f "${dest}" ]] && cmp -s "${src}" "${dest}"; then
-		echo "install_dejavu_font:: already installed in ${dest}"
-		return 0
-	fi
-
-	mkdir -p "${fonts_dir}" || {
-		echo "install_dejavu_font:: Failed to create ${fonts_dir}" >&2
-		return 1
-	}
-
-	cp "${src}" "${dest}" || {
-		echo "install_dejavu_font:: Failed to copy font to ${dest}" >&2
-		return 1
-	}
-
-	# Avoid fc-cache -f: force rescans cost seconds and stall make test.
+	# Plain fc-cache, since -f forces a slow full rescan.
 	if command -v fc-cache >/dev/null 2>&1; then
 		fc-cache "${fonts_dir}" >/dev/null 2>&1 || {
 			echo "install_dejavu_font:: fc-cache failed for ${fonts_dir}; font is installed" >&2
 		}
 	fi
-
-	echo "install_dejavu_font:: installed ${dest}"
 
 	return 0
 }
@@ -575,8 +383,8 @@ install_dejavu_font() {
 # Install the local Cursor quest-log plugin, user rules, and Cursor settings
 #
 # Returns:
-# - apply_quest_log exit status
-# - 1 when validation fails
+# - 0 on success
+# - 1 when validation or apply_quest_log fails
 install_quest_log() {
 	validate_install_env || return 1
 	# shellcheck disable=SC2119
@@ -587,12 +395,11 @@ install_quest_log() {
 
 main() {
 	local uninstall=false
-	local errors=0
 	local want_zsh=false
 	local want_bash=false
+	local errors=0
 
 	DRY_RUN=false
-
 	while (($# > 0)); do
 		case "$1" in
 		-h | --help)
@@ -628,8 +435,11 @@ main() {
 
 	local rc_files=()
 	[[ "${want_zsh}" == true ]] && rc_files+=("${HOME}/.zshrc")
-	[[ "${want_bash}" == true ]] && rc_files+=("${HOME}/.bashrc")
-	export DRY_RUN
+	if [[ "${want_bash}" == true ]]; then
+		local bash_rc
+		bash_rc="$(bash_rc_path)" || return 1
+		rc_files+=("${bash_rc}")
+	fi
 
 	local rc_file
 	if [[ "${uninstall}" == true ]]; then
@@ -639,23 +449,15 @@ main() {
 
 		uninstall_quest_plugin || errors=$((errors + 1))
 		uninstall_quest_rules || errors=$((errors + 1))
-		if ((errors == 0)); then
-			return 0
-		fi
 
+		((errors == 0)) && return 0
 		return 1
 	fi
 
-	# Font, plugin, rules, and settings first; roll plugin and rules back if an
-	# rc update fails. Cursor settings and the font stay in place on rollback.
 	install_dejavu_font || return 1
 	install_quest_log || return 1
 	for rc_file in "${rc_files[@]}"; do
-		if ! install_zangarmarsh "${rc_file}"; then
-			uninstall_quest_plugin || true
-			uninstall_quest_rules || true
-			return 1
-		fi
+		install_zangarmarsh "${rc_file}" || return 1
 	done
 
 	return 0
@@ -667,10 +469,9 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
 
 	install_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 	source "${install_dir}/../tools/lib/repo.sh"
-	# Always bind to this checkout. An inherited ZANGARMARSH_ROOT from another
-	# tree would make make install write the wrong source line.
-	unset ZANGARMARSH_ROOT
 	ensure_zangarmarsh_repo "${install_dir}"
+	source "${ZANGARMARSH_ROOT}/tools/lib/fs.sh"
+	source "${ZANGARMARSH_ROOT}/tools/lib/platform.sh"
 	source "${ZANGARMARSH_ROOT}/tools/quest-log/lib/apply.sh"
 
 	main "$@"

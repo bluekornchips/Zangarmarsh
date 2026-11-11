@@ -3,164 +3,47 @@
 # Quest-log Cursor plugin install and uninstall helpers
 #
 
-source "${ZANGARMARSH_ROOT}/tools/quest-log/lib/io.sh"
+source "${ZANGARMARSH_ROOT}/tools/lib/fs.sh"
 
-# Resolve the local Cursor plugin install directory
+# Print the local Cursor plugin install directory after owned_path accepts it
 #
 # Reads environment:
-# - QUEST_LOG_PLUGIN_DIR, optional override
-# - HOME, used when QUEST_LOG_PLUGIN_DIR is unset
+# - HOME, used to resolve ~/.cursor/plugins/local/quest-log
 #
 # Outputs:
 # - Absolute plugin install path, to stdout
 #
 # Returns:
-# - 0 on success
-# - 1 when HOME is empty and no override is set
+# - 0 when the path is owned
+# - 1 when HOME is empty or the path fails owned_path
 quest_log_plugin_dir() {
-	if [[ -n "${QUEST_LOG_PLUGIN_DIR:-}" ]]; then
-		printf '%s\n' "${QUEST_LOG_PLUGIN_DIR}"
-		return 0
-	fi
-
-	if [[ -z "${HOME:-}" ]]; then
-		printf 'quest_log_plugin_dir:: HOME is required\n' >&2
-		return 1
-	fi
-
-	printf '%s/.cursor/plugins/local/quest-log\n' "${HOME}"
+	local plugins_root="${HOME:-}/.cursor/plugins/local"
+	local install_dir="${plugins_root}/quest-log"
+	owned_path "${install_dir}" "${plugins_root}" "quest_log_plugin_dir" || return 1
+	printf '%s\n' "${install_dir}"
 
 	return 0
 }
 
-# Resolve a path under HOME without following symlinks below HOME
-#
-# Inputs:
-# - $1, path, absolute path that must sit under HOME
-#
-# Outputs:
-# - Resolved path on stdout
-#
-# Returns:
-# - 0 when the path is free of symlinks below HOME
-# - 1 when the path escapes HOME or contains a symlink
-_plugin_resolve_under_home() {
-	local path="$1"
-	local base="${HOME}"
-
-	if [[ "${path}" != "${HOME}" && "${path}" != "${HOME}/"* ]]; then
-		echo "_plugin_resolve_under_home:: install path must be below ${HOME}" >&2
-		return 1
-	fi
-
-	if [[ -d "${base}" || -L "${base}" ]]; then
-		base="$(cd "${base}" && pwd -P)" || {
-			echo "_plugin_resolve_under_home:: cannot resolve HOME" >&2
-			return 1
-		}
-	fi
-
-	local rest="${path#"${HOME}"}"
-	rest="${rest#/}"
-	local cursor="${base}"
-	local remaining="${rest}"
-
-	local component
-	while [[ -n "${remaining}" ]]; do
-		component="${remaining%%/*}"
-		if [[ "${remaining}" == */* ]]; then
-			remaining="${remaining#*/}"
-		else
-			remaining=""
-		fi
-
-		if [[ -z "${component}" || "${component}" == "." || "${component}" == ".." ]]; then
-			echo "_plugin_resolve_under_home:: path traversal is not allowed" >&2
-			return 1
-		fi
-
-		cursor="${cursor}/${component}"
-		if [[ -L "${cursor}" ]]; then
-			echo "_plugin_resolve_under_home:: refusing symlink: ${cursor}" >&2
-			return 1
-		fi
-
-		if [[ ! -e "${cursor}" ]]; then
-			if [[ -n "${remaining}" ]]; then
-				cursor="${cursor}/${remaining}"
-			fi
-
-			printf '%s\n' "${cursor}"
-			return 0
-		fi
-	done
-
-	printf '%s\n' "${cursor}"
-
-	return 0
-}
-
-# Validate the plugin installation path before any deletion
-#
-# Inputs:
-# - $1, install_dir, requested plugin installation directory
-#
-# Returns:
-# - 0 when install_dir is an absolute child of ~/.cursor/plugins/local
-# - 1 when the path is unsafe or invalid
-validate_plugin_install_dir() {
-	local install_dir="$1"
-	local allowed_root="${HOME}/.cursor/plugins/local"
-
-	if [[ -z "${HOME:-}" || -z "${install_dir}" || "${install_dir}" != /* ]]; then
-		echo "validate_plugin_install_dir:: absolute install path is required" >&2
-		return 1
-	fi
-
-	if [[ "${install_dir}" == */ ]]; then
-		echo "validate_plugin_install_dir:: trailing slash is not allowed" >&2
-		return 1
-	fi
-
-	case "${install_dir}" in
-	*"/../"* | *"/./"* | */.. | */.)
-		echo "validate_plugin_install_dir:: path traversal is not allowed" >&2
-		return 1
-		;;
-	esac
-
-	case "${install_dir}" in
-	"${allowed_root}"/*) ;;
-	*)
-		echo "validate_plugin_install_dir:: install path must be below ${allowed_root}" >&2
-		return 1
-		;;
-	esac
-
-	# String prefix checks above plus the symlink-aware walk below are enough;
-	# a second resolved-prefix case duplicated the same guarantee.
-	_plugin_resolve_under_home "${install_dir}" >/dev/null || return 1
-
-	return 0
-}
-
-# Copy the tracked quest-log plugin tree into the local Cursor plugins path
+# Replace the local Cursor plugin with a fresh copy of the tracked plugin tree
 #
 # Inputs:
 # - $1, plugin_source_dir, the tracked plugin tree under tools/quest-log/plugin
 #
 # Reads environment:
-# - QUEST_LOG_PLUGIN_DIR, optional install destination
 # - DRY_RUN, when true report without writing
-# - HOME, used to resolve the default install path
+# - HOME, used to resolve the install path
 #
 # Side Effects:
-# - Replaces the install directory from a staged copy of plugin_source_dir,
-#   so stale files never survive a run
+# - Copies plugin_source_dir to quest-log.staging beside the install path
+# - Moves the live install to quest-log.removing, moves the staged copy into place,
+#   then deletes quest-log.removing
+# - Deletes leftover staging and removing paths first, so an interrupted run is
+#   repaired by the next run
 #
 # Returns:
 # - 0 on success, including dry-run
-# - 1 when the source is invalid, the path is unsafe, or the copy fails
+# - 1 when the source is invalid, the path is unsafe, or a step fails
 install_quest_plugin() {
 	local plugin_source_dir="$1"
 
@@ -171,67 +54,42 @@ install_quest_plugin() {
 
 	local install_dir
 	install_dir="$(quest_log_plugin_dir)" || return 1
-	validate_plugin_install_dir "${install_dir}" || return 1
-
 	local install_parent
 	install_parent="$(dirname "${install_dir}")"
-	ensure_dir "${install_parent}" "install_quest_plugin" || return 1
+	local staging_dir="${install_parent}/quest-log.staging"
+	local removing_dir="${install_parent}/quest-log.removing"
 
-	echo "install_quest_plugin: running"
+	owned_path "${staging_dir}" "${install_parent}" "install_quest_plugin" || return 1
+	owned_path "${removing_dir}" "${install_parent}" "install_quest_plugin" || return 1
 
-	if [[ "${DRY_RUN:-}" == "true" ]]; then
+	if [[ "${DRY_RUN:-false}" == "true" ]]; then
 		echo "install_quest_plugin: would replace ${install_dir}"
 		return 0
 	fi
 
-	local staging_dir
-	staging_dir="$(mktemp -d "${install_parent}/.quest-log-staging.XXXXXX")" || {
-		echo "install_quest_plugin:: Failed to create staging directory" >&2
+	ensure_dir "${install_parent}" "install_quest_plugin" || return 1
+
+	# A partial copy from an interrupted run must never reach the install path,
+	# so the staged copy is always rebuilt from source.
+	rm -rf -- "${staging_dir}" "${removing_dir}" || return 1
+	cp -R "${plugin_source_dir}" "${staging_dir}" || return 1
+
+	if [[ -e "${install_dir}" ]]; then
+		mv "${install_dir}" "${removing_dir}" || {
+			echo "install_quest_plugin:: failed to move ${install_dir} aside" >&2
+			return 1
+		}
+	fi
+
+	mv "${staging_dir}" "${install_dir}" || {
+		echo "install_quest_plugin:: failed to move ${staging_dir} into place" >&2
 		return 1
 	}
 
-	if ! cp -R "${plugin_source_dir}/." "${staging_dir}/"; then
-		rm -rf "${staging_dir}"
-		echo "install_quest_plugin:: copy failed" >&2
+	rm -rf -- "${removing_dir}" || {
+		echo "install_quest_plugin:: failed to remove ${removing_dir}" >&2
 		return 1
-	fi
-
-	local backup_dir=""
-	if [[ -e "${install_dir}" || -L "${install_dir}" ]]; then
-		backup_dir="$(mktemp -d "${install_parent}/.quest-log-backup.XXXXXX")" || {
-			rm -rf "${staging_dir}"
-			echo "install_quest_plugin:: Failed to allocate backup path" >&2
-			return 1
-		}
-
-		rmdir "${backup_dir}" || {
-			rm -rf "${staging_dir}" "${backup_dir}"
-			echo "install_quest_plugin:: Failed to free backup path" >&2
-			return 1
-		}
-
-		if ! mv "${install_dir}" "${backup_dir}"; then
-			rm -rf "${staging_dir}"
-			echo "install_quest_plugin:: Failed to stage existing installation" >&2
-			return 1
-		fi
-	fi
-
-	if ! mv "${staging_dir}" "${install_dir}"; then
-		if [[ -e "${backup_dir}" || -L "${backup_dir}" ]]; then
-			if ! mv "${backup_dir}" "${install_dir}"; then
-				echo "install_quest_plugin:: Failed to restore previous installation" >&2
-			fi
-		fi
-
-		rm -rf "${staging_dir}"
-		echo "install_quest_plugin:: Failed to activate staged installation" >&2
-		return 1
-	fi
-
-	if [[ -n "${backup_dir}" ]]; then
-		rm -rf "${backup_dir}"
-	fi
+	}
 
 	echo "install_quest_plugin: complete"
 
@@ -241,12 +99,11 @@ install_quest_plugin() {
 # Remove the locally installed quest-log Cursor plugin directory
 #
 # Reads environment:
-# - QUEST_LOG_PLUGIN_DIR, optional install destination
 # - DRY_RUN, when true report without deleting
-# - HOME, used to resolve the default install path
+# - HOME, used to resolve the install path
 #
 # Side Effects:
-# - Deletes the validated install directory, unless DRY_RUN is true
+# - Deletes the install directory unless DRY_RUN is true
 #
 # Returns:
 # - 0 on success, including when absent or in dry-run mode
@@ -254,27 +111,21 @@ install_quest_plugin() {
 uninstall_quest_plugin() {
 	local install_dir
 	install_dir="$(quest_log_plugin_dir)" || return 1
-	validate_plugin_install_dir "${install_dir}" || return 1
 
-	if [[ ! -e "${install_dir}" && ! -L "${install_dir}" ]]; then
+	if [[ ! -e "${install_dir}" ]]; then
 		echo "uninstall_quest_plugin: not installed in ${install_dir}"
 		return 0
 	fi
 
-	if [[ "${DRY_RUN:-}" == "true" ]]; then
+	if [[ "${DRY_RUN:-false}" == "true" ]]; then
 		echo "uninstall_quest_plugin: would remove ${install_dir}"
 		return 0
 	fi
 
-	if ! rm -rf -- "${install_dir}"; then
+	rm -rf -- "${install_dir}" || {
 		echo "uninstall_quest_plugin:: failed to remove ${install_dir}" >&2
 		return 1
-	fi
-
-	if [[ -e "${install_dir}" || -L "${install_dir}" ]]; then
-		echo "uninstall_quest_plugin:: failed to remove ${install_dir}" >&2
-		return 1
-	fi
+	}
 
 	echo "uninstall_quest_plugin: removed ${install_dir}"
 

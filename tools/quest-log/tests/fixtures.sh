@@ -34,8 +34,8 @@ create_test_plugin_source() {
 # - $1 label, short name used in the temporary directory template
 #
 # Side Effects:
-# - Sets and exports TEST_TEMP_DIR, HOME, PLUGIN_SOURCE_DIR, QUEST_LOG_PLUGIN_DIR,
-#   and QUEST_LOG_RULES_DIR
+# - Sets and exports TEST_TEMP_DIR, HOME, PLUGIN_SOURCE_DIR, TEST_PLUGIN_DIR,
+#   and TEST_RULES_DIR
 #
 # Returns:
 # - 0 on success
@@ -54,11 +54,11 @@ quest_log_test_home() {
 	create_test_plugin_source "${PLUGIN_SOURCE_DIR}"
 	export PLUGIN_SOURCE_DIR
 
-	QUEST_LOG_PLUGIN_DIR="${HOME}/.cursor/plugins/local/quest-log"
-	export QUEST_LOG_PLUGIN_DIR
+	TEST_PLUGIN_DIR="${HOME}/.cursor/plugins/local/quest-log"
+	export TEST_PLUGIN_DIR
 
-	QUEST_LOG_RULES_DIR="${HOME}/.cursor/rules"
-	export QUEST_LOG_RULES_DIR
+	TEST_RULES_DIR="${HOME}/.cursor/rules"
+	export TEST_RULES_DIR
 
 	return 0
 }

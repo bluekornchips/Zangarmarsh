@@ -13,7 +13,17 @@ setup_file() {
 	return 0
 }
 
+# Point HOME at a temp directory for each tool function test
+#
+# Side Effects:
+# - Exports HOME to a new directory under BATS_TEST_TMPDIR
+#
+# Returns:
+# - 0 on success
+# - 1 when the temp HOME cannot be created
 setup() {
+	source "${GIT_ROOT}/tests/fixtures.sh" || return 1
+	use_temp_home || return 1
 	return 0
 }
 
@@ -89,6 +99,7 @@ EOF
 	run bash --noprofile --norc -c "source '${SCRIPT}' && drun"
 	[[ "${status}" -eq 1 ]]
 	echo "${output}" | grep -q "drun:: image is required"
+	echo "${output}" | grep -Fq "drun:: usage: drun IMAGE [bash args...]"
 }
 
 @test "tool_functions:: questlog --help works after bash and zsh source" {
@@ -162,7 +173,7 @@ EOF
 	echo "${output}" | grep -Fq -- '.terraform/zangarmarsh.tfplan'
 }
 
-@test "tfa:: fails when plan file is absent" {
+@test "tfa:: requires a plan path and fails when the plan file is absent" {
 	local work
 	work="$(mktemp -d "${BATS_TEST_TMPDIR}/tfa-work.XXXXXX")"
 	mkdir -p "${work}/.terraform"
@@ -177,13 +188,21 @@ EOF
 	run env PATH="${mock_bin}:${PATH}" bash --noprofile --norc -c "
 		source '${SCRIPT}' || exit 1
 		cd '${work}' || exit 1
-		tfa
+		tfa .terraform/zangarmarsh.tfplan
 	"
 	[[ "${status}" -eq 1 ]]
 	echo "${output}" | grep -q "tfa:: plan not found"
+
+	run env PATH="${mock_bin}:${PATH}" bash --noprofile --norc -c "
+		source '${SCRIPT}' || exit 1
+		cd '${work}' || exit 1
+		tfa
+	"
+	[[ "${status}" -eq 1 ]]
+	echo "${output}" | grep -q "tfa:: plan path is required"
 }
 
-@test "tfa:: applies .terraform/zangarmarsh.tfplan when present" {
+@test "tfa:: applies the plan file it is given" {
 	local work
 	work="$(mktemp -d "${BATS_TEST_TMPDIR}/tfa-apply.XXXXXX")"
 	mkdir -p "${work}/.terraform"
@@ -199,7 +218,7 @@ EOF
 	run env PATH="${mock_bin}:${PATH}" bash --noprofile --norc -c "
 		source '${SCRIPT}' || exit 1
 		cd '${work}' || exit 1
-		tfa
+		tfa .terraform/zangarmarsh.tfplan
 	"
 	[[ "${status}" -eq 0 ]]
 	echo "${output}" | grep -Fq -- 'apply'

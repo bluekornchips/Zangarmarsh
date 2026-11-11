@@ -13,15 +13,23 @@ setup_file() {
 	return 0
 }
 
+# Create a temp HOME and TEST_DIR for each zangarmarsh test
+#
+# Side Effects:
+# - Sources tests/fixtures.sh and exports HOME and TEST_DIR
+#
+# Returns:
+# - 0 on success
+# - 1 when HOME or TEST_DIR cannot be created
 setup() {
 	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
 
 	source "${GIT_ROOT}/tests/fixtures.sh"
+	use_temp_home || return 1
 
 	TEST_DIR="$(mktemp -d "${base}/zangarmarsh-test.XXXXXX")"
 	TEST_DIR="$(cd "${TEST_DIR}" && pwd)"
 	export TEST_DIR
-	unset ZANGARMARSH_LOADED_ROOT
 
 	return 0
 }
@@ -51,48 +59,25 @@ teardown() {
 	echo "${output}" | grep -q "zangarmarsh:: interactive shell required"
 }
 
-@test "zangarmarsh:: sets ZANGARMARSH_ROOT and leaves VERBOSE unset by default" {
-	run env -u ZANGARMARSH_VERBOSE bash --noprofile --norc -c "
+@test "zangarmarsh:: sets ZANGARMARSH_ROOT" {
+	run bash --noprofile --norc -c "
 		source '${SCRIPT}' || exit 1
 		printf 'ROOT=%s\n' \"\${ZANGARMARSH_ROOT}\"
-		printf 'VERBOSE=%s\n' \"\${ZANGARMARSH_VERBOSE-__unset__}\"
 	"
 	[[ "${status}" -eq 0 ]]
 	echo "${output}" | grep -q '^ROOT=.'
-	echo "${output}" | grep -q '^VERBOSE=__unset__$'
 }
 
-@test "zangarmarsh:: preserves an existing ZANGARMARSH_VERBOSE value" {
-	run env ZANGARMARSH_VERBOSE=true bash --noprofile --norc -c "
-		source '${SCRIPT}' || exit 1
-		printf '%s\n' \"\${ZANGARMARSH_VERBOSE}\"
-	"
-	[[ "${status}" -eq 0 ]]
-	echo "${output}" | grep -qx 'true'
-}
-
-@test "zangarmarsh:: second source of the same root is a no-op" {
+@test "zangarmarsh:: second source keeps the same root" {
 	run bash --noprofile --norc -c "
 		source '${SCRIPT}' || exit 1
 		first_root=\"\${ZANGARMARSH_ROOT}\"
-		[[ \"\${ZANGARMARSH_LOADED_ROOT}\" == \"\${first_root}\" ]] || exit 2
 		source '${SCRIPT}' || exit 1
 		[[ \"\${ZANGARMARSH_ROOT}\" == \"\${first_root}\" ]] || exit 3
-		[[ \"\${ZANGARMARSH_LOADED_ROOT}\" == \"\${first_root}\" ]] || exit 4
 		printf 'ROOT=%s\n' \"\${first_root}\"
 	"
 	[[ "${status}" -eq 0 ]]
 	echo "${output}" | grep -q '^ROOT=.'
-}
-
-@test "zangarmarsh:: does not export the loaded-root guard" {
-	run bash --noprofile --norc -c "
-		source '${SCRIPT}' || exit 1
-		[[ \"\${ZANGARMARSH_LOADED_ROOT}\" == \"\${ZANGARMARSH_ROOT}\" ]] || exit 2
-		bash --noprofile --norc -c 'printf \"CHILD=%s\\n\" \"\${ZANGARMARSH_LOADED_ROOT:-}\"'
-	"
-	[[ "${status}" -eq 0 ]]
-	echo "${output}" | grep -qx 'CHILD='
 }
 
 @test "zangarmarsh:: root follows the sourced script directory" {
@@ -123,7 +108,6 @@ teardown() {
 
 	run bash --noprofile --norc -c "
 		cd '${other_worktree}' || exit 1
-		unset ZANGARMARSH_VERBOSE
 		source '${SCRIPT}' || exit 1
 		printf 'ROOT=%s\n' \"\${ZANGARMARSH_ROOT}\"
 	"
@@ -141,7 +125,9 @@ teardown() {
 	touch "${home}/.zcompdump"
 	HOME="${home}" seed_zsh_autosuggestions_stub || return 1
 
-	run env HOME="${home}" ZDOTDIR="${home}" zsh -c "
+	run env HOME="${home}" ZDOTDIR="${home}" \
+		ZANGARMARSH_ZSH_AUTOSUGGESTIONS="${home}/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh" \
+		zsh -c "
 		source '${home}/.zshrc' || exit 1
 		print -r -- \"\${PROMPT}\"
 		type build_prompt

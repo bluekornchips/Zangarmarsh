@@ -1,9 +1,7 @@
-BATS_JOBS   ?= $(shell nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)
-
-TEST_FILES  := $(shell find . -name '*-tests.sh' -type f ! -path './.git/*')
+TEST_FILES  := $(shell find . -name '*-tests.sh' -type f ! -path './.git/*' \
+        $(if $(filter Darwin,$(shell uname -s)),! -path './tools/auras/tests/*',))
 SHELL_FILES := $(shell find . -name '*.sh' -type f ! -path './.git/*' \
         ! -name '*-tests.sh')
-FMT_FILES   := $(shell find . -name '*.sh' -type f ! -path './.git/*')
 ZSH_FILES   := $(shell find profile/zsh -name '*.zsh' -type f)
 
 BATS_FLAGS  := --timing --verbose-run --formatter pretty
@@ -12,8 +10,7 @@ CHECK_DEPS   := ./check_dependencies.sh
 
 .DEFAULT_GOAL := ci
 
-.PHONY: ci format help install lint shellcheck syntax test test-serial \
-        test-smoke uninstall
+.PHONY: ci format help install lint shellcheck syntax test uninstall
 
 help:
 	@printf '%s\n' \
@@ -25,9 +22,7 @@ help:
 		'  lint         Check shfmt diff and shellcheck on *.sh including bats' \
 		'  shellcheck   shellcheck -x on *.sh; bats files use -s bash' \
 		'  syntax       bash -n on *.sh and zsh -n on profile/zsh/*.zsh' \
-		'  test         Run all bats tests in parallel' \
-		'  test-serial  Run all bats tests serially' \
-		'  test-smoke   Run profile/tests/smoke-tests.sh' \
+		'  test         Run all bats tests' \
 		'  uninstall    Remove profile hooks, Cursor plugin, and managed rules via profile/install.sh --uninstall'
 
 format:
@@ -58,15 +53,7 @@ shellcheck:
 
 test:
 	@$(CHECK_DEPS)
-	@$(BATS) --jobs $(BATS_JOBS) --no-parallelize-within-files $(TEST_FILES)
-
-test-serial:
-	@$(CHECK_DEPS)
 	@$(BATS) $(TEST_FILES)
-
-test-smoke:
-	@$(CHECK_DEPS)
-	@$(BATS) profile/tests/smoke-tests.sh
 
 install:
 	@profile/install.sh

@@ -39,60 +39,26 @@ cursor_user_settings_path() {
 	return 0
 }
 
-# Overwrite host Cursor user settings from tools/vscode/settings.json
+# Write the tracked Cursor settings template over the host Cursor user settings
 #
 # Reads environment:
-# - ZANGARMARSH_ROOT, HOME, DRY_RUN
+# - ZANGARMARSH_ROOT, template at tools/vscode/settings.json
+# - HOME, used to resolve the settings path
+# - DRY_RUN, when true report without writing
 #
 # Side Effects:
-# - Replaces the host Cursor User/settings.json with the template
-# - Updates STATS_CREATED, STATS_UPDATED, STATS_UNCHANGED, or STATS_ERRORS
+# - Replaces the host Cursor User/settings.json when its content differs
 #
 # Returns:
-# - 0 on success
-# - 1 when the template cannot be read or settings cannot be written
+# - 0 on success, including dry-run and unchanged content
+# - 1 when the template cannot be read or the write fails
 sync_cursor_user_settings() {
-	local template="${ZANGARMARSH_ROOT}/tools/vscode/settings.json"
-
-	if [[ -z "${ZANGARMARSH_ROOT:-}" ]]; then
-		echo "sync_cursor_user_settings:: ZANGARMARSH_ROOT is required" >&2
-		return 1
-	fi
-
-	if [[ -z "${HOME:-}" ]]; then
-		echo "sync_cursor_user_settings:: HOME is required" >&2
-		return 1
-	fi
-
 	local settings_file
 	settings_file="$(cursor_user_settings_path)" || return 1
 
-	if [[ "${DRY_RUN:-}" == "true" ]]; then
-		echo "sync_cursor_user_settings:: would overwrite ${settings_file}"
-		return 0
-	fi
-
-	ensure_dir "$(dirname "${settings_file}")" "sync_cursor_user_settings" || return 1
-
 	local new_content
-	new_content="$(cat "${template}")" || return 1
-	echo "sync_cursor_user_settings:: writing ${settings_file}"
-	write_if_changed "${settings_file}" "${new_content}"$'\n' "sync_cursor_user_settings" || {
-		STATS_ERRORS=$((STATS_ERRORS + 1))
-		return 1
-	}
-
-	case "${WRITE_IF_CHANGED_OUTCOME:-}" in
-	unchanged)
-		STATS_UNCHANGED=$((STATS_UNCHANGED + 1))
-		;;
-	created)
-		STATS_CREATED=$((STATS_CREATED + 1))
-		;;
-	updated)
-		STATS_UPDATED=$((STATS_UPDATED + 1))
-		;;
-	esac
+	new_content="$(cat "${ZANGARMARSH_ROOT}/tools/vscode/settings.json")" || return 1
+	write_if_changed "${settings_file}" "${new_content}"$'\n' "sync_cursor_user_settings" || return 1
 
 	return 0
 }

@@ -51,9 +51,9 @@ setup() {
 	[[ "${PLATFORM_OS}" == "macos" || "${PLATFORM_OS}" == "linux" ]]
 }
 
-@test "apply_platform_env:: derives PLATFORM_OS from PLATFORM even when sticky" {
-	PLATFORM="linux-amd64"
-	PLATFORM_OS="macos"
+@test "apply_platform_env:: redetects over an inherited PLATFORM" {
+	PLATFORM="bogus-id"
+	PLATFORM_OS="bogus"
 	export PLATFORM
 	export PLATFORM_OS
 
@@ -61,5 +61,6 @@ setup() {
 		return 1
 	fi
 
-	[[ "${PLATFORM_OS}" == "linux" ]]
+	[[ "${PLATFORM}" == "$(_detect_platform)" ]]
+	[[ "${PLATFORM_OS}" == "$(platform_os_from_id "${PLATFORM}")" ]]
 }

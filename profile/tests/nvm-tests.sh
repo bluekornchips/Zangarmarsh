@@ -13,14 +13,24 @@ setup_file() {
 	return 0
 }
 
+# Create a temp HOME and TEST_DIR, then source the nvm script with lazy loading on
+#
+# Side Effects:
+# - Changes the working directory to TEST_DIR
+# - Exports HOME, NVM_DIR, ZANGARMARSH_LAZY_LOADING, and ZANGARMARSH_ENABLE_NVM
+# - Sources SCRIPT
+#
+# Returns:
+# - 0 on success
+# - 1 when HOME, TEST_DIR, or the cd fails
 setup() {
 	local base="${BATS_TEST_TMPDIR:-${TMPDIR:-/tmp}}"
 
+	source "${GIT_ROOT}/tests/fixtures.sh" || return 1
 	TEST_DIR="$(mktemp -d "${base}/nvm-test.XXXXXX")"
 	cd "${TEST_DIR}" || return 1
 
-	HOME="${TEST_DIR}"
-	export HOME
+	use_temp_home || return 1
 	NVM_DIR="${HOME}/.nvm"
 	export NVM_DIR
 	ZANGARMARSH_LAZY_LOADING=true

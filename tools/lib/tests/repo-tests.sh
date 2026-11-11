@@ -30,8 +30,8 @@ setup() {
 	[[ "$output" == "${ZANGARMARSH_ROOT}/tools/lib" ]]
 }
 
-@test "resolve_zangarmarsh_repo:: reuses a valid ZANGARMARSH_ROOT" {
-	run resolve_zangarmarsh_repo
+@test "resolve_zangarmarsh_repo:: ignores an inherited ZANGARMARSH_ROOT" {
+	run env ZANGARMARSH_ROOT="/nonexistent/zangarmarsh-root" bash -c "source '${SCRIPT}' && resolve_zangarmarsh_repo '${SCRIPT}'"
 	[[ "$status" -eq 0 ]]
 	[[ "$output" == "${ZANGARMARSH_ROOT}" ]]
 }

@@ -174,33 +174,10 @@ teardown() {
 	[[ "$output" == "${expected}" ]]
 }
 
-@test "resolve_symlink_path:: resolves absolute symlink targets without GNU readlink -f" {
-	local appdir="${AURAS_TEST_HOME}/apps"
-	if ! make_appimage "${appdir}" "demoapp.AppImage"; then
-		return 1
-	fi
-	local appimage="${appdir}/demoapp.AppImage"
-	local link_path="${AURAS_TEST_HOME}/demoapp-link"
-	ln -sf "${appimage}" "${link_path}"
-
-	run resolve_symlink_path "${link_path}"
-	[[ "$status" -eq 0 ]]
-	[[ "$output" == "${appimage}" ]]
-}
-
-@test "resolve_symlink_path:: resolves relative symlink targets" {
-	local appdir="${AURAS_TEST_HOME}/apps"
-	if ! make_appimage "${appdir}" "demoapp.AppImage"; then
-		return 1
-	fi
-	local appimage="${appdir}/demoapp.AppImage"
-	local link_dir="${AURAS_TEST_HOME}/bin"
-	mkdir -p "${link_dir}"
-	ln -sf "../apps/demoapp.AppImage" "${link_dir}/demoapp"
-
-	run resolve_symlink_path "${link_dir}/demoapp"
-	[[ "$status" -eq 0 ]]
-	[[ "$output" == "${appimage}" ]]
+@test "resolve_appimage_path:: rejects an empty path" {
+	run resolve_appimage_path "" "resolve_appimage_path"
+	[[ "$status" -eq 1 ]]
+	grep -q "resolve_appimage_path:: AppImage path is required" <<<"$output"
 }
 
 @test "desktop_entry_is_auras_managed:: accepts current marker and version" {
@@ -305,7 +282,7 @@ teardown() {
 	[[ "$status" -eq 0 ]]
 
 	[[ -f "${HOME}/.local/share/applications/demoapp.desktop" ]]
-	[[ "$(resolve_symlink_path "${HOME}/.local/bin/demoapp")" == "${appimage}" ]]
+	[[ "$(readlink "${HOME}/.local/bin/demoapp")" == "${appimage}" ]]
 }
 
 @test "main:: script handles unknown options" {
@@ -326,7 +303,7 @@ teardown() {
 	[[ "$status" -eq 0 ]]
 
 	[[ -f "${HOME}/.local/share/applications/demoapp.desktop" ]]
-	[[ "$(resolve_symlink_path "${HOME}/.local/bin/demoapp")" == "${appimage}" ]]
+	[[ "$(readlink "${HOME}/.local/bin/demoapp")" == "${appimage}" ]]
 
 	if ! make_managed_desktop "curseforge" "${appimage}"; then
 		return 1

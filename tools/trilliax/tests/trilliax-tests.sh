@@ -14,9 +14,19 @@ setup_file() {
 	return 0
 }
 
+# Load fixtures and the trilliax script, then create a temp HOME and cleanup directory
+#
+# Side Effects:
+# - Sources tests/fixtures.sh and SCRIPT
+# - Exports HOME, TEST_DIR, TEST_CLEANUP_DIR, DRY_RUN, and MAX_DEPTH
+#
+# Returns:
+# - 0 on success
+# - 1 when the script cannot be sourced or HOME cannot be created
 setup() {
 	source "${GIT_ROOT}/tests/fixtures.sh"
 	source_for_test "$SCRIPT" || return 1
+	use_temp_home || return 1
 
 	TEST_DIR="$(mktemp -d "${TMPDIR:-/tmp}/trilliax-test.XXXXXX")"
 	TEST_DIR="$(cd "${TEST_DIR}" && pwd -P)"

@@ -39,7 +39,7 @@ OPTIONS:
   -h, --help         Show this help message
 
 ENVIRONMENT VARIABLES:
-  DRY_RUN     Enable dry-run mode
+  DRY_RUN     true or false (default false), same as --dry-run
   MAX_DEPTH   Maximum find depth, default ${DEFAULT_MAX_DEPTH}
 
 CLEANUP OPERATIONS:
@@ -385,6 +385,12 @@ run_trilliax() {
 	local target_dir="."
 	local targets_string=""
 	local all_flag="false"
+	local dry_run="${DRY_RUN:-false}"
+	if [[ "${dry_run}" != "true" && "${dry_run}" != "false" ]]; then
+		echo "run_trilliax:: DRY_RUN must be true or false" >&2
+		return 1
+	fi
+
 	while (($# > 0)); do
 		case "$1" in
 		-d | --dir)
@@ -412,7 +418,7 @@ run_trilliax() {
 			shift
 			;;
 		-r | --dry-run)
-			DRY_RUN="true"
+			dry_run="true"
 			shift
 			;;
 		-h | --help)
@@ -437,9 +443,21 @@ run_trilliax() {
 		return 1
 	fi
 
+	target_dir="$(absolute_dir_of "${target_dir}")" || return 1
+
+	# Compare physical paths so a symlinked HOME or --dir cannot bypass the guard.
+	local home_real
+	home_real="$(cd "${HOME}" && pwd -P)" || return 1
+	local target_real
+	target_real="$(cd "${target_dir}" && pwd -P)" || return 1
+	if [[ "${home_real}/" == "${target_real%/}/"* ]]; then
+		echo "run_trilliax:: Refusing to clean HOME or an ancestor of HOME: ${target_dir}" >&2
+		return 1
+	fi
+
 	validate_targets "${targets_string}" "${all_flag}" || return 1
 
-	DRY_RUN="${DRY_RUN:-false}"
+	DRY_RUN="${dry_run}"
 	export DRY_RUN
 
 	echo "run_trilliax:: Apologies for the mess master, I shall tidy up immediately."
@@ -447,7 +465,6 @@ run_trilliax() {
 	MAX_DEPTH="${MAX_DEPTH:-${DEFAULT_MAX_DEPTH}}"
 	export MAX_DEPTH
 
-	target_dir="$(absolute_dir_of "${target_dir}")" || return 1
 	echo "run_trilliax:: Cleaning directory: ${target_dir}"
 
 	echo "run_trilliax:: Filthy, filthy, FILTHY!"

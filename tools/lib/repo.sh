@@ -50,10 +50,7 @@ absolute_dir_of() {
 # Find the repository directory that contains zangarmarsh.sh
 #
 # Inputs:
-# - $1 start_path, file or directory to walk upward from when ZANGARMARSH_ROOT is unset
-#
-# Reads environment:
-# - ZANGARMARSH_ROOT, reused when it already points at zangarmarsh.sh
+# - $1 start_path, file or directory to walk upward from
 #
 # Outputs:
 # - Absolute repository path on stdout
@@ -64,13 +61,8 @@ absolute_dir_of() {
 resolve_zangarmarsh_repo() {
 	local start_path="${1:-}"
 
-	if [[ -n "${ZANGARMARSH_ROOT:-}" && -f "${ZANGARMARSH_ROOT}/zangarmarsh.sh" ]]; then
-		printf '%s\n' "${ZANGARMARSH_ROOT}"
-		return 0
-	fi
-
 	if [[ -z "${start_path}" ]]; then
-		echo "resolve_zangarmarsh_repo:: start path is required when ZANGARMARSH_ROOT is unset" >&2
+		echo "resolve_zangarmarsh_repo:: start path is required" >&2
 		return 1
 	fi
 
@@ -94,10 +86,10 @@ resolve_zangarmarsh_repo() {
 	return 1
 }
 
-# Set and export ZANGARMARSH_ROOT from an existing value or a start path
+# Set and export ZANGARMARSH_ROOT from a start path
 #
 # Inputs:
-# - $1 start_path, file or directory used when ZANGARMARSH_ROOT is unset
+# - $1 start_path, file or directory to walk upward from
 #
 # Side Effects:
 # - Exports ZANGARMARSH_ROOT to the located repository path

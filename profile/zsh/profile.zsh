@@ -8,21 +8,10 @@ if [[ -z "${ZANGARMARSH_ROOT:-}" ]]; then
 	return 1
 fi
 
-# Load config when this file is sourced alone; zangarmarsh.sh already loaded it.
-if [[ ! -f "${ZANGARMARSH_ROOT}/profile/config.sh" ]]; then
-	echo "profile.zsh:: Required file not found: ${ZANGARMARSH_ROOT}/profile/config.sh" >&2
-	return 1
-fi
-
 source "${ZANGARMARSH_ROOT}/profile/config.sh" || {
 	echo "profile.zsh:: Failed to source ${ZANGARMARSH_ROOT}/profile/config.sh" >&2
 	return 1
 }
-
-if [[ ! -f "${ZANGARMARSH_ROOT}/profile/zsh/platform.zsh" ]]; then
-	echo "profile.zsh:: Required file not found: ${ZANGARMARSH_ROOT}/profile/zsh/platform.zsh" >&2
-	return 1
-fi
 
 source "${ZANGARMARSH_ROOT}/profile/zsh/platform.zsh" || {
 	echo "profile.zsh:: Failed to source ${ZANGARMARSH_ROOT}/profile/zsh/platform.zsh" >&2
@@ -65,38 +54,25 @@ zangarmarsh_apply_zsh_history() {
 	return 0
 }
 
-# Load zsh completion; use a cached dump when it is fresher than 24 hours.
+# Load zsh completion from ${HOME}/.zcompdump with compinit -C.
 #
 # Side Effects:
-# - Runs compinit -C against a fresh ${HOME}/.zcompdump, otherwise full compinit
+# - Creates ${HOME}/.zcompdump when it is missing
 # - Sets completion menu select and auto_menu
 #
 # Returns:
 # - 0 on success
-# - 1 when compinit fails
+# - 1 when compinit cannot be autoloaded or fails
 zangarmarsh_init_completions() {
-	local zcompdump="${HOME}/.zcompdump"
-
-	# LOCAL_OPTIONS keeps EXTENDED_GLOB from leaking into the caller shell.
-	setopt LOCAL_OPTIONS EXTENDED_GLOB
-
 	autoload -Uz compinit || {
 		echo "zangarmarsh_init_completions:: failed to autoload compinit" >&2
 		return 1
 	}
 
-	# Unquoted path so the mh+24 glob qualifier can match an aged dump.
-	if [[ -f "${zcompdump}" && -z ${zcompdump}(#qN.mh+24) ]]; then
-		compinit -C -d "${zcompdump}" || {
-			echo "zangarmarsh_init_completions:: compinit -C failed" >&2
-			return 1
-		}
-	else
-		compinit -d "${zcompdump}" || {
-			echo "zangarmarsh_init_completions:: compinit failed" >&2
-			return 1
-		}
-	fi
+	compinit -C -d "${HOME}/.zcompdump" || {
+		echo "zangarmarsh_init_completions:: compinit -C failed" >&2
+		return 1
+	}
 
 	zstyle ':completion:*:*:*:*:*' menu select
 	setopt auto_menu
@@ -163,12 +139,9 @@ EOF
 unset HISTFILE HISTSIZE HISTFILESIZE HISTCONTROL HISTIGNORE HISTORY_IGNORE
 zangarmarsh_apply_zsh_history || return 1
 
-[[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "profile.zsh:: Loading zsh history configuration" >&2
-[[ "${ZANGARMARSH_VERBOSE:-}" == "true" ]] && echo "profile.zsh:: Set HISTFILE to: ${HISTFILE}" >&2
-
-[[ -f "${HISTFILE}" ]] || {
-	touch "${HISTFILE}" && chmod 600 "${HISTFILE}"
-} || true
+if [[ ! -f "${HISTFILE}" ]]; then
+	(umask 077 && : >>"${HISTFILE}") || true
+fi
 
 setopt \
 	hist_expire_dups_first \
@@ -178,24 +151,11 @@ setopt \
 	share_history \
 	extended_history
 
-# Completion, autosuggestions, and the custom prompt are interactive-only.
-# ZANGARMARSH_TEST=1 lets bats exercise this path under zsh -c.
-if [[ ! -o interactive && -z "${ZANGARMARSH_TEST:-}" ]]; then
-	return 0
-fi
-
 zangarmarsh_init_completions || return 1
 zangarmarsh_bind_history_search || return 1
 zangarmarsh_load_autosuggestions
-
-if [[ ! -f "${ZANGARMARSH_ROOT}/profile/zsh/prompt.zsh" ]]; then
-	echo "profile.zsh:: Required file not found: ${ZANGARMARSH_ROOT}/profile/zsh/prompt.zsh" >&2
-	return 1
-fi
 
 source "${ZANGARMARSH_ROOT}/profile/zsh/prompt.zsh" || {
 	echo "profile.zsh:: Failed to source ${ZANGARMARSH_ROOT}/profile/zsh/prompt.zsh" >&2
 	return 1
 }
-
-setopt PROMPT_SUBST 2>/dev/null || true
