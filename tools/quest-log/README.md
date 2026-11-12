@@ -68,20 +68,24 @@ The plugin follows this repository's GPL-3.0-only license.
 | `zsh.mdc`        | Zsh 5 profile and Zsh-owned module rules                      |
 | `python.mdc`     | Python standards; writing allowed, running needs approval     |
 | `lua.mdc`        | Lua and WoW addon guidance                                    |
-| `javascript.mdc` | JavaScript modules, async work, errors, and tests             |
-| `typescript.mdc` | TypeScript typing, modules, async work, errors, and tests     |
+| `javascript.mdc` | JavaScript and shared TypeScript modules, async, and errors   |
+| `typescript.mdc` | TypeScript strict typing, catches, headers, and type checks   |
 
 ## Skills
 
 | Skill                    | Role                                        |
 | ------------------------ | ------------------------------------------- |
 | `blue-author`            | Current PR and issue delivery documents     |
+| `blue-compensate`        | Compensating-code inventory and redesigns   |
+| `blue-diagnose`          | Feedback-loop-first bug diagnosis           |
 | `blue-penmanship`        | Comment and doc claims vs current code      |
 | `blue-review-comments`   | Short, courteous pull request comments      |
 | `blue-review`            | Strict maintainability and ambition review  |
 | `blue-review-bash`       | Bash repository review checklist            |
 | `blue-review-lua`        | Lua review checklist                        |
 | `blue-review-python`     | Python repository review checklist          |
+| `blue-review-security`   | Trust-boundary security review              |
+| `blue-scribe`            | Writing rules, skills, and READMEs          |
 | `blue-python-setup`      | Python project setup notes for the user     |
 | `blue-review-typescript` | TypeScript review checklist                 |
 | `blueberry`              | Master pass over blue-review and penmanship |

@@ -97,6 +97,7 @@ setup() {
 		source '${SCRIPT}' || exit 1
 		printf 'STYLE=%s\n' \"\$ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE\"
 		printf 'SUGGEST=%s\n' \"\$ZANGARMARSH_ZSH_AUTOSUGGESTIONS\"
+		typeset -f _zsh_autosuggest_start >/dev/null && printf 'SUGGEST_FN=1\n'
 		type build_prompt >/dev/null && printf 'PROMPT_FN=1\n'
 		zstyle -t ':completion:*:*:*:*:*' menu select && printf 'MENU=1\n'
 		bindkey '^[[A' | grep -q up-line-or-beginning-search && printf 'UP_SEARCH=1\n'
@@ -104,6 +105,7 @@ setup() {
 	[[ "${status}" -eq 0 ]]
 	echo "${output}" | grep -q "fg=8"
 	echo "${output}" | grep -q "zsh-autosuggestions"
+	echo "${output}" | grep -q "^SUGGEST_FN=1$"
 	echo "${output}" | grep -q "^PROMPT_FN=1$"
 	echo "${output}" | grep -q "^MENU=1$"
 	echo "${output}" | grep -q "^UP_SEARCH=1$"

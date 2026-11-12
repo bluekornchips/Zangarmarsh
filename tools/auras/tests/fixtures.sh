@@ -17,6 +17,10 @@ source "${GIT_ROOT}/tests/fixtures.sh" || return 1
 # Returns:
 # - 0 on success
 auras_test_setup() {
+	if [[ "$(uname -s)" != "Linux" ]]; then
+		skip "auras requires Linux"
+	fi
+
 	source "${SCRIPT}"
 	auras_home_setup
 

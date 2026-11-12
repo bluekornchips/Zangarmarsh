@@ -15,19 +15,17 @@ Always be rule compliant. No exceptions. None.
 
 - Every reply and every edit must satisfy every applicable Cursor rule and every applicable quest-log rule for the files and languages in play.
 - Partially compliant is not compliant. A change that violates a matching rule is rejected.
-- Do not invent carve-outs, soft exceptions, or "close enough" judgment against a written rule.
+- Do not invent carve-outs, soft exceptions, or "close enough" judgment against a written rule. User urgency, prior chat history, and convenience never waive a rule.
 - If a user request conflicts with a rule, follow the rule, refuse the violating part, and say so in one short sentence.
-- Before sending, re-check the diff and the reply against the matching rules. Fix violations without asking the user to accept non-compliant work.
+- Only fully correct output is correct. Before sending, check every claim, path, command, and step, and re-check the diff and the reply against the matching rules. Fix every mistake and violation without asking the user to accept non-compliant work.
 
 ## Standards
 
 - Prefer clear, direct prose. Give the shortest answer that fully answers the question, command, or statement. Cut preamble, recap, and filler.
-- If system or workspace rules conflict with this file, follow the higher-priority rule.
 - Give runnable paths, commands, and steps. Add a reason only when the approach is not obvious.
 - For any change made, say how to verify it.
 - Use fenced code blocks for code and shell. Add error handling when leaving it out would mislead.
 - Prefer ASCII in prose. Quoted user text or file paths may use other characters.
-- Only fully correct output is correct. Check every claim, path, command, and step before sending, and fix any mistake found.
 
 ## Less code
 
@@ -37,7 +35,6 @@ Less code is a requirement. Fewer lines means fewer defects.
 - Add no helpers, options, wrappers, flags, or branches the current request does not need.
 - Delete unused code. Do not keep code for a later caller.
 - Match the existing file. Add an abstraction only to remove real duplication.
-- A shorter direct version beats a longer clever one.
 
 ## Comments and docs
 
@@ -46,18 +43,16 @@ Comments and docs sound like a person.
 - Every function except `main` has a header comment stating its purpose and signature, plus any applicable inputs, outputs, side effects, and returns.
 - Write an inline comment only when a reader would misuse the code without it: a hidden constraint, workaround, unit, or surprising invariant.
 - Use one or two plain sentences that reuse words already in the code. Do not narrate the line.
-- Do not leak conversation, prompt, or iteration history into code comments, pull request descriptions, or other maintainer-facing prose.
-- Do not write edit-diary comments that describe what just changed, for example `Used to be x; now y`.
 - Do not add file banners, section dividers, or changelog comments unless the current request asks for that format.
 - Do not use stock wording such as robust, leverage, seamless, comprehensive, utilize, or "this function".
-- Other docs state the fact a reader needs.
 
 ## Python
 
 - Writing, generating, and editing Python is allowed.
-- Always wait for explicit user approval before running Python, directly or indirectly.
+- Always wait for explicit user approval before running Python, directly or indirectly. This covers `python`, `python3`, `py`, `pip`, `pip3`, `pipx`, `pytest`, `mypy`, `tox`, `nox`, `poetry`, `hatch`, `pdm`, `virtualenv`, and Python execution through `uv`.
 - Indirect execution includes shell scripts, Make targets, package scripts, hooks, and test suites that may invoke Python.
 - Approval covers only the command or bounded operation the user names in the current request. It does not carry to later requests.
+- When approval is absent or unclear, refuse execution and offer a non-Python path.
 
 ## Usage
 
@@ -65,13 +60,11 @@ Comments and docs sound like a person.
 
 - Treat git usage as read-only unless the user explicitly asks for commits or other state changes.
 - Prose with commas and semicolons.
-- Working code when the user asked for working code.
 - Inspecting and running tests that already exist when those tests never invoke Python.
 
 ### Denied
 
 - Creating new tests unless the current request explicitly asks for them.
-- State-changing git commands unless the user explicitly requests them.
 - Conversational prefixes INFO, WARNING, ERROR, DEBUG, PASS, FAIL, CRITICAL, or TRACE in normal prose and output.
 - Ellipsis, emdash, and ndash in prose.
 - Double asterisk bold in normal prose when headings or plain text work.
@@ -79,7 +72,3 @@ Comments and docs sound like a person.
 - Parenthesis or brackets in prose.
 - Secrets, credentials, or personal identifiable data in source, examples, comments, docs, rules, or skills.
 - Swearing or profanity in tracked files, including rules, skills, comments, docs, help text, and examples.
-- Shipping or proposing code that violates any applicable rule.
-- Treating "user urgency", prior chat history, or convenience as a waiver of any rule.
-- Conversation, prompt, or iteration history in comments, PR descriptions, or other maintainer-facing prose.
-- Edit-diary comments that narrate the change just made.

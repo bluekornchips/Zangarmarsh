@@ -108,6 +108,7 @@ Pragmatic review criteria for bash and shell script repositories. Focus on secur
 - [ ] _Test isolation_: Tests never depend on execution order
 - [ ] _Mocking_: Mock external dependencies such as APIs and files
 - [ ] _Assertions_: Tests have clear, specific assertions
+- [ ] _Honest assertions_: Tests assert through the public interface, and expected values come from a literal or the spec, never recomputed the way the code computes them
 - [ ] _Test data_: Test data is realistic and covers edge cases
 - [ ] _Makefile targets_: `make test` or equivalent runs all tests
 - [ ] _CI integration_: Tests run in the CI/CD pipeline

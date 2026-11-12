@@ -87,7 +87,7 @@ Pragmatic review criteria for Lua repositories, including WoW add-on Lua files l
 
 ## Documentation
 
-- [ ] _LDoc for public APIs_: Every public function except `main` has an LDoc header stating purpose, params, and returns
+- [ ] _LDoc headers_: Every function except `main` has an LDoc header stating purpose, params, and returns
 - [ ] _Comments explain why_: Inline comments are rare and explain rationale or non-obvious behavior
 - [ ] _TODO and FIXME meaning_: `TODO` marks missing future work and `FIXME` marks known problems in current code
 - [ ] _README accuracy_: Setup, usage, and Lua version notes match the repository
@@ -114,6 +114,7 @@ Pragmatic review criteria for Lua repositories, including WoW add-on Lua files l
 - [ ] _Resource cases tested_: Cover file, socket, and handle cleanup paths
 - [ ] _Fixtures realistic_: Fixtures match real Lua tables, config shapes, and edge cases
 - [ ] _Deterministic tests_: Tests avoid live network and host-specific paths unless isolated
+- [ ] _Honest assertions_: Tests assert through the public interface, and expected values come from a literal or the spec, never recomputed the way the code computes them
 - [ ] _CI gates_: Lint and tests run in CI with documented commands
 
 ---

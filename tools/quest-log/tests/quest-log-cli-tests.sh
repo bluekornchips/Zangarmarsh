@@ -253,7 +253,7 @@ EOF
 	done
 
 	local skill
-	for skill in blue-author blue-penmanship blue-review-comments blue-review blue-review-bash blue-review-lua blue-review-python blue-review-typescript blue-python-setup blueberry; do
+	for skill in blue-author blue-compensate blue-diagnose blue-penmanship blue-review-comments blue-review blue-review-bash blue-review-lua blue-review-python blue-review-security blue-review-typescript blue-python-setup blue-scribe blueberry; do
 		[[ -f "${tracked_plugin}/skills/${skill}/SKILL.md" ]]
 	done
 

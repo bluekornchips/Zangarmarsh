@@ -86,6 +86,7 @@ Items marked with `[TS]` apply only to TypeScript projects.
 - [ ] _Coverage thresholds_: CI enforces thresholds aligned with risk
 - [ ] _Deterministic tests_: Tests are stable and never rely on network
 - [ ] _Realistic fixtures_: Test data mirrors production constraints
+- [ ] _Honest assertions_: Tests assert through the public interface, and expected values come from a literal or the spec, never recomputed the way the code computes them
 - [ ] _Test documentation_: README includes test and coverage commands
 
 ---

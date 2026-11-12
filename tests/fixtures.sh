@@ -129,7 +129,8 @@ use_temp_home() {
 # - HOME, required; the stub always lands under this directory
 #
 # Side Effects:
-# - Creates ${HOME}/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh
+# - Creates ${HOME}/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh with
+#   a _zsh_autosuggest_start stub so sourcing can be asserted
 # - Exports ZANGARMARSH_ZSH_AUTOSUGGESTIONS to that path
 #
 # Returns:
@@ -150,7 +151,12 @@ seed_zsh_autosuggestions_stub() {
 		return 1
 	}
 
-	printf '# autosuggestions stub\n' >"${suggest_path}"
+	# Define the real plugin's start helper so tests can prove the file was sourced.
+	cat >"${suggest_path}" <<'EOF'
+_zsh_autosuggest_start() {
+	return 0
+}
+EOF
 	ZANGARMARSH_ZSH_AUTOSUGGESTIONS="${suggest_path}"
 	export ZANGARMARSH_ZSH_AUTOSUGGESTIONS
 

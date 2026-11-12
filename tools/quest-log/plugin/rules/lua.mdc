@@ -29,7 +29,7 @@ These style choices apply only to Lua files loaded by a WoW add-on TOC.
 - Declare every variable with `local` in the smallest useful scope. Globals are allowed only for the documented WoW and saved-variable patterns in `.luacheckrc`.
 - Prefer `local function name(...)` for named local functions. For `ns` APIs, use `function ns.Name(...)` when that matches existing public names.
 - Validate early and return early. For expected failures, return `nil` plus an error string and optional code. For API misuse, use `error()` or `assert()`.
-- Every public function except `main` has an LDoc header in the form shown in the example. State the purpose, params, and returns.
+- Every function except `main` has an LDoc header in the form shown in the example. State the purpose, params, and returns.
 - Require modules into local variables named after the last module path component, for example `local socket = require("socket")` and never `local skt = require("socket")`.
 - Library modules that ship only through `require` return a table and avoid globals and side effects beyond loading dependencies. TOC-loaded add-on files are exempt.
 - Prefer tables populated all at once, use trailing commas in multiline tables, and use plain key syntax when the key is a valid identifier.
@@ -51,7 +51,6 @@ These style choices apply only to Lua files loaded by a WoW add-on TOC.
 
 ### Denied
 
-- Implicit globals.
 - Uppercase names starting with `_`, since Lua reserves them.
 - `require "module"` syntax. Use `require("module")`.
 - Omitting parentheses for string literal function calls.
@@ -59,11 +58,16 @@ These style choices apply only to Lua files loaded by a WoW add-on TOC.
 - APIs that depend on callers knowing the difference between `nil` and `false`.
 - Single-line blocks except `then return`, `then break`, and one-line callback returns.
 - Relying on `__gc` to close files, sockets, handles, or other non-memory resources.
+
 ## Example
 
 ```lua
 local _, ns = ...
 
+--- Reject an empty add-on message.
+-- @param message string: Message to check.
+-- @return string or nil: The message when it is not empty.
+-- @return string: Error message on failure.
 local function normalize_message(message)
   assert(type(message) == "string")
 

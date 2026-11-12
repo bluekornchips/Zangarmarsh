@@ -1,6 +1,6 @@
 ---
 name: blue-penmanship
-description: Audit comments, docs, and references against current code. Finds confirmed drift that is dead, unused, outdated, incorrect, useless, profane, or pii. Use when the user invokes blue-penmanship, asks to audit comments or docs, or asks to check README, Makefile, CI, or comment claims against the current branch.
+description: Audit comments, docs, and references against current code. Finds confirmed drift that is dead, unused, outdated, incorrect, overclaimed, useless, profane, or pii. Use when the user invokes blue-penmanship, asks to audit comments or docs, or asks to check README, Makefile, CI, or comment claims against the current branch.
 disable-model-invocation: true
 ---
 
@@ -50,6 +50,7 @@ Report a finding only after reading the claim line and the contradicting source 
 - Unused: orphan docs or comments attached to deleted or unreachable code
 - Outdated: once true, now contradicted by code
 - Incorrect: wrong paths, targets, env names, routes, or contracts
+- Overclaimed: a claim about tested or supported behavior that goes past the evidence in the repo, such as a platform no test or CI job covers
 - Useless: narrating comments, edit-diary comments, conversation or prompt leakage, type restatements, duplicated prose, placeholders
 - Profane: swearing or profanity in a tracked file
 - Pii: real personal identifiable information in a tracked file
@@ -71,7 +72,7 @@ For each finding, use this shape:
 ```text
 - Claim: path:line
   Source: contradicting-path:line
-  Class: dead | unused | outdated | incorrect | useless | profane | pii
+  Class: dead | unused | outdated | incorrect | overclaimed | useless | profane | pii
   Severity: block | fix | delete
   Impact: what a reader would do wrong, or why the text does no work
   Remedy: delete the text, or the smallest correction
@@ -80,7 +81,7 @@ For each finding, use this shape:
 Severity:
 
 - `block`: a reader would run a wrong command, follow a missing path, or trust a false contract; also any `pii` finding
-- `fix`: current behavior is misstated; also any `profane` finding
+- `fix`: current behavior is misstated; also any `overclaimed` or `profane` finding
 - `delete`: the text does no work
 
 If there is no confirmed drift, say so and stop.
@@ -89,6 +90,7 @@ If there is no confirmed drift, say so and stop.
 
 - Delete dead, unused, and useless text.
 - Correct outdated and incorrect claims with the smallest wording change.
+- Narrow overclaimed text to the verified scope, or delete it.
 - Rewrite `profane` text without swearing.
 - Replace `pii` with non-identifying wording or a clear fictional placeholder.
 - Leave working prose alone.

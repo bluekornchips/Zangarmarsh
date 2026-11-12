@@ -39,7 +39,7 @@ This skill is review criteria only.
 
 ## Google Python Style and Language Rules
 
-- [ ] _Google docstrings_: Modules, classes, and every public function or method except `main` have `"""..."""` docstrings with a one-line summary, a blank line, and the applicable `Args:`, `Returns:`, `Yields:`, `Raises:`, or `Attributes:` sections
+- [ ] _Google docstrings_: Modules, classes, and every function or method except `main` have `"""..."""` docstrings with a one-line summary, a blank line, and the applicable `Args:`, `Returns:`, `Yields:`, `Raises:`, or `Attributes:` sections
 - [ ] _Naming conventions_: `module_name`, `package_name`, `ClassName`, `ExceptionName`, `function_name`, `method_name`, `local_var_name`, `GLOBAL_CONSTANT_NAME`, and `_internal_name` follow Google style
 - [ ] _Imports order and form_: Imports sit at the top of the file, grouped as standard library, third-party, then repository packages, separated by blank lines and sorted lexicographically
 - [ ] _No wildcard imports_: Never use `from module import *`
@@ -95,6 +95,7 @@ This skill is review criteria only.
 - [ ] _Happy and failure paths_: Unit tests cover expected inputs, boundary values, default arguments, and `pytest.raises(..., match=...)` error cases
 - [ ] _Isolated environment and mocks_: Isolate external state and environment variables with `unittest.mock.patch` or fixtures and make no live network calls
 - [ ] _Coverage configured_: Test runs report coverage against `src` when `pyproject.toml` configures it
+- [ ] _Honest assertions_: Tests assert through the public interface, and expected values come from a literal or the spec, never recomputed the way the code computes them
 - [ ] _Documented verification_: `README.md` documents the user-run `uv` and `make` verification commands
 
 ---

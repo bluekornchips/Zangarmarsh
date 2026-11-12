@@ -1,10 +1,12 @@
 ---
-description: JavaScript standards for modules, async work, errors, validation, and tooling.
+description: JavaScript and shared TypeScript standards for modules, async work, errors, validation, and tooling.
 globs:
   - '**/*.js'
   - '**/*.jsx'
   - '**/*.mjs'
   - '**/*.cjs'
+  - '**/*.ts'
+  - '**/*.tsx'
 alwaysApply: false
 ---
 
@@ -38,7 +40,6 @@ Keep JavaScript boundaries explicit and keep async and error handling direct.
 ### Denied
 
 - `var`.
-- Hardcoded secrets.
 - `eval` or `Function` on dynamic input.
 - Mutating function parameters.
 - `console.log` on production paths.

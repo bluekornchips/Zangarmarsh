@@ -50,8 +50,6 @@ Keep bash and zsh scripts safe, readable, and honest about errors and cleanup.
 - `echo` lines longer than 160 characters. Use a heredoc or a loop instead.
 - Removing paths the script did not create, except by the cleanup tools listed below.
 - `rm -rf /`, `eval`, `exec`, or `sudo`.
-- Multi-line `if` blocks whose only body is a plain `return`.
-- Any spacing or `return` placement that breaks the Standards above.
 
 ### Cleanup tool exception
 

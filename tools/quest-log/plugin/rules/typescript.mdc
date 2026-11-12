@@ -1,5 +1,5 @@
 ---
-description: TypeScript standards for strict typing, modules, async, errors, and tooling.
+description: TypeScript standards for strict typing, catches, headers, and type checks.
 globs:
   - '**/*.ts'
   - '**/*.tsx'
@@ -14,15 +14,12 @@ Keep TypeScript strict at boundaries so mistakes surface early and types stay ho
 
 ## Standards
 
+- Follow `javascript.mdc` for modules, async work, errors, validation, and tooling.
 - Enable `"strict": true` and `noUncheckedIndexedAccess` in `tsconfig.json`.
 - Named exports for library code. Explicit return types on exported functions, public class methods, and shared types when they clarify contracts.
-- Use `const`, or `let` only when reassignment is needed. Use `===` and `!==`.
-- Prefer `async` and `await` over raw `Promise` chains when both are available.
-- In `catch`, use `unknown` and narrow before use. Set `cause` on re-throw when the runtime supports it.
-- Validate untrusted input at module boundaries. Read config from environment variables or injected config.
+- In `catch`, use `unknown` and narrow before use.
 - Every function except `main` has a JSDoc or TSDoc header in the form shown in the example. State the purpose, params, return, and thrown errors.
 - Run `tsc --noEmit` with zero errors before merge.
-- Keep the formatter and linter clean on touched files when the repo defines them.
 
 ## Usage
 
@@ -32,7 +29,6 @@ Keep TypeScript strict at boundaries so mistakes surface early and types stay ho
 - `readonly` on fields that must not change after construction.
 - Discriminated unions instead of large optional bags for mutually exclusive states.
 - `satisfies` and `as const` when they tighten inference without widening.
-- `Promise.all` for independent concurrent work with rejection handling on work you start.
 
 ### Denied
 
@@ -40,12 +36,6 @@ Keep TypeScript strict at boundaries so mistakes surface early and types stay ho
 - `@ts-ignore` or `@ts-nocheck`.
 - Non-null `value!` without a short nearby comment that states the invariant.
 - Type assertions such as `value as unknown as T` to silence the compiler.
-- `var`.
-- Hardcoded secrets.
-- `eval` on dynamic input.
-- Mutating function parameters.
-- `console.log` on production paths.
-- Silent catches such as `catch (_) {}`.
 
 ## Example
 

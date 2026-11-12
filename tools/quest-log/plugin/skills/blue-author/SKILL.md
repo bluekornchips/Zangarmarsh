@@ -54,9 +54,15 @@ exact command a reviewer can run
 ```
 
 Expected result in one sentence.
+
+## Risk
+
+Two-way door. Reverting the merge restores the prior behavior.
 ````
 
 Replace `Not provided` only when the user or repository supplies a real issue link. The testing command must run from the documented working directory. The expected result must follow from the diff or from a test this session already ran.
+
+A change is a one-way door when it deletes data, publishes an artifact, or overwrites host files. For a one-way door, add one sentence on what a revert cannot undo.
 
 ## issue.md
 
@@ -81,6 +87,7 @@ Each criterion is an observable outcome a reviewer can check, with the exact ver
 ## Final check
 
 - `pr.md` matches the current diff.
+- A two-sentence restatement of what `pr.md` claims matches the diff. Rewrite `pr.md` when it does not.
 - `issue.md` states measurable criteria.
 - Commands are complete and runnable.
 - Test claims match observed results.

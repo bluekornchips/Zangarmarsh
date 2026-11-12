@@ -10,12 +10,7 @@ Review the current diff with the blue-review bar. Leave the comments in the repl
 
 ## Bar
 
-1. Delete complexity. A new helper, option, wrapper, flag, or layer needs a reason. A new abstraction is for real duplication only.
-2. Keep files under 1000 lines. Ask to split when this diff crosses that line and the new code has its own responsibility.
-3. Stop spaghetti growth. Prefer one default flow with fewer exceptions.
-4. Keep the code direct. Reuse the helper and module that already own the concept.
-5. Require the function header the language rule requires. An inline comment stays only for a hidden constraint, workaround, unit, or surprising invariant.
-6. Flag avoidable orchestration. Skip micro-optimizations.
+Apply the Standards in [blue-review](../blue-review/SKILL.md).
 
 ## Voice
 
@@ -49,13 +44,4 @@ When the structure is clean, say `The structure is clean. We can merge this.`
 
 We approve when the behavior is correct and the structure is clean.
 
-We hold the merge when any of these are true and we cannot justify them:
-
-- A simpler structure would delete the incidental complexity
-- A file goes from below 1000 lines to above 1000 lines
-- The diff adds ad-hoc branching that tangles an existing flow
-- The diff scatters feature checks through shared code
-- The diff adds a helper, wrapper, flag, or cast the change does not need
-- The diff duplicates a helper or puts logic in the wrong module
-- A required function header is missing
-- Inline comments narrate the code
+We hold the merge on any blue-review Approval block the author cannot justify.

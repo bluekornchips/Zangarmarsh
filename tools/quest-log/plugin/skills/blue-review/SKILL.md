@@ -20,12 +20,30 @@ Apply Altitude, Depth, and Range to the change itself. A tidy fix of the wrong p
 - Depth: flag digests over raw inputs, soft targets, and self-judged success. Prefer source, logs, schemas, fixtures, and an outside check the project already has.
 - Range: replace nouns with verbs. Flag a change that stays in one layer when the project's real coupling needed adjacent methods. Do not ask for roleplay.
 
+## Spec
+
+Find the originating request, issue, or spec: the user's words, issue references in commit messages, or a doc the user names. Quote the spec line for each finding:
+
+- Missing or partial: asked for and absent or incomplete
+- Unrequested: behavior in the diff nobody asked for
+- Wrong: looks implemented, but the behavior does not match the spec
+
+Report Spec findings under their own heading. Never rerank them against maintainability findings; a change can pass one and fail the other. With no spec, say `no spec available`.
+
+## Compensating code
+
+Find all compensating code, then propose redesigns from first principles under which it would never have been written.
+
+Follow [blue-compensate](../blue-compensate/SKILL.md). Polishing compensating code is the wrong fix when a first-principles redesign is visible.
+
 ## Standards
 
 1. Delete complexity.
    - Local cleanup is not the goal. Look for a restructuring that makes whole branches, helpers, modes, or layers unnecessary.
    - A new helper, option, wrapper, flag, or layer is a defect when a shorter direct change exists.
    - A new abstraction is allowed only when it removes real duplication.
+   - Apply the deletion test. When deleting a module makes complexity vanish, it was a pass-through. When complexity reappears across callers, it earns its place.
+   - One adapter is a hypothetical seam. Require two real adapters before adding an interface or port.
    - Delete unused code. Leave nothing in place for a later caller.
    - Match the file that is already there.
 
@@ -43,6 +61,7 @@ Apply Altitude, Depth, and Range to the change itself. A tidy fix of the wrong p
    - Flag magic behavior, identity wrappers, and pass-through helpers.
    - Flag casts, `any`, `unknown`, and needless optionality when a clearer type would hold the invariant.
    - Flag a silent fallback that hides an unclear invariant.
+   - Search the codebase for an existing helper before accepting a new one.
    - Reuse the existing helper. Put the logic in the module that already owns the concept.
 
 5. Require function headers. Keep inline comments rare.
@@ -91,6 +110,18 @@ For each meaningful change, ask:
 - An inline comment that narrates the next line.
 - Temporary branching that will stay.
 
+These smells are judgement calls. Label each as possible, for example `possible feature envy`. A documented repo rule overrides them.
+
+- Speculative generality: parameters, hooks, or abstractions for needs nobody has
+- Middle man: a function or class that mostly delegates onward
+- Shotgun surgery: one logical change forces edits scattered across many files
+- Divergent change: one file edited for several unrelated reasons
+- Feature envy: code that reaches into another module's data more than its own
+- Data clumps: the same few values always passed together
+- Primitive obsession: a string or number standing in for a domain concept
+- Repeated switches: the same branch on the same type at several sites
+- Mysterious name: a name that hides what the thing does or holds
+
 ## Remedies
 
 Prefer these fixes:
@@ -121,7 +152,7 @@ Say it plainly:
 
 ## Output
 
-Order findings like this:
+Report Spec findings first, under their own heading. Order the maintainability findings like this:
 
 1. Wrong problem, shallow method, or missed adjacent coupling
 2. Structural regressions and missed simplifications

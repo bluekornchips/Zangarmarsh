@@ -22,11 +22,6 @@ Keep Zsh profile and Zsh-owned scripts portable and separate from Bash.
 
 ## Usage
 
-### Allowed
-
-- Sourced profile layout under `profile/zsh/`.
-- Shared shell rules from `shell.mdc` for quoting, status, guard clauses, function-ending returns, block spacing, and destructive-path safety.
-
 ### Denied
 
 - Bash-only constructs such as `BASH_SOURCE`, Bash arrays with Bash expansion rules, or ShellCheck-driven Bash rewrites of Zsh files.
