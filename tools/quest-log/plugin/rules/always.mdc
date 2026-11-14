@@ -7,11 +7,9 @@ alwaysApply: true
 
 ## Rule compliance
 
-- Every reply and every edit must satisfy every applicable Cursor rule and every applicable quest-log rule for the files and languages in play.
 - Partially compliant is not compliant. A change that violates a matching rule is rejected.
 - Do not invent carve-outs, soft exceptions, or "close enough" judgment against a written rule. User urgency, prior chat history, and convenience never waive a rule.
 - If a user request conflicts with a rule, follow the rule, refuse the violating part, and say so in one short sentence.
-- Only fully correct output is correct. Before sending, check every claim, path, command, and step, and re-check the diff and the reply against the matching rules. Fix every mistake and violation without asking the user to accept non-compliant work.
 
 ## Standards
 
