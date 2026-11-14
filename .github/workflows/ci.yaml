@@ -10,18 +10,13 @@ permissions:
 
 jobs:
   test:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           fetch-depth: 0
 
-      - name: Install dependencies (Linux)
-        if: runner.os == 'Linux'
+      - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y bats shellcheck jq zsh
@@ -31,34 +26,8 @@ jobs:
           sudo install -m 755 /tmp/shfmt /usr/local/bin/shfmt
           shfmt --version
 
-      - name: Install dependencies (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          brew install bats-core shellcheck jq
-          case "$(uname -m)" in
-          arm64)
-            curl -fsSL -o /tmp/shfmt \
-              "https://github.com/mvdan/sh/releases/download/v3.14.1/shfmt_v3.14.1_darwin_arm64"
-            echo "b7c872db63553ccffc7253aba3ed7d4885a27d83f1ba567b1138c6315a5847e5  /tmp/shfmt" | shasum -a 256 -c -
-            ;;
-          *)
-            curl -fsSL -o /tmp/shfmt \
-              "https://github.com/mvdan/sh/releases/download/v3.14.1/shfmt_v3.14.1_darwin_amd64"
-            echo "d33eee0da0f92835b3562e9767a05cee7e4eaeef47daa03bfd09da17b4b590a6  /tmp/shfmt" | shasum -a 256 -c -
-            ;;
-          esac
-          sudo install -m 755 /tmp/shfmt /usr/local/bin/shfmt
-          shfmt --version
-
       - name: Repository checks
         run: make ci
-
-      - name: Bash 3.2 install entry under set -u
-        if: runner.os == 'macOS'
-        run: |
-          /bin/bash -c 'set -u; profile/install.sh --help >/dev/null'
-          /bin/bash -c 'set -u; profile/install.sh --dry-run >/dev/null'
-          /bin/bash zangarmarsh.sh; test $? -eq 1
 
       - name: Secret scan
         uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7

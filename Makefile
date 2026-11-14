@@ -1,4 +1,5 @@
 BATS_JOBS   ?= $(shell nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)
+BATS_PARALLEL := $(shell command -v parallel >/dev/null 2>&1 && echo --jobs $(BATS_JOBS) --no-parallelize-within-files)
 
 TEST_FILES  := $(shell find . -name '*-tests.sh' -type f ! -path './.git/*' \
         $(if $(filter Darwin,$(shell uname -s)),! -path './tools/auras/tests/*',))
@@ -24,7 +25,7 @@ help:
 		'  lint         Check shfmt diff and shellcheck on *.sh including bats' \
 		'  shellcheck   shellcheck -x on *.sh; bats files use -s bash' \
 		'  syntax       bash -n on *.sh and zsh -n on profile/zsh/*.zsh' \
-		'  test         Run all bats tests in parallel' \
+		'  test         Run all bats tests (parallel when GNU parallel is installed)' \
 		'  uninstall    Remove profile hooks, Cursor plugin, and managed rules via profile/install.sh --uninstall'
 
 format:
@@ -55,7 +56,7 @@ shellcheck:
 
 test:
 	@$(CHECK_DEPS)
-	@$(BATS) --jobs $(BATS_JOBS) --no-parallelize-within-files $(TEST_FILES)
+	@$(BATS) $(BATS_PARALLEL) $(TEST_FILES)
 
 install:
 	@profile/install.sh
