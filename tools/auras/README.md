@@ -9,7 +9,7 @@ Creates, refreshes, and removes user `.desktop` launcher entries and `~/.local/b
 
 The name is used for the desktop file stem, the desktop entry `Name=` value, and the shell command under `~/.local/bin`.
 
-With `--buff`, supply an explicit AppImage path. With `--ready-check DIR`, Auras scans each immediate subdirectory of `DIR`, picks the newest AppImage in that folder by filename version then modification time, and buffs it using the subdirectory name as the stem.
+With `--buff`, supply an explicit AppImage path.
 
 ## Managed Entry Safety
 
@@ -38,9 +38,6 @@ The CLI runs standalone. It loads its libraries from the checkout that holds the
 # Relative AppImage paths are resolved from the current directory
 ./tools/auras/auras.sh --buff demoapp --appimage ./Apps/DemoApp/DemoApp-1.0.0.AppImage
 
-# Buff the latest AppImage in each child of a packages directory
-./tools/auras/auras.sh --ready-check "$HOME/Apps"
-
 # Remove one managed launcher and bin symlink
 ./tools/auras/auras.sh --debuff demoapp
 
@@ -58,29 +55,7 @@ update-desktop-database "$HOME/.local/share/applications"
 
 Run `./tools/auras/auras.sh --help` for the flag list.
 
-Exactly one of `--buff`, `--ready-check`, or `--debuff` is allowed per run; giving more than one fails with `use only one of --buff, --ready-check, or --debuff`. Running with none of them prints usage and exits with status 1. The required user environment input is `HOME`, which must be set because both outputs live under `~/.local`.
-
-## Ready-check layout
-
-`--ready-check` expects:
-
-```text
-DIR/
-  DemoApp/
-    DemoApp-1.0.0.AppImage
-    DemoApp-1.2.0.AppImage
-  SampleApp/
-    SampleApp.AppImage
-```
-
-For each immediate subdirectory:
-
-1. Collect `*.AppImage` / `*.appimage` files in that directory only.
-2. Prefer the highest parseable filename version, for example `1.2.0` over `1.0.0`.
-3. When versions tie or no version is present, prefer the newest modification time.
-4. Install that winner with the subdirectory basename as `NAME`.
-
-Files sitting directly in `DIR`, and nested directories deeper than one level, are ignored. Older AppImage files are left on disk.
+Exactly one of `--buff` or `--debuff` is allowed per run; giving more than one fails with `use only one of --buff or --debuff`. Running with none of them prints usage and exits with status 1. The required user environment input is `HOME`, which must be set because both outputs live under `~/.local`.
 
 ## Shell access
 

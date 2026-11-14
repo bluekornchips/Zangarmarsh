@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Shared Auras library: constants plus path, desktop, buff, debuff, and ready-check helpers
+# Shared Auras library: constants plus path, desktop, buff, and debuff helpers
 #
 
 AURAS_DESKTOP_VERSION="1"
@@ -15,4 +15,3 @@ source "${_AURAS_LIB_DIR}/paths.sh" || return 1
 source "${_AURAS_LIB_DIR}/desktop.sh" || return 1
 source "${_AURAS_LIB_DIR}/buff.sh" || return 1
 source "${_AURAS_LIB_DIR}/debuff.sh" || return 1
-source "${_AURAS_LIB_DIR}/ready-check.sh" || return 1

@@ -252,13 +252,6 @@ teardown() {
 	grep -q -- "--appimage PATH" <<<"$output"
 }
 
-@test "main:: --help mentions --ready-check" {
-	run bash "$SCRIPT" --help
-	[[ "$status" -eq 0 ]]
-
-	grep -q -- "--ready-check DIR" <<<"$output"
-}
-
 @test "main:: --help works when ZANGARMARSH_ROOT points at a missing tree" {
 	run env ZANGARMARSH_ROOT=/nonexistent bash "$SCRIPT" --help
 	[[ "$status" -eq 0 ]]
@@ -322,7 +315,7 @@ teardown() {
 	run main --buff demoapp --debuff demoapp
 	[[ "$status" -eq 1 ]]
 
-	grep -q "main:: use only one of --buff, --ready-check, or --debuff" <<<"$output"
+	grep -q "main:: use only one of --buff or --debuff" <<<"$output"
 }
 
 @test "main:: rejects unknown --packages-dir" {

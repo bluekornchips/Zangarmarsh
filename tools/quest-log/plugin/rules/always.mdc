@@ -5,13 +5,7 @@ alwaysApply: true
 
 # Core Development Rules
 
-## Purpose
-
-Set baseline response and change standards for every request.
-
 ## Rule compliance
-
-Always be rule compliant. No exceptions. None.
 
 - Every reply and every edit must satisfy every applicable Cursor rule and every applicable quest-log rule for the files and languages in play.
 - Partially compliant is not compliant. A change that violates a matching rule is rejected.

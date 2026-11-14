@@ -15,7 +15,7 @@ _AURAS_DIR="$(cd "$(dirname "${_AURAS_SCRIPT}")" && pwd)"
 # - 0 always
 usage() {
 	cat <<EOF
-Usage: $(basename "$0") -b|--buff NAME -a|--appimage PATH | --ready-check DIR | -d|--debuff NAME | -h|--help
+Usage: $(basename "$0") -b|--buff NAME -a|--appimage PATH | -d|--debuff NAME | -h|--help
 
 Creates or refreshes a user .desktop launcher and a ~/.local/bin symlink for one
 AppImage. Debuff removes both when they were created by this script.
@@ -23,10 +23,6 @@ AppImage. Debuff removes both when they were created by this script.
 Buff requires NAME and --appimage PATH. Relative AppImage directories are resolved
 from the current working directory. NAME is the desktop file stem, desktop Name=,
 and the command name under ~/.local/bin.
-
-Ready-check takes a packages directory, scans each immediate subdirectory for
-AppImage files, picks the highest filename version then newest mtime, and buffs
-each stem named after its subdirectory.
 
 Existing launchers are overwritten only when they were created by this script
 and include the current Auras management marker.
@@ -38,7 +34,6 @@ Options:
   -h, --help             Show this help message
   -b, --buff NAME        Install managed launcher and bin symlink for NAME
   -a, --appimage PATH    AppImage path, required with --buff
-  --ready-check DIR      Buff latest AppImage in each child of DIR
   -d, --debuff NAME      Remove managed NAME.desktop and matching bin symlink
 
 EOF
@@ -75,7 +70,7 @@ _auras_require_single_mode() {
 	local current_mode="$1"
 
 	if [[ -n "${current_mode}" ]]; then
-		echo "main:: use only one of --buff, --ready-check, or --debuff" >&2
+		echo "main:: use only one of --buff or --debuff" >&2
 		return 1
 	fi
 
@@ -99,7 +94,6 @@ main() {
 	local mode=""
 	local appimage_path=""
 	local app_stem=""
-	local packages_dir=""
 
 	while (($# > 0)); do
 		case "$1" in
@@ -116,17 +110,6 @@ main() {
 
 			mode="buff"
 			app_stem="$2"
-			shift 2
-			;;
-		--ready-check)
-			_auras_require_single_mode "${mode}" || return 1
-			if (($# < 2)); then
-				echo "main:: --ready-check requires DIR" >&2
-				return 1
-			fi
-
-			mode="ready-check"
-			packages_dir="$2"
 			shift 2
 			;;
 		-d | --debuff)
@@ -165,15 +148,6 @@ main() {
 	case "${mode}" in
 	buff)
 		buff_main "${app_stem}" "${appimage_path}"
-		return $?
-		;;
-	ready-check)
-		if [[ -n "${appimage_path}" ]]; then
-			echo "main:: --appimage is only valid with --buff" >&2
-			return 1
-		fi
-
-		ready_check_main "${packages_dir}"
 		return $?
 		;;
 	debuff)
