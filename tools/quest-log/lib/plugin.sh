@@ -207,7 +207,7 @@ _quest_log_skill_selected() {
 	return 1
 }
 
-# Drop skills and agents from a staged plugin tree that are outside the install set
+# Drop skills from a staged plugin tree that are outside the install set
 #
 # Inputs:
 # - $1, staging_dir, staged copy of the plugin
@@ -215,7 +215,6 @@ _quest_log_skill_selected() {
 #
 # Side Effects:
 # - Deletes skill directories not in the selected set
-# - Deletes agents/ when blueberry is not selected
 #
 # Returns:
 # - 0 on success
@@ -233,10 +232,6 @@ _quest_log_prune_staged_plugin() {
 		fi
 	done
 
-	if [[ -e "${staging_dir}/agents" ]] && ! _quest_log_skill_selected "blueberry" "$@"; then
-		rm -rf -- "${staging_dir}/agents" || return 1
-	fi
-
 	return 0
 }
 
@@ -252,7 +247,7 @@ _quest_log_prune_staged_plugin() {
 #
 # Side Effects:
 # - Copies plugin_source_dir to quest-log.staging beside the install path
-# - Keeps only the selected skills, and agents when blueberry is selected
+# - Keeps only the selected skills
 # - Moves the live install to quest-log.removing, moves the staged copy into place,
 #   then deletes quest-log.removing
 # - Deletes leftover staging and removing paths first, so an interrupted run is

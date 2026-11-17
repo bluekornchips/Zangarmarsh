@@ -21,18 +21,18 @@ Install the quest-log Cursor plugin from tools/quest-log/plugin under
 overwrite host Cursor user settings from tools/vscode/settings.json.
 
 By default only blue-author, blue-optical, blue-review, and blueberry are
-installed. blueberry also pulls blue-penmanship and the blueberry agents.
+installed. blueberry also pulls blue-penmanship.
 Pass --all for every skill, or --skill for a custom set.
 
 OPTIONS:
     -h, --help          Show this help message
     -r, --dry-run       Show planned changes without writing files
-    -a, --all           Install every skill and agent from the plugin tree
+    -a, --all           Install every skill from the plugin tree
         --skill NAME    Install NAME; repeat the flag or pass comma-separated names
 
 EXAMPLES:
     $0                  # Default skills, rules, and Cursor settings
-    $0 --all            # Every skill and agent
+    $0 --all            # Every skill
     $0 --skill blue-diagnose
     $0 --skill blue-review --skill blue-optical
     $0 --skill blue-review,blue-diagnose

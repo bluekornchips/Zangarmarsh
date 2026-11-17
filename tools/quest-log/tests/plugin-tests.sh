@@ -128,7 +128,7 @@ plugin_lib_test_setup() {
 	[[ -f "${TEST_PLUGIN_DIR}/skills/blue-optical/SKILL.md" ]]
 	[[ -f "${TEST_PLUGIN_DIR}/skills/blueberry/SKILL.md" ]]
 	[[ -f "${TEST_PLUGIN_DIR}/skills/blue-penmanship/SKILL.md" ]]
-	[[ -f "${TEST_PLUGIN_DIR}/agents/blueberry-review.md" ]]
+	[[ ! -e "${TEST_PLUGIN_DIR}/agents" ]]
 	[[ ! -e "${TEST_PLUGIN_DIR}/skills/blue-diagnose" ]]
 	cmp -s "${PLUGIN_SOURCE_DIR}/rules/always.mdc" "${TEST_PLUGIN_DIR}/rules/always.mdc"
 	[[ ! -e "${HOME}/.cursor/plugins/local/quest-log.staging" ]]

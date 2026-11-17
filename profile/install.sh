@@ -27,7 +27,7 @@ Options:
   -h, --help       Show this help
   -r, --dry-run    Show changes without modifying user files
   -u, --uninstall  Remove the Zangarmarsh block, local Cursor plugin, and managed rules
-  -a, --all        Install every quest-log skill and agent
+  -a, --all        Install every quest-log skill
       --skill NAME Install quest-log skill NAME; repeat or pass comma-separated names
       --zsh        Update ~/.zshrc only, or both rc files with --bash
       --bash       Update the bash rc file only, or both rc files with --zsh

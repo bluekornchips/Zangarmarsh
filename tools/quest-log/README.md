@@ -4,7 +4,7 @@ Install the tracked plugin tree under `~/.cursor/plugins/local/quest-log`, sync 
 
 `make install` and `questlog` both install the plugin, sync user rules, and overwrite Cursor user settings through `apply_quest_log`. `make install` also installs the bundled DejaVu Sans Mono font.
 
-By default only these skills are installed: `blue-author`, `blue-optical`, `blue-review`, and `blueberry`. Selecting `blueberry` also installs `blue-penmanship` and the blueberry agents. Use `--all` for every skill, or `--skill` for a custom set. Repeat `--skill`, or pass comma-separated names.
+By default only these skills are installed: `blue-author`, `blue-optical`, `blue-review`, and `blueberry`. Selecting `blueberry` also installs `blue-penmanship`. Use `--all` for every skill, or `--skill` for a custom set. Repeat `--skill`, or pass comma-separated names.
 
 User rules under `~/.cursor/rules` are the agent source of truth and apply in a new chat without Reload Window. The plugin path still carries skills and a copy of rules for the plugin layout. Skills discovery may still need a reload.
 
@@ -65,7 +65,6 @@ Run `questlog --help` for the flags.
 ```text
 plugin/
   .cursor-plugin/plugin.json   # plugin manifest
-  agents/*.md                  # blueberry passes pinned to Auto Cost
   rules/*.mdc                  # Cursor rules
   skills/*/SKILL.md            # blue-* and blueberry skills
 ```
@@ -87,7 +86,7 @@ The plugin follows this repository's GPL-3.0-only license.
 
 ## Skills
 
-Default install: `blue-author`, `blue-optical`, `blue-review`, `blueberry`, plus `blue-penmanship` and blueberry agents for blueberry. Other skills stay in the tracked tree and install with `--all` or `--skill`.
+Default install: `blue-author`, `blue-optical`, `blue-review`, `blueberry`, plus `blue-penmanship` for blueberry. Other skills stay in the tracked tree and install with `--all` or `--skill`. Blueberry launches sibling passes as `generalPurpose` Tasks pinned to Auto Cost.
 
 | Skill                    | Default | Role                                        |
 | ------------------------ | ------- | ------------------------------------------- |
@@ -105,14 +104,7 @@ Default install: `blue-author`, `blue-optical`, `blue-review`, `blueberry`, plus
 | `blue-python-setup`      | no      | Python project setup notes for the user     |
 | `blue-review-typescript` | no      | TypeScript review checklist                 |
 
-## Agents
-
-| Agent                    | Role                                        |
-| ------------------------ | ------------------------------------------- |
-| `blueberry-review`       | blue-review on Auto Cost                    |
-| `blueberry-penmanship`   | blue-penmanship on Auto Cost                |
-
-To add or change a rule, skill, or agent, edit the files under `plugin/` directly and run `questlog` to install the update.
+To add or change a rule or skill, edit the files under `plugin/` directly and run `questlog` to install the update.
 
 ## Install layout
 

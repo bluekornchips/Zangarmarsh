@@ -257,11 +257,7 @@ EOF
 		[[ -f "${tracked_plugin}/skills/${skill}/SKILL.md" ]]
 	done
 
-	local agent
-	for agent in blueberry-review blueberry-penmanship; do
-		[[ -f "${tracked_plugin}/agents/${agent}.md" ]]
-	done
-
+	[[ ! -e "${tracked_plugin}/agents" ]]
 	[[ ! -e "${tracked_plugin}/MCP.md" ]]
 }
 
@@ -282,8 +278,8 @@ EOF
 	[[ -f "${TEST_PLUGIN_DIR}/skills/blue-review/SKILL.md" ]]
 	[[ -f "${TEST_PLUGIN_DIR}/skills/blueberry/SKILL.md" ]]
 	[[ -f "${TEST_PLUGIN_DIR}/skills/blue-penmanship/SKILL.md" ]]
-	[[ -f "${TEST_PLUGIN_DIR}/agents/blueberry-review.md" ]]
 	[[ -f "${TEST_PLUGIN_DIR}/.cursor-plugin/plugin.json" ]]
+	[[ ! -e "${TEST_PLUGIN_DIR}/agents" ]]
 	[[ ! -e "${TEST_PLUGIN_DIR}/skills/blue-retired" ]]
 	[[ ! -e "${TEST_PLUGIN_DIR}/skills/blue-diagnose" ]]
 	[[ ! -e "${TEST_PLUGIN_DIR}/skills/blue-scribe" ]]

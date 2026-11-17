@@ -13,14 +13,14 @@ source "${GIT_ROOT}/tests/fixtures.sh" || return 1
 # - $1 plugin_dir, destination directory for the fake plugin
 #
 # Side Effects:
-# - Writes plugin.json, one rule, default skills, and blueberry agents
+# - Writes plugin.json, one rule, and default skills
 #
 # Returns:
 # - 0 on success
 create_test_plugin_source() {
 	local plugin_dir="$1"
 
-	mkdir -p "${plugin_dir}/.cursor-plugin" "${plugin_dir}/rules" "${plugin_dir}/agents"
+	mkdir -p "${plugin_dir}/.cursor-plugin" "${plugin_dir}/rules"
 
 	local skill
 	for skill in blue-author blue-optical blue-review blueberry blue-penmanship blue-diagnose; do
@@ -30,8 +30,6 @@ create_test_plugin_source() {
 
 	echo '{"name":"quest-log"}' >"${plugin_dir}/.cursor-plugin/plugin.json"
 	echo "rule body" >"${plugin_dir}/rules/always.mdc"
-	echo "agent body" >"${plugin_dir}/agents/blueberry-review.md"
-	echo "agent body" >"${plugin_dir}/agents/blueberry-penmanship.md"
 
 	return 0
 }
