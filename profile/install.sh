@@ -20,10 +20,15 @@ Usage: $(basename "$0") [OPTIONS]
 Manage the Zangarmarsh block in ~/.zshrc and the bash rc file, and install the
 local Cursor plugin, user rules, Cursor settings, and DejaVu Sans Mono font.
 
+Quest-log skills default to blue-author, blue-optical, blue-review, and
+blueberry. Pass --all for every skill, or --skill for a custom set.
+
 Options:
   -h, --help       Show this help
   -r, --dry-run    Show changes without modifying user files
   -u, --uninstall  Remove the Zangarmarsh block, local Cursor plugin, and managed rules
+  -a, --all        Install every quest-log skill and agent
+      --skill NAME Install quest-log skill NAME; repeat or pass comma-separated names
       --zsh        Update ~/.zshrc only, or both rc files with --bash
       --bash       Update the bash rc file only, or both rc files with --zsh
 
@@ -397,6 +402,8 @@ main() {
 	local uninstall=false
 	local want_zsh=false
 	local want_bash=false
+	local want_all=false
+	local skill_args=()
 	local errors=0
 
 	DRY_RUN=false
@@ -411,6 +418,18 @@ main() {
 			;;
 		-u | --uninstall)
 			uninstall=true
+			;;
+		-a | --all)
+			want_all=true
+			;;
+		--skill)
+			shift
+			if [[ $# -eq 0 || "$1" == -* ]]; then
+				printf 'main:: --skill needs a skill name\n' >&2
+				return 1
+			fi
+
+			skill_args+=("$1")
 			;;
 		--zsh)
 			want_zsh=true
@@ -453,6 +472,8 @@ main() {
 		((errors == 0)) && return 0
 		return 1
 	fi
+
+	quest_log_apply_skill_flags "${want_all}" "${skill_args[@]}" || return 1
 
 	install_dejavu_font || return 1
 	install_quest_log || return 1

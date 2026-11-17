@@ -253,7 +253,7 @@ EOF
 	done
 
 	local skill
-	for skill in blue-author blue-compensate blue-diagnose blue-penmanship blue-review-comments blue-review blue-review-bash blue-review-lua blue-review-python blue-review-security blue-review-typescript blue-python-setup blue-scribe blueberry; do
+	for skill in blue-author blue-diagnose blue-optical blue-penmanship blue-review blue-review-bash blue-review-lua blue-review-python blue-review-security blue-review-typescript blue-python-setup blue-scribe blueberry; do
 		[[ -f "${tracked_plugin}/skills/${skill}/SKILL.md" ]]
 	done
 
@@ -265,7 +265,7 @@ EOF
 	[[ ! -e "${tracked_plugin}/MCP.md" ]]
 }
 
-@test "integration:: tracked plugin install replaces a live tree with the declared assets" {
+@test "integration:: tracked plugin install keeps the default skill set only" {
 	local tracked_plugin="${ZANGARMARSH_ROOT}/tools/quest-log/plugin"
 
 	mkdir -p "${TEST_PLUGIN_DIR}/skills/blue-retired" "${TEST_PLUGIN_DIR}/rules"
@@ -278,10 +278,56 @@ EOF
 	[[ -f "${TEST_PLUGIN_DIR}/rules/bash.mdc" ]]
 	[[ -f "${TEST_PLUGIN_DIR}/rules/zsh.mdc" ]]
 	[[ -f "${TEST_PLUGIN_DIR}/skills/blue-author/SKILL.md" ]]
+	[[ -f "${TEST_PLUGIN_DIR}/skills/blue-optical/SKILL.md" ]]
 	[[ -f "${TEST_PLUGIN_DIR}/skills/blue-review/SKILL.md" ]]
+	[[ -f "${TEST_PLUGIN_DIR}/skills/blueberry/SKILL.md" ]]
+	[[ -f "${TEST_PLUGIN_DIR}/skills/blue-penmanship/SKILL.md" ]]
+	[[ -f "${TEST_PLUGIN_DIR}/agents/blueberry-review.md" ]]
 	[[ -f "${TEST_PLUGIN_DIR}/.cursor-plugin/plugin.json" ]]
 	[[ ! -e "${TEST_PLUGIN_DIR}/skills/blue-retired" ]]
+	[[ ! -e "${TEST_PLUGIN_DIR}/skills/blue-diagnose" ]]
+	[[ ! -e "${TEST_PLUGIN_DIR}/skills/blue-scribe" ]]
 	[[ ! -f "${TEST_PLUGIN_DIR}/rules/extra.mdc" ]]
+}
+
+@test "integration:: run_quest_log --all installs every tracked skill" {
+	local tracked_plugin="${ZANGARMARSH_ROOT}/tools/quest-log/plugin"
+	PLUGIN_SOURCE_DIR="${tracked_plugin}"
+
+	run run_quest_log --all
+	[[ "${status}" -eq 0 ]]
+	[[ -f "${TEST_PLUGIN_DIR}/skills/blue-diagnose/SKILL.md" ]]
+	[[ -f "${TEST_PLUGIN_DIR}/skills/blue-scribe/SKILL.md" ]]
+	[[ -f "${TEST_PLUGIN_DIR}/skills/blue-optical/SKILL.md" ]]
+}
+
+@test "run_quest_log:: --skill installs named skills only" {
+	run run_quest_log --skill blue-review --skill blue-diagnose
+	[[ "${status}" -eq 0 ]]
+	[[ -f "${TEST_PLUGIN_DIR}/skills/blue-review/SKILL.md" ]]
+	[[ -f "${TEST_PLUGIN_DIR}/skills/blue-diagnose/SKILL.md" ]]
+	[[ ! -e "${TEST_PLUGIN_DIR}/skills/blue-author" ]]
+	[[ ! -e "${TEST_PLUGIN_DIR}/skills/blueberry" ]]
+}
+
+@test "run_quest_log:: --skill accepts comma-separated names" {
+	run run_quest_log --skill blue-review,blue-optical
+	[[ "${status}" -eq 0 ]]
+	[[ -f "${TEST_PLUGIN_DIR}/skills/blue-review/SKILL.md" ]]
+	[[ -f "${TEST_PLUGIN_DIR}/skills/blue-optical/SKILL.md" ]]
+	[[ ! -e "${TEST_PLUGIN_DIR}/skills/blueberry" ]]
+}
+
+@test "run_quest_log:: rejects --all with --skill" {
+	run run_quest_log --all --skill blue-review
+	[[ "${status}" -eq 1 ]]
+	echo "${output}" | grep -q "use --all or --skill, not both"
+}
+
+@test "run_quest_log:: --skill without a name fails" {
+	run run_quest_log --skill
+	[[ "${status}" -eq 1 ]]
+	echo "${output}" | grep -q "--skill needs a skill name"
 }
 
 @test "quest-log.sh:: --help works without a pre-set ZANGARMARSH_ROOT" {

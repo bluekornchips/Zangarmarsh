@@ -1,6 +1,6 @@
 ---
 name: blue-review
-description: Run an extremely strict maintainability review for less code, ambition of the change, required function headers, abstraction quality, giant files, and spaghetti growth. Use for blue-review, a thermo-nuclear code quality review, thermonuclear review, deep code quality audit, or especially harsh maintainability review.
+description: Run an extremely strict maintainability review for less code, ambition of the change, compensating code, required function headers, abstraction quality, giant files, and spaghetti growth. Write short courteous pull request comments from the same bar. Use for blue-review, PR review, pull request comments, compensating-code review, a thermo-nuclear code quality review, thermonuclear review, deep code quality audit, or especially harsh maintainability review.
 disable-model-invocation: true
 ---
 
@@ -34,7 +34,14 @@ Report Spec findings under their own heading. Never rerank them against maintain
 
 Find all compensating code, then propose redesigns from first principles under which it would never have been written.
 
-Follow [blue-compensate](../blue-compensate/SKILL.md). Polishing compensating code is the wrong fix when a first-principles redesign is visible.
+1. List every compensating site in the diff and the nearby code it props up.
+2. Name the broken invariant or boundary each site repairs.
+3. Propose the redesign where that repair is unnecessary.
+4. Prefer that redesign over polishing the compensation.
+
+For each finding: site, what it compensates for, the redesign where it would never have been written, why polishing fails.
+
+Block when compensating code remains and a first-principles redesign is visible.
 
 ## Standards
 
@@ -137,22 +144,24 @@ Prefer these fixes:
 
 A rename is the wrong fix when the structure is the problem. A tidier copy of the same idea is the wrong fix when a simpler idea is visible.
 
-## Tone
+## Voice
 
-Be direct and serious. Stay polite. State a maintainability defect as a defect.
+Be direct and serious. Stay polite. State a maintainability defect as a defect. Speak as we. Name the code, not the author. One comment per issue, two sentences at most: one fact, then the action. Use the words already in the code.
 
-Say it plainly:
+Skip you, your, let's, can we, question marks, praise, summaries, and nits when a structural note is present.
 
-- `this pushes the file past 1000 lines. decompose this first.`
-- `this adds another special-case branch. keep the behavior and delete the branch.`
-- `this helper is longer than the direct change. remove it.`
-- `this function is missing its header. state the purpose and the signature.`
-- `this comment narrates the line. delete it, or state the hidden constraint.`
-- `this duplicates a helper that already exists. reuse it.`
+Say it this way:
+
+- `This pushes the file past 1000 lines. We should split it first.`
+- `This adds another special-case branch. We can keep the behavior and delete the branch.`
+- `This helper is longer than the direct change. We should remove it.`
+- `This function is missing its header. We should state the purpose and the signature.`
+- `This comment narrates the line. We should delete it, or state the hidden constraint.`
+- `This duplicates a helper that already exists. We should reuse it.`
 
 ## Output
 
-Report Spec findings first, under their own heading. Order the maintainability findings like this:
+Report Spec findings first, under their own heading. Leave comments in the reply. Post them to the pull request only when the user asks. Order the maintainability findings like this:
 
 1. Wrong problem, shallow method, or missed adjacent coupling
 2. Structural regressions and missed simplifications
@@ -162,13 +171,15 @@ Report Spec findings first, under their own heading. Order the maintainability f
 6. Missing function headers and bad comments
 7. Legibility
 
-Prefer a few high-conviction comments. Skip cosmetic nits when a structural defect is present.
+Prefer a few high-conviction comments, each standing alone on the line it concerns. Skip cosmetic nits when a structural defect is present.
+
+When the structure is clean, say `The structure is clean. We can merge this.`
 
 ## Approval
 
-Approval requires correct behavior and a clean structure.
+We approve when the behavior is correct and the structure is clean.
 
-Block when any of these are true and the author cannot justify them:
+We hold the merge when any of these are true and the author cannot justify them:
 
 - The change solves the task label and leaves the durable outcome or verification gap open
 - A simpler structure would delete the incidental complexity
@@ -177,6 +188,7 @@ Block when any of these are true and the author cannot justify them:
 - The diff scatters feature checks through shared code
 - The diff adds a helper, wrapper, flag, or cast the change does not need
 - The diff duplicates a helper or puts logic in the wrong module
+- Compensating code remains and a first-principles redesign is visible
 - A required function header is missing
 - Inline comments narrate the code
 

@@ -21,7 +21,7 @@ help:
 		'  ci           syntax, lint, then test' \
 		'  format       Rewrite shell scripts with shfmt defaults' \
 		'  help         Show this help' \
-		'  install      Install profile hooks, Cursor plugin, rules, settings, and font via profile/install.sh' \
+		'  install      Install profile hooks, default Cursor skills, rules, settings, and font; pass flags via INSTALL_FLAGS' \
 		'  lint         Check shfmt diff and shellcheck on *.sh including bats' \
 		'  shellcheck   shellcheck -x on *.sh; bats files use -s bash' \
 		'  syntax       bash -n on *.sh and zsh -n on profile/zsh/*.zsh' \
@@ -59,7 +59,7 @@ test:
 	@$(BATS) $(BATS_PARALLEL) $(TEST_FILES)
 
 install:
-	@profile/install.sh
+	@profile/install.sh $(INSTALL_FLAGS)
 
 uninstall:
 	@profile/install.sh --uninstall

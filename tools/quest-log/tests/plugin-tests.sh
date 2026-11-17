@@ -124,9 +124,38 @@ plugin_lib_test_setup() {
 	[[ -f "${TEST_PLUGIN_DIR}/.cursor-plugin/plugin.json" ]]
 	[[ -f "${TEST_PLUGIN_DIR}/rules/always.mdc" ]]
 	[[ -f "${TEST_PLUGIN_DIR}/skills/blue-review/SKILL.md" ]]
+	[[ -f "${TEST_PLUGIN_DIR}/skills/blue-author/SKILL.md" ]]
+	[[ -f "${TEST_PLUGIN_DIR}/skills/blue-optical/SKILL.md" ]]
+	[[ -f "${TEST_PLUGIN_DIR}/skills/blueberry/SKILL.md" ]]
+	[[ -f "${TEST_PLUGIN_DIR}/skills/blue-penmanship/SKILL.md" ]]
+	[[ -f "${TEST_PLUGIN_DIR}/agents/blueberry-review.md" ]]
+	[[ ! -e "${TEST_PLUGIN_DIR}/skills/blue-diagnose" ]]
 	cmp -s "${PLUGIN_SOURCE_DIR}/rules/always.mdc" "${TEST_PLUGIN_DIR}/rules/always.mdc"
 	[[ ! -e "${HOME}/.cursor/plugins/local/quest-log.staging" ]]
 	[[ ! -e "${HOME}/.cursor/plugins/local/quest-log.removing" ]]
+}
+
+@test "install_quest_plugin:: --all via QUEST_LOG_SKILLS installs every skill" {
+	QUEST_LOG_SKILLS=all
+
+	run install_quest_plugin "${PLUGIN_SOURCE_DIR}"
+	[[ "${status}" -eq 0 ]]
+	[[ -f "${TEST_PLUGIN_DIR}/skills/blue-diagnose/SKILL.md" ]]
+	[[ -f "${TEST_PLUGIN_DIR}/skills/blue-review/SKILL.md" ]]
+}
+
+@test "quest_log_apply_skill_flags:: expands repeated and comma-separated --skill values" {
+	run quest_log_apply_skill_flags false blue-review "blue-optical,blue-diagnose"
+	[[ "${status}" -eq 0 ]]
+	[[ "${QUEST_LOG_SKILLS}" == "blue-review blue-optical blue-diagnose" ]]
+}
+
+@test "quest_log_skills_to_install:: rejects a missing explicit skill" {
+	QUEST_LOG_SKILLS="blue-review missing-skill"
+
+	run quest_log_skills_to_install "${PLUGIN_SOURCE_DIR}"
+	[[ "${status}" -eq 1 ]]
+	echo "${output}" | grep -q "skill not found: missing-skill"
 }
 
 @test "install_quest_plugin:: updates changed files" {

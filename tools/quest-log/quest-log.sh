@@ -20,12 +20,22 @@ Install the quest-log Cursor plugin from tools/quest-log/plugin under
 ~/.cursor/plugins/local/quest-log, sync rules into ~/.cursor/rules, and
 overwrite host Cursor user settings from tools/vscode/settings.json.
 
+By default only blue-author, blue-optical, blue-review, and blueberry are
+installed. blueberry also pulls blue-penmanship and the blueberry agents.
+Pass --all for every skill, or --skill for a custom set.
+
 OPTIONS:
     -h, --help          Show this help message
     -r, --dry-run       Show planned changes without writing files
+    -a, --all           Install every skill and agent from the plugin tree
+        --skill NAME    Install NAME; repeat the flag or pass comma-separated names
 
 EXAMPLES:
-    $0                  # Install plugin, rules, and overwrite Cursor settings
+    $0                  # Default skills, rules, and Cursor settings
+    $0 --all            # Every skill and agent
+    $0 --skill blue-diagnose
+    $0 --skill blue-review --skill blue-optical
+    $0 --skill blue-review,blue-diagnose
     $0 --dry-run        # Show planned plugin, rules, and settings writes
 EOF
 
@@ -39,6 +49,7 @@ EOF
 #
 # Reads environment:
 # - DRY_RUN, must be exactly true or false when set
+# - QUEST_LOG_SKILLS, used when neither --all nor --skill is given
 #
 # Side Effects:
 # - Installs the plugin and user rules, overwrites host Cursor settings
@@ -53,6 +64,9 @@ run_quest_log() {
 		return 1
 	fi
 
+	local want_all=false
+	local skill_args=()
+
 	while (($# > 0)); do
 		case "$1" in
 		-h | --help)
@@ -61,6 +75,20 @@ run_quest_log() {
 			;;
 		-r | --dry-run)
 			DRY_RUN=true
+			shift
+			;;
+		-a | --all)
+			want_all=true
+			shift
+			;;
+		--skill)
+			shift
+			if [[ $# -eq 0 || "$1" == -* ]]; then
+				echo "run_quest_log:: --skill needs a skill name" >&2
+				return 1
+			fi
+
+			skill_args+=("$1")
 			shift
 			;;
 		-*)
@@ -76,6 +104,8 @@ run_quest_log() {
 			;;
 		esac
 	done
+
+	quest_log_apply_skill_flags "${want_all}" "${skill_args[@]}" || return 1
 
 	echo "quest-log: running"
 

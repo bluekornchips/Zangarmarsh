@@ -4,11 +4,13 @@ Install the tracked plugin tree under `~/.cursor/plugins/local/quest-log`, sync 
 
 `make install` and `questlog` both install the plugin, sync user rules, and overwrite Cursor user settings through `apply_quest_log`. `make install` also installs the bundled DejaVu Sans Mono font.
 
+By default only these skills are installed: `blue-author`, `blue-optical`, `blue-review`, and `blueberry`. Selecting `blueberry` also installs `blue-penmanship` and the blueberry agents. Use `--all` for every skill, or `--skill` for a custom set. Repeat `--skill`, or pass comma-separated names.
+
 User rules under `~/.cursor/rules` are the agent source of truth and apply in a new chat without Reload Window. The plugin path still carries skills and a copy of rules for the plugin layout. Skills discovery may still need a reload.
 
 ## Features
 
-- Replaces `~/.cursor/plugins/local/quest-log` with a fresh copy of `tools/quest-log/plugin/` on every run
+- Replaces `~/.cursor/plugins/local/quest-log` with a fresh copy of the selected plugin assets on every run
 - Syncs `plugin/rules/*.mdc` into `~/.cursor/rules` as `zangarmarsh-*.mdc` files and deletes only managed files whose source rule is gone
 - Overwrites host Cursor `User/settings.json` from `tools/vscode/settings.json`
 - Writes settings first, then rules, then the plugin, and checks the plugin and rules destinations before the first write
@@ -19,6 +21,17 @@ User rules under `~/.cursor/rules` are the agent source of truth and apply in a 
 # Source the main script, or run the standalone entry
 source /path/to/zangarmarsh/zangarmarsh.sh
 questlog
+
+# Install every skill
+questlog --all
+
+# Custom skill set
+questlog --skill blue-diagnose
+questlog --skill blue-review --skill blue-optical
+questlog --skill blue-review,blue-diagnose
+
+# Same flags through make install
+make install INSTALL_FLAGS='--skill blue-diagnose'
 
 # Standalone, no prior source required
 ./tools/quest-log/quest-log.sh --help
@@ -40,7 +53,7 @@ Run `questlog --help` for the flags.
 - Always binds to the checkout that holds the script, ignoring an inherited `ZANGARMARSH_ROOT`.
 - The plugin and rules install paths pass `owned_path` before the first write. A symlink in either path stops the run before anything is written.
 - Dry run writes nothing, including directories, and prints what it would change.
-- The plugin is copied to `quest-log.staging` beside its install path. The live install moves to `quest-log.removing`, the staged copy moves into place, and `quest-log.removing` is deleted. A failed copy leaves the live install untouched. A run that stops between the two moves leaves the plugin missing until the next run, which clears leftover staging and removing paths and copies again.
+- The plugin is copied to `quest-log.staging` beside its install path, then trimmed to the selected skills before swap. The live install moves to `quest-log.removing`, the staged copy moves into place, and `quest-log.removing` is deleted. A failed copy leaves the live install untouched. A run that stops between the two moves leaves the plugin missing until the next run, which clears leftover staging and removing paths and copies again.
 - Each tracked rule is written as `zangarmarsh-<name>.mdc` through `write_atomic`. Managed `zangarmarsh-*.mdc` files with no source rule are deleted. Files without the `zangarmarsh-` prefix are never touched.
 - Settings are written first. A failed settings write stops the run before any rule or plugin change.
 - Rules and settings print `Created`, `Updated`, `No changes`, or `Would write` for each file.
@@ -74,23 +87,23 @@ The plugin follows this repository's GPL-3.0-only license.
 
 ## Skills
 
-| Skill                    | Role                                        |
-| ------------------------ | ------------------------------------------- |
-| `blue-author`            | Current PR and issue delivery documents     |
-| `blue-compensate`        | Compensating-code inventory and redesigns   |
-| `blue-diagnose`          | Feedback-loop-first bug diagnosis           |
-| `blue-optical`           | Optical balance for UI, icons, and layout   |
-| `blue-penmanship`        | Comment and doc claims vs current code      |
-| `blue-review-comments`   | Short, courteous pull request comments      |
-| `blue-review`            | Strict maintainability and ambition review  |
-| `blue-review-bash`       | Bash repository review checklist            |
-| `blue-review-lua`        | Lua review checklist                        |
-| `blue-review-python`     | Python repository review checklist          |
-| `blue-review-security`   | Trust-boundary security review              |
-| `blue-scribe`            | Writing rules, skills, and READMEs          |
-| `blue-python-setup`      | Python project setup notes for the user     |
-| `blue-review-typescript` | TypeScript review checklist                 |
-| `blueberry`              | Master pass over blue-review and penmanship |
+Default install: `blue-author`, `blue-optical`, `blue-review`, `blueberry`, plus `blue-penmanship` and blueberry agents for blueberry. Other skills stay in the tracked tree and install with `--all` or `--skill`.
+
+| Skill                    | Default | Role                                        |
+| ------------------------ | ------- | ------------------------------------------- |
+| `blue-author`            | yes     | Current PR and issue delivery documents     |
+| `blue-optical`           | yes     | Optical balance for UI, icons, and layout   |
+| `blue-review`            | yes     | Maintainability, compensating code, and PR comments |
+| `blueberry`              | yes     | Master pass over blue-review and penmanship |
+| `blue-penmanship`        | via blueberry | Comment and doc claims vs current code |
+| `blue-diagnose`          | no      | Feedback-loop-first bug diagnosis           |
+| `blue-review-bash`       | no      | Bash repository review checklist            |
+| `blue-review-lua`        | no      | Lua review checklist                        |
+| `blue-review-python`     | no      | Python repository review checklist          |
+| `blue-review-security`   | no      | Trust-boundary security review              |
+| `blue-scribe`            | no      | Writing rules, skills, and READMEs          |
+| `blue-python-setup`      | no      | Python project setup notes for the user     |
+| `blue-review-typescript` | no      | TypeScript review checklist                 |
 
 ## Agents
 
@@ -103,7 +116,7 @@ To add or change a rule, skill, or agent, edit the files under `plugin/` directl
 
 ## Install layout
 
-- `tools/quest-log/plugin/`: tracked plugin source, installed as-is
+- `tools/quest-log/plugin/`: tracked plugin source; live install keeps the selected skills only
 - `~/.cursor/plugins/local/quest-log/`: live local plugin install refreshed every run
 - `~/.cursor/rules/zangarmarsh-*.mdc`: live user-rules sync from `plugin/rules/`, agent source of truth
 

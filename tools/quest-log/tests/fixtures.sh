@@ -13,17 +13,25 @@ source "${GIT_ROOT}/tests/fixtures.sh" || return 1
 # - $1 plugin_dir, destination directory for the fake plugin
 #
 # Side Effects:
-# - Writes plugin.json, one rule, and one skill under plugin_dir
+# - Writes plugin.json, one rule, default skills, and blueberry agents
 #
 # Returns:
 # - 0 on success
 create_test_plugin_source() {
 	local plugin_dir="$1"
 
-	mkdir -p "${plugin_dir}/.cursor-plugin" "${plugin_dir}/rules" "${plugin_dir}/skills/blue-review"
+	mkdir -p "${plugin_dir}/.cursor-plugin" "${plugin_dir}/rules" "${plugin_dir}/agents"
+
+	local skill
+	for skill in blue-author blue-optical blue-review blueberry blue-penmanship blue-diagnose; do
+		mkdir -p "${plugin_dir}/skills/${skill}"
+		echo "skill body" >"${plugin_dir}/skills/${skill}/SKILL.md"
+	done
+
 	echo '{"name":"quest-log"}' >"${plugin_dir}/.cursor-plugin/plugin.json"
 	echo "rule body" >"${plugin_dir}/rules/always.mdc"
-	echo "skill body" >"${plugin_dir}/skills/blue-review/SKILL.md"
+	echo "agent body" >"${plugin_dir}/agents/blueberry-review.md"
+	echo "agent body" >"${plugin_dir}/agents/blueberry-penmanship.md"
 
 	return 0
 }
@@ -36,6 +44,7 @@ create_test_plugin_source() {
 # Side Effects:
 # - Sets and exports TEST_TEMP_DIR, HOME, PLUGIN_SOURCE_DIR, TEST_PLUGIN_DIR,
 #   and TEST_RULES_DIR
+# - Unsets QUEST_LOG_SKILLS so each test starts from the default skill set
 #
 # Returns:
 # - 0 on success
@@ -49,6 +58,8 @@ quest_log_test_home() {
 	HOME="${TEST_TEMP_DIR}/home"
 	mkdir -p "${HOME}"
 	export HOME
+
+	unset QUEST_LOG_SKILLS
 
 	PLUGIN_SOURCE_DIR="${TEST_TEMP_DIR}/plugin"
 	create_test_plugin_source "${PLUGIN_SOURCE_DIR}"

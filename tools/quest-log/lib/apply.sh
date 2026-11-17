@@ -14,6 +14,7 @@ source "${ZANGARMARSH_ROOT}/tools/quest-log/lib/cursor-settings.sh"
 # - PLUGIN_SOURCE_DIR, optional plugin source, default tools/quest-log/plugin
 # - HOME, used to resolve the install destinations
 # - DRY_RUN, when true report without writing
+# - QUEST_LOG_SKILLS, skill install set passed through to install_quest_plugin
 #
 # Side Effects:
 # - Writes Cursor user settings, managed rules, and the plugin in that order
