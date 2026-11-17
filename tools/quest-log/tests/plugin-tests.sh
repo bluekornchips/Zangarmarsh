@@ -145,9 +145,10 @@ plugin_lib_test_setup() {
 }
 
 @test "quest_log_apply_skill_flags:: expands repeated and comma-separated --skill values" {
-	run quest_log_apply_skill_flags false blue-review "blue-optical,blue-diagnose"
+	quest_log_apply_skill_flags false blue-review "blue-optical,blue-diagnose"
+	run quest_log_skills_to_install "${PLUGIN_SOURCE_DIR}"
 	[[ "${status}" -eq 0 ]]
-	[[ "${QUEST_LOG_SKILLS}" == "blue-review blue-optical blue-diagnose" ]]
+	[[ "${output}" == $'blue-review\nblue-optical\nblue-diagnose' ]]
 }
 
 @test "quest_log_skills_to_install:: rejects a missing explicit skill" {

@@ -62,15 +62,15 @@ quest_log_apply_skill_flags() {
 
 	local names=()
 	local raw
+	local expanded
+	local name
 	for raw in "$@"; do
 		if [[ -z "${raw}" ]]; then
 			echo "quest_log_apply_skill_flags:: --skill needs a skill name" >&2
 			return 1
 		fi
 
-		local expanded
 		expanded="$(quest_log_expand_skill_arg "${raw}")"
-		local name
 		while IFS= read -r name; do
 			[[ -n "${name}" ]] || continue
 			names+=("${name}")

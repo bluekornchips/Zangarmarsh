@@ -327,7 +327,7 @@ EOF
 @test "run_quest_log:: --skill without a name fails" {
 	run run_quest_log --skill
 	[[ "${status}" -eq 1 ]]
-	echo "${output}" | grep -q "--skill needs a skill name"
+	echo "${output}" | grep -q -- "--skill needs a skill name"
 }
 
 @test "quest-log.sh:: --help works without a pre-set ZANGARMARSH_ROOT" {
