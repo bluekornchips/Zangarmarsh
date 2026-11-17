@@ -79,6 +79,7 @@ The plugin follows this repository's GPL-3.0-only license.
 | `blue-author`            | Current PR and issue delivery documents     |
 | `blue-compensate`        | Compensating-code inventory and redesigns   |
 | `blue-diagnose`          | Feedback-loop-first bug diagnosis           |
+| `blue-optical`           | Optical balance for UI, icons, and layout   |
 | `blue-penmanship`        | Comment and doc claims vs current code      |
 | `blue-review-comments`   | Short, courteous pull request comments      |
 | `blue-review`            | Strict maintainability and ambition review  |
