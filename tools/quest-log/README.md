@@ -52,6 +52,7 @@ Run `questlog --help` for the flags.
 ```text
 plugin/
   .cursor-plugin/plugin.json   # plugin manifest
+  agents/*.md                  # blueberry passes pinned to Auto Cost
   rules/*.mdc                  # Cursor rules
   skills/*/SKILL.md            # blue-* and blueberry skills
 ```
@@ -90,7 +91,14 @@ The plugin follows this repository's GPL-3.0-only license.
 | `blue-review-typescript` | TypeScript review checklist                 |
 | `blueberry`              | Master pass over blue-review and penmanship |
 
-To add or change a rule or skill, edit the files under `plugin/` directly and run `questlog` to install the update.
+## Agents
+
+| Agent                    | Role                                        |
+| ------------------------ | ------------------------------------------- |
+| `blueberry-review`       | blue-review on Auto Cost                    |
+| `blueberry-penmanship`   | blue-penmanship on Auto Cost                |
+
+To add or change a rule, skill, or agent, edit the files under `plugin/` directly and run `questlog` to install the update.
 
 ## Install layout
 

@@ -257,6 +257,11 @@ EOF
 		[[ -f "${tracked_plugin}/skills/${skill}/SKILL.md" ]]
 	done
 
+	local agent
+	for agent in blueberry-review blueberry-penmanship; do
+		[[ -f "${tracked_plugin}/agents/${agent}.md" ]]
+	done
+
 	[[ ! -e "${tracked_plugin}/MCP.md" ]]
 }
 
