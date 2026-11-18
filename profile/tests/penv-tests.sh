@@ -60,7 +60,7 @@ mock_fast_venv() {
 			local env_dir="${3:-.venv}"
 			mkdir -p "${env_dir}/bin"
 			cat >"${env_dir}/bin/activate" <<'EOF'
-VIRTUAL_ENV="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd)"
+VIRTUAL_ENV="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd -P)"
 export VIRTUAL_ENV
 PATH="${VIRTUAL_ENV}/bin:${PATH}"
 export PATH
@@ -95,7 +95,10 @@ setup() {
 	use_temp_home || return 1
 
 	TEST_DIR="$(mktemp -d "${base}/penv-test.XXXXXX")"
+	TEST_DIR="$(cd "${TEST_DIR}" && pwd -P)"
 	cd "${TEST_DIR}" || return 1
+
+	unset VIRTUAL_ENV
 
 	source "$SCRIPT"
 	mock_fast_venv
