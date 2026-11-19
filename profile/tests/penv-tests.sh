@@ -60,7 +60,7 @@ mock_fast_venv() {
 			local env_dir="${3:-.venv}"
 			mkdir -p "${env_dir}/bin"
 			cat >"${env_dir}/bin/activate" <<'EOF'
-VIRTUAL_ENV="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd -P)"
+				VIRTUAL_ENV="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd -P)"
 export VIRTUAL_ENV
 PATH="${VIRTUAL_ENV}/bin:${PATH}"
 export PATH

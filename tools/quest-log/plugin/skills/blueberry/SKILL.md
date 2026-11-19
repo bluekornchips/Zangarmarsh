@@ -1,22 +1,12 @@
 ---
 name: blueberry
-description: Run blue-review and blue-penmanship as one workflow on Auto Cost. Use when the user invokes blueberry, asks for a full blue review, or asks for a combined blue-review and penmanship pass.
+description: Run blue-review and blue-penmanship as one workflow. Use when the user invokes blueberry, asks for a full blue review, or asks for a combined blue-review and penmanship pass.
 disable-model-invocation: true
 ---
 
 # Blueberry
 
 Master pass over blue-review and blue-penmanship. Add no criteria of its own. Read each sibling skill and follow it.
-
-## Cost
-
-Auto Cost is a hard requirement for every blueberry pass.
-
-- Launch each pass as a fresh `generalPurpose` Task.
-- Pass Task `model` as `auto-smart[optimize_for=cost]`. Never inherit the parent model.
-- Never use Balance, Intelligence, Composer Fast, Grok Fast, Opus, or other frontier or high-effort slugs for a blueberry pass.
-- Keep the parent to gathering diffs and assembling the reply. Do the review and penmanship work only in those Tasks.
-- Do not use custom plugin agents, `thermo-nuclear-code-quality-review`, or an unpinned Task call.
 
 ## Sibling skills
 
@@ -42,7 +32,7 @@ If the user names another base, use that. If `origin/main` is missing, use `main
 4. Launch one Task for blue-review over the whole change set.
 5. Launch one Task for blue-penmanship. Output the drift plan and stop for approval.
 
-A pass that fails or returns no report did not run. Retry it once on the same `generalPurpose` cost pin, then mark it `not run`. Never count it as zero findings. Never retry on a costlier model.
+A pass that fails or returns no report did not run. Retry it once, then mark it `not run`. Never count it as zero findings.
 
 ## Output
 

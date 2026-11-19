@@ -86,7 +86,7 @@ The plugin follows this repository's GPL-3.0-only license.
 
 ## Skills
 
-Default install: `blue-author`, `blue-optical`, `blue-review`, `blueberry`, plus `blue-penmanship` for blueberry. Other skills stay in the tracked tree and install with `--all` or `--skill`. Blueberry launches sibling passes as `generalPurpose` Tasks pinned to Auto Cost.
+Default install: `blue-author`, `blue-optical`, `blue-review`, `blueberry`, plus `blue-penmanship` for blueberry. Other skills stay in the tracked tree and install with `--all` or `--skill`.
 
 | Skill                    | Default | Role                                        |
 | ------------------------ | ------- | ------------------------------------------- |
